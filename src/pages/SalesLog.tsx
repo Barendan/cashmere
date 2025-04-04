@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,13 +12,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Undo2, PlusCircle, MinusCircle } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import TransactionCard from "@/components/TransactionCard";
 
 const SalesLog = () => {
-  const { products, transactions, recordSale, undoLastTransaction } = useData();
+  const { products, transactions, recordSale, undoLastTransaction, isLoading, error } = useData();
   const { isAdmin } = useAuth();
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [filterType, setFilterType] = useState<string>("all");
+  const isMobile = useIsMobile();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 border border-red-300 bg-red-50 rounded-md text-red-700 mb-4">
+        <h3 className="font-semibold mb-2">Error Loading Data</h3>
+        <p>{error}</p>
+      </div>
+    );
+  }
 
   const inStockProducts = [...products]
     .filter((product) => product.stockQuantity > 0)
@@ -67,8 +85,18 @@ const SalesLog = () => {
   const selectedProduct = products.find((p) => p.id === selectedProductId);
   const maxQuantity = selectedProduct ? selectedProduct.stockQuantity : 0;
 
+  const todaySales = transactions
+    .filter(
+      (t) =>
+        t.type === "sale" &&
+        new Date(t.date).toDateString() === new Date().toDateString()
+    );
+  
+  const totalSalesToday = todaySales.reduce((sum, t) => sum + t.price, 0);
+  const itemsSoldToday = todaySales.reduce((sum, t) => sum + t.quantity, 0);
+
   return (
-    <div className="w-full">
+    <div className="w-full space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <Card className="lg:col-span-2 bg-white">
           <CardHeader>
@@ -158,7 +186,7 @@ const SalesLog = () => {
                 </div>
               </div>
             )}
-            <div className="flex justify-between mt-6">
+            <div className="flex flex-col sm:flex-row justify-between mt-6 gap-3 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
@@ -189,26 +217,13 @@ const SalesLog = () => {
               <div className="p-4 bg-spa-sage/10 rounded-md">
                 <div className="text-sm text-muted-foreground">Total Sales Today</div>
                 <div className="text-2xl font-medium mt-1">
-                  ${transactions
-                    .filter(
-                      (t) =>
-                        t.type === "sale" &&
-                        new Date(t.date).toDateString() === new Date().toDateString()
-                    )
-                    .reduce((sum, t) => sum + t.price, 0)
-                    .toFixed(2)}
+                  ${totalSalesToday.toFixed(2)}
                 </div>
               </div>
               <div className="p-4 bg-spa-water/10 rounded-md">
                 <div className="text-sm text-muted-foreground">Items Sold Today</div>
                 <div className="text-2xl font-medium mt-1">
-                  {transactions
-                    .filter(
-                      (t) =>
-                        t.type === "sale" &&
-                        new Date(t.date).toDateString() === new Date().toDateString()
-                    )
-                    .reduce((sum, t) => sum + t.quantity, 0)}
+                  {itemsSoldToday}
                 </div>
               </div>
               <div className="mt-6">
@@ -236,13 +251,17 @@ const SalesLog = () => {
       </div>
       <Card className="bg-white">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
             <div>
               <CardTitle className="text-spa-deep">Sales & Inventory Log</CardTitle>
               <CardDescription>History of all transactions</CardDescription>
             </div>
-            <Tabs defaultValue="all" onValueChange={setFilterType} className="w-[400px]">
-              <TabsList className="grid grid-cols-4">
+            <Tabs 
+              defaultValue="all" 
+              onValueChange={setFilterType} 
+              className="w-full sm:w-[400px]"
+            >
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="sale">Sales</TabsTrigger>
                 <TabsTrigger value="restock">Restocks</TabsTrigger>
@@ -252,50 +271,68 @@ const SalesLog = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-spa-sand">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[180px]">Date & Time</TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell className="text-sm">
-                        {formatDate(transaction.date)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {transaction.productName}
-                      </TableCell>
-                      <TableCell>{transaction.userName}</TableCell>
-                      <TableCell>{transaction.quantity}</TableCell>
-                      <TableCell>
-                        <Badge className={getTransactionTypeColor(transaction.type)}>
-                          {transaction.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${transaction.price.toFixed(2)}
+          {/* Mobile View - Transaction Cards */}
+          {isMobile && (
+            <div className="space-y-4">
+              {filteredTransactions.length > 0 ? (
+                filteredTransactions.map((transaction) => (
+                  <TransactionCard key={transaction.id} transaction={transaction} getTransactionTypeColor={getTransactionTypeColor} formatDate={formatDate} />
+                ))
+              ) : (
+                <div className="text-center py-6 text-muted-foreground border rounded-md p-4">
+                  No transactions found for the selected filter.
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Desktop View - Tables */}
+          {!isMobile && (
+            <div className="rounded-md border border-spa-sand overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[180px]">Date & Time</TableHead>
+                    <TableHead>Product</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.length > 0 ? (
+                    filteredTransactions.map((transaction) => (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="text-sm">
+                          {formatDate(transaction.date)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {transaction.productName}
+                        </TableCell>
+                        <TableCell>{transaction.userName}</TableCell>
+                        <TableCell>{transaction.quantity}</TableCell>
+                        <TableCell>
+                          <Badge className={getTransactionTypeColor(transaction.type)}>
+                            {transaction.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${transaction.price.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        No transactions found for the selected filter.
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                      No transactions found for the selected filter.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
