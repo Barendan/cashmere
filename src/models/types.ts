@@ -10,10 +10,6 @@ export interface Product {
   lowStockThreshold: number;
   imageUrl?: string;
   lastRestocked?: Date;
-  // New fields based on the provided data
-  size?: string;
-  ingredients?: string;
-  skinConcerns?: string;
 }
 
 export interface Transaction {

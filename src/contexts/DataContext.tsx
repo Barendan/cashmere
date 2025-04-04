@@ -4,16 +4,65 @@ import { Product, Transaction } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { v4 as uuidv4 } from "uuid";
-import { 
-  fetchProducts, 
-  fetchTransactions, 
-  addProductToDb, 
-  updateProductInDb, 
-  deleteProductFromDb,
-  addTransactionToDb,
-  seedProducts
-} from "../services/supabaseClient";
-import { productSeedData } from "../services/seedData";
+
+// Sample product data
+const SAMPLE_PRODUCTS: Product[] = [
+  {
+    id: "p1",
+    name: "Hydrating Facial Serum",
+    description: "Deep hydration for all skin types",
+    stockQuantity: 15,
+    costPrice: 12.5,
+    sellPrice: 34.99,
+    category: "Facial Care",
+    lowStockThreshold: 5,
+    lastRestocked: new Date("2023-03-15")
+  },
+  {
+    id: "p2",
+    name: "Exfoliating Scrub",
+    description: "Gentle exfoliation for smooth skin",
+    stockQuantity: 8,
+    costPrice: 8.75,
+    sellPrice: 24.99,
+    category: "Cleansers",
+    lowStockThreshold: 3,
+    lastRestocked: new Date("2023-03-10")
+  },
+  {
+    id: "p3",
+    name: "Calming Rose Toner",
+    description: "Alcohol-free toner with rose water",
+    stockQuantity: 12,
+    costPrice: 5.25,
+    sellPrice: 18.99,
+    category: "Toners",
+    lowStockThreshold: 4,
+    lastRestocked: new Date("2023-03-12")
+  },
+  {
+    id: "p4",
+    name: "Overnight Recovery Mask",
+    description: "Intensive repair while you sleep",
+    stockQuantity: 0,
+    costPrice: 15.00,
+    sellPrice: 39.99,
+    category: "Masks",
+    lowStockThreshold: 3,
+    lastRestocked: new Date("2023-02-28")
+  },
+  {
+    id: "p5",
+    name: "Vitamin C Brightening Cream",
+    description: "For even tone and radiance",
+    stockQuantity: 2,
+    costPrice: 11.25,
+    sellPrice: 29.99,
+    category: "Moisturizers",
+    lowStockThreshold: 3,
+    lastRestocked: new Date("2023-03-05")
+  }
+];
 
 // Sample transaction data
 const SAMPLE_TRANSACTIONS: Transaction[] = [
@@ -65,8 +114,6 @@ interface DataContextType {
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
-  isLoading: boolean;
-  error: string | null;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -76,72 +123,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [lastRestockDate, setLastRestockDate] = useState<Date | null>(null);
   const [lastAction, setLastAction] = useState<{ action: string; data: any } | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Load data from Supabase
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch products from Supabase
-        const productsData = await fetchProducts();
-        
-        // If no products, seed the database with our data
-        if (productsData.length === 0) {
-          await seedProducts(productSeedData);
-          const newProductsData = await fetchProducts();
-          setProducts(newProductsData);
-        } else {
-          setProducts(productsData);
-        }
-        
-        // Fetch transactions
-        const transactionsData = await fetchTransactions();
-        if (transactionsData.length === 0) {
-          // Use sample transactions if none exist
-          setTransactions(SAMPLE_TRANSACTIONS);
-        } else {
-          setTransactions(transactionsData);
-        }
-        
-        // Get latest restock date
-        const lastRestockTx = transactionsData
-          .filter(t => t.type === 'restock')
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-          
-        setLastRestockDate(lastRestockTx ? new Date(lastRestockTx.date) : null);
-        
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Error loading data:", err);
-        setError("Failed to load data. Please try again later.");
-        setIsLoading(false);
-        
-        // Fallback to localStorage if API fails
-        const savedProducts = localStorage.getItem("spaProducts");
-        const savedTransactions = localStorage.getItem("spaTransactions");
-        const savedRestockDate = localStorage.getItem("lastRestockDate");
-        
-        if (savedProducts) setProducts(JSON.parse(savedProducts));
-        if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-        if (savedRestockDate) setLastRestockDate(new Date(JSON.parse(savedRestockDate)));
-        
-        toast({ 
-          title: "Connection Error", 
-          description: "Using local data. Changes won't be saved to the database.",
-          variant: "destructive" 
-        });
-      }
-    };
+    // Load data from localStorage or use sample data
+    const savedProducts = localStorage.getItem("spaProducts");
+    const savedTransactions = localStorage.getItem("spaTransactions");
+    const savedRestockDate = localStorage.getItem("lastRestockDate");
     
-    loadData();
-  }, [toast]);
+    setProducts(savedProducts ? JSON.parse(savedProducts) : SAMPLE_PRODUCTS);
+    setTransactions(savedTransactions ? JSON.parse(savedTransactions) : SAMPLE_TRANSACTIONS);
+    setLastRestockDate(savedRestockDate ? new Date(JSON.parse(savedRestockDate)) : null);
+  }, []);
 
-  // Save data to localStorage as backup
+  // Save data to localStorage whenever it changes
   useEffect(() => {
     if (products.length > 0) {
       localStorage.setItem("spaProducts", JSON.stringify(products));
@@ -164,83 +160,38 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastAction({ action, data });
   };
 
-  const addProduct = async (product: Omit<Product, "id">) => {
-    try {
-      const newProduct = await addProductToDb(product);
-      setProducts([...products, newProduct]);
-      toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
-    } catch (err) {
-      console.error("Error adding product:", err);
-      toast({ 
-        title: "Error", 
-        description: "Failed to add product. Please try again.", 
-        variant: "destructive" 
-      });
-      
-      // Fallback to local addition if API fails
-      const localNewProduct = { ...product, id: uuidv4() };
-      setProducts([...products, localNewProduct]);
-      toast({ 
-        title: "Product Added Locally", 
-        description: "Note: This change is only saved locally.", 
-        variant: "default" 
-      });
-    }
+  const addProduct = (product: Omit<Product, "id">) => {
+    const newProduct = { ...product, id: uuidv4() };
+    setProducts([...products, newProduct]);
+    toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
   };
 
-  const updateProduct = async (id: string, updates: Partial<Product>) => {
+  const updateProduct = (id: string, updates: Partial<Product>) => {
     const oldProduct = products.find(p => p.id === id);
     if (!oldProduct) return;
     
     // Save the old state for potential undo
     saveLastAction("updateProduct", { id, oldData: { ...oldProduct } });
     
-    try {
-      await updateProductInDb(id, updates);
-      setProducts(products.map(p => 
-        p.id === id ? { ...p, ...updates } : p
-      ));
-      toast({ title: "Product Updated", description: `${oldProduct.name} was updated.` });
-    } catch (err) {
-      console.error("Error updating product:", err);
-      toast({ 
-        title: "Error", 
-        description: "Failed to update product. Changes saved locally only.", 
-        variant: "destructive" 
-      });
-      
-      // Update locally anyway
-      setProducts(products.map(p => 
-        p.id === id ? { ...p, ...updates } : p
-      ));
-    }
+    setProducts(products.map(p => 
+      p.id === id ? { ...p, ...updates } : p
+    ));
+    
+    toast({ title: "Product Updated", description: `${oldProduct.name} was updated.` });
   };
 
-  const deleteProduct = async (id: string) => {
+  const deleteProduct = (id: string) => {
     const product = products.find(p => p.id === id);
     if (!product) return;
     
     // Save the old state for potential undo
     saveLastAction("deleteProduct", { product });
     
-    try {
-      await deleteProductFromDb(id);
-      setProducts(products.filter(p => p.id !== id));
-      toast({ title: "Product Deleted", description: `${product.name} was removed from inventory.` });
-    } catch (err) {
-      console.error("Error deleting product:", err);
-      toast({ 
-        title: "Error", 
-        description: "Failed to delete product from database. Removed locally only.", 
-        variant: "destructive" 
-      });
-      
-      // Remove locally anyway
-      setProducts(products.filter(p => p.id !== id));
-    }
+    setProducts(products.filter(p => p.id !== id));
+    toast({ title: "Product Deleted", description: `${product.name} was removed from inventory.` });
   };
 
-  const recordSale = async (productId: string, quantity: number) => {
+  const recordSale = (productId: string, quantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({ title: "Error", description: "Product not found.", variant: "destructive" });
@@ -264,9 +215,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ? { ...p, stockQuantity: p.stockQuantity - quantity }
         : p
     );
+    setProducts(updatedProducts);
 
     // Add transaction record
-    const newTransaction: Omit<Transaction, "id"> = {
+    const newTransaction: Transaction = {
+      id: uuidv4(),
       productId,
       productName: product.name,
       quantity,
@@ -277,33 +230,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       userName: user?.name || "Unknown User"
     };
     
-    try {
-      // Update product in database
-      await updateProductInDb(productId, { stockQuantity: product.stockQuantity - quantity });
-      
-      // Add transaction to database
-      const savedTransaction = await addTransactionToDb(newTransaction);
-      
-      // Update local state
-      setProducts(updatedProducts);
-      setTransactions([savedTransaction, ...transactions]);
-      
-      toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
-    } catch (err) {
-      console.error("Error recording sale:", err);
-      toast({ 
-        title: "Connection Error", 
-        description: "Sale recorded locally only. Database not updated.", 
-        variant: "destructive" 
-      });
-      
-      // Update local state anyway
-      setProducts(updatedProducts);
-      setTransactions([{ ...newTransaction, id: uuidv4() }, ...transactions]);
-    }
+    setTransactions([newTransaction, ...transactions]);
+    toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
   };
 
-  const recordRestock = async (productId: string, quantity: number) => {
+  const recordRestock = (productId: string, quantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({ title: "Error", description: "Product not found.", variant: "destructive" });
@@ -317,63 +248,35 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     // Update product quantity and last restocked date
-    const newStockQuantity = product.stockQuantity + quantity;
-    const newLastRestocked = new Date();
-    
     const updatedProducts = products.map(p =>
       p.id === productId
         ? { 
             ...p, 
-            stockQuantity: newStockQuantity,
-            lastRestocked: newLastRestocked
+            stockQuantity: p.stockQuantity + quantity,
+            lastRestocked: new Date()
           }
         : p
     );
+    setProducts(updatedProducts);
 
     // Add transaction record
-    const newTransaction: Omit<Transaction, "id"> = {
+    const newTransaction: Transaction = {
+      id: uuidv4(),
       productId,
       productName: product.name,
       quantity,
       price: product.costPrice * quantity,
       type: "restock",
-      date: newLastRestocked,
+      date: new Date(),
       userId: user?.id || "unknown",
       userName: user?.name || "Unknown User"
     };
     
-    try {
-      // Update product in database
-      await updateProductInDb(productId, { 
-        stockQuantity: newStockQuantity,
-        lastRestocked: newLastRestocked
-      });
-      
-      // Add transaction to database
-      const savedTransaction = await addTransactionToDb(newTransaction);
-      
-      // Update local state
-      setProducts(updatedProducts);
-      setTransactions([savedTransaction, ...transactions]);
-      setLastRestockDate(newLastRestocked);
-      
-      toast({ title: "Restock Recorded", description: `Added ${quantity} ${product.name} to inventory.` });
-    } catch (err) {
-      console.error("Error recording restock:", err);
-      toast({ 
-        title: "Connection Error", 
-        description: "Restock recorded locally only. Database not updated.", 
-        variant: "destructive" 
-      });
-      
-      // Update local state anyway
-      setProducts(updatedProducts);
-      setTransactions([{ ...newTransaction, id: uuidv4() }, ...transactions]);
-      setLastRestockDate(newLastRestocked);
-    }
+    setTransactions([newTransaction, ...transactions]);
+    toast({ title: "Restock Recorded", description: `Added ${quantity} ${product.name} to inventory.` });
   };
 
-  const adjustInventory = async (productId: string, newQuantity: number) => {
+  const adjustInventory = (productId: string, newQuantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({ title: "Error", description: "Product not found.", variant: "destructive" });
@@ -394,9 +297,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ? { ...p, stockQuantity: newQuantity }
         : p
     );
+    setProducts(updatedProducts);
 
     // Add transaction record
-    const newTransaction: Omit<Transaction, "id"> = {
+    const newTransaction: Transaction = {
+      id: uuidv4(),
       productId,
       productName: product.name,
       quantity: Math.abs(difference),
@@ -407,33 +312,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       userName: user?.name || "Unknown User"
     };
     
-    try {
-      // Update product in database
-      await updateProductInDb(productId, { stockQuantity: newQuantity });
-      
-      // Add transaction to database
-      const savedTransaction = await addTransactionToDb(newTransaction);
-      
-      // Update local state
-      setProducts(updatedProducts);
-      setTransactions([savedTransaction, ...transactions]);
-      
-      toast({ 
-        title: "Inventory Adjusted", 
-        description: `${product.name} quantity updated to ${newQuantity}.` 
-      });
-    } catch (err) {
-      console.error("Error adjusting inventory:", err);
-      toast({ 
-        title: "Connection Error", 
-        description: "Adjustment recorded locally only. Database not updated.", 
-        variant: "destructive" 
-      });
-      
-      // Update local state anyway
-      setProducts(updatedProducts);
-      setTransactions([{ ...newTransaction, id: uuidv4() }, ...transactions]);
-    }
+    setTransactions([newTransaction, ...transactions]);
+    toast({ 
+      title: "Inventory Adjusted", 
+      description: `${product.name} quantity updated to ${newQuantity}.` 
+    });
   };
 
   const updateLastRestockDate = () => {
@@ -542,9 +425,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         adjustInventory,
         updateLastRestockDate,
         undoLastTransaction,
-        getProduct,
-        isLoading,
-        error
+        getProduct
       }}
     >
       {children}
