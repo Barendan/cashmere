@@ -1,9 +1,8 @@
-
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsItem, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, DollarSign, ArrowUp, ShoppingBag, BarChart as BarChartIcon } from "lucide-react";
@@ -12,7 +11,6 @@ const Metrics = () => {
   const { products, transactions } = useData();
   const [timeRange, setTimeRange] = useState<"7days" | "30days" | "monthly">("7days");
 
-  // Calculate dates for time ranges
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 7);
@@ -20,20 +18,16 @@ const Metrics = () => {
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
 
-  // Filter sales transactions based on the time range
   const salesTransactions = useMemo(() => {
     return transactions.filter(t => t.type === "sale");
   }, [transactions]);
 
-  // Get current month name
   const currentMonth = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(today);
 
-  // Calculate sales data for charts
   const salesData = useMemo(() => {
     const salesByDay = new Map();
     const salesByMonth = new Map();
     
-    // Filter transactions based on time range and type
     const filteredSales = salesTransactions.filter(sale => {
       const saleDate = new Date(sale.date);
       
@@ -43,14 +37,12 @@ const Metrics = () => {
         case "30days":
           return saleDate >= thirtyDaysAgo;
         case "monthly":
-          // Group by month, so include all
           return true;
         default:
           return false;
       }
     });
     
-    // Process for daily view (7 or 30 days)
     if (timeRange === "7days" || timeRange === "30days") {
       filteredSales.forEach(sale => {
         const saleDate = new Date(sale.date);
@@ -65,7 +57,6 @@ const Metrics = () => {
         daySales.items += sale.quantity;
       });
       
-      // Fill in missing days with zero sales
       const daysToShow = timeRange === "7days" ? 7 : 30;
       for (let i = 0; i < daysToShow; i++) {
         const date = new Date(today);
@@ -77,7 +68,6 @@ const Metrics = () => {
         }
       }
       
-      // Sort by date
       return Array.from(salesByDay.values())
         .sort((a, b) => a.date.localeCompare(b.date))
         .map(day => ({
@@ -86,7 +76,6 @@ const Metrics = () => {
         }));
     }
     
-    // Process for monthly view
     else if (timeRange === "monthly") {
       filteredSales.forEach(sale => {
         const saleDate = new Date(sale.date);
@@ -101,10 +90,8 @@ const Metrics = () => {
         monthSales.items += sale.quantity;
       });
       
-      // Sort by month
       return Array.from(salesByMonth.values())
         .sort((a, b) => {
-          // Parse month and year for proper sorting
           const [aMonth, aYear] = a.date.split(' ');
           const [bMonth, bYear] = b.date.split(' ');
           
@@ -118,7 +105,6 @@ const Metrics = () => {
     return [];
   }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo, today]);
 
-  // Calculate product performance metrics
   const productPerformance = useMemo(() => {
     const productSales = new Map();
     
@@ -150,7 +136,6 @@ const Metrics = () => {
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
   }, [salesTransactions, products]);
 
-  // Calculate total sales and revenue
   const totalRevenue = useMemo(() => 
     salesTransactions.reduce((sum, t) => sum + t.price, 0),
     [salesTransactions]
@@ -172,7 +157,6 @@ const Metrics = () => {
     return profit;
   }, [salesTransactions, products]);
   
-  // Prepare category data for pie chart
   const categoryData = useMemo(() => {
     const categories = new Map();
     
@@ -195,19 +179,15 @@ const Metrics = () => {
     return Array.from(categories.values());
   }, [salesTransactions, products]);
 
-  // Colors for pie chart
   const COLORS = ['#AECCC6', '#9CB380', '#A6C0D0', '#D1C6B8', '#E6DFD9', '#7E9A9A'];
   
-  // Function to export data as CSV
   const exportCSV = () => {
-    // Convert product performance data to CSV
     let csv = 'Product Name,Total Sold,Total Revenue,Cost Price,Profit\n';
     
     productPerformance.forEach(product => {
       csv += `"${product.name}",${product.totalSold},${product.totalRevenue.toFixed(2)},${product.costPrice.toFixed(2)},${product.profit.toFixed(2)}\n`;
     });
     
-    // Create download link
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -221,7 +201,6 @@ const Metrics = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="bg-white">
           <CardContent className="p-6">
@@ -266,7 +245,6 @@ const Metrics = () => {
         </Card>
       </div>
 
-      {/* Sales Chart */}
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -275,9 +253,9 @@ const Metrics = () => {
           </div>
           <Tabs defaultValue="7days" onValueChange={(value) => setTimeRange(value as any)}>
             <TabsList>
-              <TabsItem value="7days">Last 7 Days</TabsItem>
-              <TabsItem value="30days">Last 30 Days</TabsItem>
-              <TabsItem value="monthly">Monthly</TabsItem>
+              <TabsTrigger value="7days">Last 7 Days</TabsTrigger>
+              <TabsTrigger value="30days">Last 30 Days</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly</TabsTrigger>
             </TabsList>
           </Tabs>
         </CardHeader>
@@ -300,7 +278,6 @@ const Metrics = () => {
         </CardContent>
       </Card>
 
-      {/* Product Performance & Category Split */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-white">
           <CardHeader>
@@ -311,7 +288,7 @@ const Metrics = () => {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={productPerformance.slice(0, 6)} // Show top 6 products
+                  data={productPerformance.slice(0, 6)}
                   layout="vertical"
                   margin={{ left: 100 }}
                 >
@@ -374,7 +351,6 @@ const Metrics = () => {
         </Card>
       </div>
 
-      {/* Product Performance Table */}
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>

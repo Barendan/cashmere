@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsItem, TabsList } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Undo2, PlusCircle, MinusCircle } from "lucide-react";
 
@@ -20,7 +19,6 @@ const SalesLog = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [filterType, setFilterType] = useState<string>("all");
 
-  // Sort products alphabetically and filter out of stock products
   const inStockProducts = [...products]
     .filter((product) => product.stockQuantity > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -33,7 +31,6 @@ const SalesLog = () => {
     }
   };
 
-  // Filter transactions based on selected type
   const filteredTransactions = transactions.filter((transaction) => {
     if (filterType === "all") return true;
     return transaction.type === filterType;
@@ -73,7 +70,6 @@ const SalesLog = () => {
   return (
     <div className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Sale Entry Form */}
         <Card className="lg:col-span-2 bg-white">
           <CardHeader>
             <CardTitle className="text-spa-deep">Record Sale</CardTitle>
@@ -81,7 +77,6 @@ const SalesLog = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Product Selection */}
               <div className="space-y-2">
                 <Label htmlFor="product">Product</Label>
                 <Select value={selectedProductId} onValueChange={setSelectedProductId}>
@@ -100,8 +95,6 @@ const SalesLog = () => {
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Quantity Input */}
               <div className="space-y-2">
                 <Label htmlFor="quantity">Quantity</Label>
                 <div className="flex items-center space-x-2">
@@ -148,8 +141,6 @@ const SalesLog = () => {
                 )}
               </div>
             </div>
-
-            {/* Sale Summary */}
             {selectedProductId && selectedProduct && (
               <div className="mt-6 p-4 border border-spa-sand rounded-md bg-spa-cream/30">
                 <h3 className="font-medium mb-2">Sale Summary</h3>
@@ -167,7 +158,6 @@ const SalesLog = () => {
                 </div>
               </div>
             )}
-
             <div className="flex justify-between mt-6">
               <Button
                 type="button"
@@ -189,8 +179,6 @@ const SalesLog = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Quick Stats */}
         <Card className="bg-white">
           <CardHeader>
             <CardTitle className="text-spa-deep">Today's Activity</CardTitle>
@@ -198,7 +186,6 @@ const SalesLog = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Today's Sales */}
               <div className="p-4 bg-spa-sage/10 rounded-md">
                 <div className="text-sm text-muted-foreground">Total Sales Today</div>
                 <div className="text-2xl font-medium mt-1">
@@ -212,8 +199,6 @@ const SalesLog = () => {
                     .toFixed(2)}
                 </div>
               </div>
-
-              {/* Items Sold */}
               <div className="p-4 bg-spa-water/10 rounded-md">
                 <div className="text-sm text-muted-foreground">Items Sold Today</div>
                 <div className="text-2xl font-medium mt-1">
@@ -226,8 +211,6 @@ const SalesLog = () => {
                     .reduce((sum, t) => sum + t.quantity, 0)}
                 </div>
               </div>
-
-              {/* Recent Products */}
               <div className="mt-6">
                 <h3 className="text-sm font-medium mb-2">Recently Sold Products</h3>
                 <div className="space-y-2">
@@ -251,8 +234,6 @@ const SalesLog = () => {
           </CardContent>
         </Card>
       </div>
-
-      {/* Transactions Log */}
       <Card className="bg-white">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -262,10 +243,10 @@ const SalesLog = () => {
             </div>
             <Tabs defaultValue="all" onValueChange={setFilterType} className="w-[400px]">
               <TabsList className="grid grid-cols-4">
-                <TabsItem value="all">All</TabsItem>
-                <TabsItem value="sale">Sales</TabsItem>
-                <TabsItem value="restock">Restocks</TabsItem>
-                <TabsItem value="adjustment">Adjustments</TabsItem>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="sale">Sales</TabsTrigger>
+                <TabsTrigger value="restock">Restocks</TabsTrigger>
+                <TabsTrigger value="adjustment">Adjustments</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
