@@ -16,30 +16,30 @@ const ProductCard = ({ product, onAddToCart, isInCart }: ProductCardProps) => {
   const isLowStock = product.stockQuantity <= product.lowStockThreshold;
   
   return (
-    <div className="border border-spa-sand rounded-md p-3 bg-white">
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium">{product.name}</h4>
+    <div className="border border-spa-sand rounded-md p-2 bg-white">
+      <div className="flex justify-between items-start mb-1">
+        <h4 className="font-medium text-sm">{product.name}</h4>
         {isLowStock && (
-          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
+          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-xs py-0 px-1">
             Low Stock
           </Badge>
         )}
       </div>
       
-      <div className="text-sm mb-2">
+      <div className="text-xs mb-1">
         {product.stockQuantity} in stock
       </div>
       
       <div className="flex justify-between items-center">
-        <div className="font-medium">{formatCurrency(product.sellPrice)}</div>
+        <div className="font-medium text-sm">{formatCurrency(product.sellPrice)}</div>
         <Button 
           size="sm"
           variant={isInCart ? "outline" : "default"}
-          className={isInCart ? "bg-green-50 text-green-700 border-green-200" : ""}
+          className={`${isInCart ? "bg-green-50 text-green-700 border-green-200" : ""} text-xs py-1 px-2 h-auto`}
           onClick={() => onAddToCart(product)}
           disabled={product.stockQuantity === 0 || isInCart}
         >
-          <ShoppingCart size={16} className="mr-1" />
+          <ShoppingCart size={14} className="mr-1" />
           {isInCart ? "In Cart" : "Add"}
         </Button>
       </div>

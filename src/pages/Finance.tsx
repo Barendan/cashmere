@@ -4,13 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import IncomeForm from "@/components/finance/IncomeForm";
+import MultiServiceForm from "@/components/finance/MultiServiceForm";
 import IncomeList from "@/components/finance/IncomeList";
 import ExpenseForm from "@/components/finance/ExpenseForm";
 import ExpenseList from "@/components/finance/ExpenseList";
 import FinanceSummary from "@/components/finance/FinanceSummary";
+import usePageTitle from "@/hooks/usePageTitle";
 
 const Finance = () => {
+  usePageTitle("Finance");
   const { isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("income");
@@ -79,7 +81,7 @@ const Finance = () => {
                 <TabsTrigger value="expense">Expenses</TabsTrigger>
               </TabsList>
               <TabsContent value="income" className="space-y-6">
-                <IncomeForm onIncomeAdded={handleIncomeAdded} />
+                <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
                 <IncomeList newIncome={newIncome} />
               </TabsContent>
               <TabsContent value="expense" className="space-y-6">

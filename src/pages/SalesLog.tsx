@@ -15,6 +15,7 @@ import usePageTitle from "@/hooks/usePageTitle";
 import ShoppingCart from "@/components/sales/ShoppingCart";
 import ProductCard from "@/components/sales/ProductCard";
 import { formatDate } from "@/lib/format";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const SalesLog = () => {
   usePageTitle("Sales Log");
@@ -144,12 +145,12 @@ const SalesLog = () => {
     <div className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <Card className="lg:col-span-2 bg-white">
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
             <CardDescription>Select products to add to cart</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
+            <div className="mb-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -162,27 +163,29 @@ const SalesLog = () => {
               </div>
             </div>
             
-            {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {filteredProducts.map((product) => (
-                  <ProductCard 
-                    key={product.id}
-                    product={product}
-                    onAddToCart={handleAddToCart}
-                    isInCart={isProductInCart(product.id)}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No products found</p>
-                <p className="text-sm mt-1">
-                  {searchTerm ? 
-                    "Try a different search term" : 
-                    "There are no products with available stock"}
-                </p>
-              </div>
-            )}
+            <ScrollArea className="h-[400px] pr-4">
+              {filteredProducts.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {filteredProducts.map((product) => (
+                    <ProductCard 
+                      key={product.id}
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                      isInCart={isProductInCart(product.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No products found</p>
+                  <p className="text-sm mt-1">
+                    {searchTerm ? 
+                      "Try a different search term" : 
+                      "There are no products with available stock"}
+                  </p>
+                </div>
+              )}
+            </ScrollArea>
           </CardContent>
         </Card>
         

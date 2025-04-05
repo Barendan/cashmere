@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Leaf, LayoutDashboard, Package, LogOut, BarChart3, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_CONFIG } from "@/config/app";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -57,7 +58,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex justify-between items-center">
             <div className="flex items-center">
               <Leaf className="h-8 w-8 text-spa-sage mr-2" />
-              <h1 className="text-xl font-medium text-spa-deep">Serenity Spa Inventory</h1>
+              <h1 className="text-xl font-medium text-spa-deep">{APP_CONFIG.companyName}</h1>
             </div>
             <div className="flex items-center">
               {user && (
@@ -116,7 +117,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Footer */}
       <footer className="bg-white border-t border-spa-sand py-4 text-center text-sm text-spa-deep">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          Serenity Spa Inventory Management &copy; {new Date().getFullYear()}
+          {APP_CONFIG.companyName} &copy; {APP_CONFIG.copyrightYear}
         </div>
       </footer>
     </div>

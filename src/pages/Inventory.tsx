@@ -1,854 +1,535 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
+import { useAuth } from "../contexts/AuthContext";
 import { Product } from "../models/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  PlusCircle,
-  PackagePlus,
-  Calendar,
-  Edit,
-  Trash2,
-  RefreshCw,
-  Undo2,
-  Info,
-} from "lucide-react";
+import { Modal } from "@/components/ui/modal";
+import { Package, Edit, Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import usePageTitle from "@/hooks/usePageTitle";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const Inventory = () => {
-  const {
-    products,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-    recordRestock,
-    lastRestockDate,
-    updateLastRestockDate,
-    undoLastTransaction,
-  } = useData();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
-  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
-  const [isRestockOpen, setIsRestockOpen] = useState(false);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+const InventoryPage = () => {
+  usePageTitle("Inventory");
+  const { products, addProduct, updateProduct, deleteProduct } = useData();
+  const { isAdmin } = useAuth();
+  const { toast } = useToast();
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [newProduct, setNewProduct] = useState({
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
     name: "",
     description: "",
-    stockQuantity: 0,
+    category: "Skincare",
     costPrice: 0,
     sellPrice: 0,
-    category: "",
+    stockQuantity: 0,
     lowStockThreshold: 5,
-    size: "",
-    ingredients: "",
-    skinConcerns: "",
   });
-  const [restockAmount, setRestockAmount] = useState(0);
+  const [restockQuantity, setRestockQuantity] = useState(0);
 
-  const filteredProducts = products
-    .filter(
-      (product) =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const inStockProducts = filteredProducts.filter((product) => product.stockQuantity > 0);
-  const outOfStockProducts = filteredProducts.filter((product) => product.stockQuantity === 0);
-
-  const totalInventoryValue = products.reduce(
-    (total, product) => total + product.costPrice * product.stockQuantity,
-    0
-  );
-
-  const totalRetailValue = products.reduce(
-    (total, product) => total + product.sellPrice * product.stockQuantity,
-    0
-  );
-
-  const handleAddProduct = () => {
-    addProduct(newProduct);
-    setNewProduct({
-      name: "",
-      description: "",
-      stockQuantity: 0,
-      costPrice: 0,
-      sellPrice: 0,
-      category: "",
-      lowStockThreshold: 5,
-      size: "",
-      ingredients: "",
-      skinConcerns: "",
-    });
-    setIsAddProductOpen(false);
-  };
-
-  const handleEditProduct = () => {
-    if (selectedProduct) {
-      updateProduct(selectedProduct.id, selectedProduct);
-      setIsEditProductOpen(false);
-      setSelectedProduct(null);
+  useEffect(() => {
+    if (!isAdmin) {
+      toast({
+        title: "Unauthorized",
+        description: "You do not have permission to access this page.",
+        variant: "destructive",
+      });
     }
-  };
+  }, [isAdmin, toast]);
 
-  const handleRestock = () => {
-    if (selectedProduct && restockAmount > 0) {
-      recordRestock(selectedProduct.id, restockAmount);
-      setIsRestockOpen(false);
-      setSelectedProduct(null);
-      setRestockAmount(0);
-    }
-  };
-
+  const openAddModal = () => setIsAddModalOpen(true);
+  const closeAddModal = () => setIsAddModalOpen(false);
   const openEditModal = (product: Product) => {
-    setSelectedProduct({ ...product });
-    setIsEditProductOpen(true);
+    setSelectedProduct(product);
+    setIsEditModalOpen(true);
   };
-
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedProduct(null);
+  };
   const openRestockModal = (product: Product) => {
-    setSelectedProduct({ ...product });
-    setRestockAmount(0);
-    setIsRestockOpen(true);
+    setSelectedProduct(product);
+    setIsRestockModalOpen(true);
+  };
+  const closeRestockModal = () => {
+    setIsRestockModalOpen(false);
+    setSelectedProduct(null);
+    setRestockQuantity(0);
   };
 
-  const openDetailModal = (product: Product) => {
-    setSelectedProduct({ ...product });
-    setIsDetailOpen(true);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewProduct(prev => ({ ...prev, [name]: value }));
   };
 
-  const confirmDeleteProduct = (productId: string) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      deleteProduct(productId);
+  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewProduct(prev => ({
+      ...prev,
+      [name]: parseFloat(value) || 0, // Parse to float, default to 0 if NaN
+    }));
+  };
+
+  const handleAddProduct = async () => {
+    try {
+      await addProduct(newProduct);
+      toast({
+        title: "Success",
+        description: "Product added successfully.",
+      });
+      closeAddModal();
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return "Never";
-    if (typeof date === 'string') {
-      date = new Date(date);
+  const handleUpdateProduct = async () => {
+    if (!selectedProduct) return;
+    try {
+      await updateProduct(selectedProduct.id, selectedProduct);
+      toast({
+        title: "Success",
+        description: "Product updated successfully.",
+      });
+      closeEditModal();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update product. Please try again.",
+        variant: "destructive",
+      });
     }
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
   };
 
-  const handleUpdateRestockDate = () => {
-    updateLastRestockDate();
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      toast({
+        title: "Success",
+        description: "Product deleted successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
+  const handleRestock = async () => {
+    if (!selectedProduct) return;
+    try {
+      await updateProduct(selectedProduct.id, {
+        ...selectedProduct,
+        stockQuantity: selectedProduct.stockQuantity + restockQuantity,
+      });
+      toast({
+        title: "Success",
+        description: "Product restocked successfully.",
+      });
+      closeRestockModal();
+    } catch (error) {
+      console.error("Error restock product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to restock product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
   return (
-    <div className="w-full space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Products</p>
-                <h3 className="text-2xl font-semibold mt-1">{products.length}</h3>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-spa-sage/20 flex items-center justify-center">
-                <PackagePlus className="h-6 w-6 text-spa-deep" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Inventory Value</p>
-                <h3 className="text-2xl font-semibold mt-1">${totalInventoryValue.toFixed(2)}</h3>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-spa-water/20 flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-spa-deep" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Last Restock</p>
-                <h3 className="text-lg font-semibold mt-1">{formatDate(lastRestockDate)}</h3>
-              </div>
-              <Button
-                size="sm"
-                className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                onClick={handleUpdateRestockDate}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Update
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold tracking-tight">Inventory Management</h2>
+        <p className="text-muted-foreground">Add, edit and track your inventory</p>
       </div>
-
-      <Card className="bg-white">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-spa-deep">Inventory Management</CardTitle>
-            <CardDescription>Manage your product inventory</CardDescription>
-          </div>
-          <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              className="border-spa-sand"
-              onClick={() => undoLastTransaction()}
-            >
-              <Undo2 size={16} className="mr-2" />
-              Undo
-            </Button>
-            <Button
-              className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-              onClick={() => setIsAddProductOpen(true)}
-            >
-              <PlusCircle size={16} className="mr-2" />
-              Add Product
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-6">
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-xs border-spa-sand"
-            />
-          </div>
-
-          <div className="rounded-md border border-spa-sand overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Cost Price</TableHead>
-                  <TableHead>Sell Price</TableHead>
-                  <TableHead className="hidden md:table-cell">Last Restocked</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inStockProducts.length > 0 ? (
-                  inStockProducts.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>{product.category}</TableCell>
-                      <TableCell>
-                        <span
-                          className={
-                            product.stockQuantity <= product.lowStockThreshold
-                              ? "text-red-500 font-medium"
-                              : ""
-                          }
-                        >
-                          {product.stockQuantity}
-                        </span>
-                        {product.stockQuantity <= product.lowStockThreshold && (
-                          <Badge variant="outline" className="ml-2 text-xs text-red-500 border-red-200">
-                            Low Stock
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>${product.costPrice.toFixed(2)}</TableCell>
-                      <TableCell>${product.sellPrice.toFixed(2)}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatDate(product.lastRestocked)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => openDetailModal(product)}
-                          >
-                            <Info className="h-4 w-4" />
-                            <span className="sr-only">Details</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => openRestockModal(product)}
-                          >
-                            <PackagePlus className="h-4 w-4" />
-                            <span className="sr-only">Restock</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => openEditModal(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-red-500"
-                            onClick={() => confirmDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                      No products found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {outOfStockProducts.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-lg font-medium mb-4">Out of Stock Products</h3>
-              <div className="rounded-md border border-spa-sand">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Cost Price</TableHead>
-                      <TableHead>Sell Price</TableHead>
-                      <TableHead>Last Restocked</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {outOfStockProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>${product.costPrice.toFixed(2)}</TableCell>
-                        <TableCell>${product.sellPrice.toFixed(2)}</TableCell>
-                        <TableCell>{formatDate(product.lastRestocked)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={() => openRestockModal(product)}
-                            >
-                              <PackagePlus className="h-4 w-4" />
-                              <span className="sr-only">Restock</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              onClick={() => openEditModal(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0 text-red-500"
-                              onClick={() => confirmDeleteProduct(product.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Product</DialogTitle>
-            <DialogDescription>
-              Enter the details of the new product to add to your inventory.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="name">Product Name</Label>
-                <Input
-                  id="name"
-                  value={newProduct.name}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, name: e.target.value })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={newProduct.description}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, description: e.target.value })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  value={newProduct.category}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, category: e.target.value })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="stockQuantity">Initial Stock</Label>
-                <Input
-                  id="stockQuantity"
-                  type="number"
-                  value={newProduct.stockQuantity}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      stockQuantity: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="size">Size/Volume</Label>
-                <Input
-                  id="size"
-                  value={newProduct.size}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, size: e.target.value })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="ingredients">Ingredients</Label>
-                <Input
-                  id="ingredients"
-                  value={newProduct.ingredients}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, ingredients: e.target.value })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="skinConcerns">Skin Concerns</Label>
-                <Input
-                  id="skinConcerns"
-                  value={newProduct.skinConcerns}
-                  onChange={(e) =>
-                    setNewProduct({ ...newProduct, skinConcerns: e.target.value })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="costPrice">Cost Price ($)</Label>
-                <Input
-                  id="costPrice"
-                  type="number"
-                  step="0.01"
-                  value={newProduct.costPrice}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      costPrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="sellPrice">Sell Price ($)</Label>
-                <Input
-                  id="sellPrice"
-                  type="number"
-                  step="0.01"
-                  value={newProduct.sellPrice}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      sellPrice: parseFloat(e.target.value) || 0,
-                    })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lowStockThreshold">Low Stock Threshold</Label>
-                <Input
-                  id="lowStockThreshold"
-                  type="number"
-                  value={newProduct.lowStockThreshold}
-                  onChange={(e) =>
-                    setNewProduct({
-                      ...newProduct,
-                      lowStockThreshold: parseInt(e.target.value) || 0,
-                    })
-                  }
-                  className="border-spa-sand mt-1"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-spa-sand"
-              onClick={() => setIsAddProductOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-              onClick={handleAddProduct}
-              disabled={!newProduct.name}
-            >
-              Add Product
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
-            <DialogDescription>
-              Update the details of this product.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedProduct && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="edit-name">Product Name</Label>
-                  <Input
-                    id="edit-name"
-                    value={selectedProduct.name}
-                    onChange={(e) =>
-                      setSelectedProduct({ ...selectedProduct, name: e.target.value })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <Label htmlFor="edit-description">Description</Label>
-                  <Input
-                    id="edit-description"
-                    value={selectedProduct.description}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        description: e.target.value,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-category">Category</Label>
-                  <Input
-                    id="edit-category"
-                    value={selectedProduct.category}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        category: e.target.value,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-stockQuantity">Stock Quantity</Label>
-                  <Input
-                    id="edit-stockQuantity"
-                    type="number"
-                    value={selectedProduct.stockQuantity}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        stockQuantity: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-size">Size/Volume</Label>
-                  <Input
-                    id="edit-size"
-                    value={selectedProduct.size || ""}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        size: e.target.value,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-ingredients">Ingredients</Label>
-                  <Input
-                    id="edit-ingredients"
-                    value={selectedProduct.ingredients || ""}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        ingredients: e.target.value,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-skinConcerns">Skin Concerns</Label>
-                  <Input
-                    id="edit-skinConcerns"
-                    value={selectedProduct.skinConcerns || ""}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        skinConcerns: e.target.value,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-costPrice">Cost Price ($)</Label>
-                  <Input
-                    id="edit-costPrice"
-                    type="number"
-                    step="0.01"
-                    value={selectedProduct.costPrice}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        costPrice: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-sellPrice">Sell Price ($)</Label>
-                  <Input
-                    id="edit-sellPrice"
-                    type="number"
-                    step="0.01"
-                    value={selectedProduct.sellPrice}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        sellPrice: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-lowStockThreshold">Low Stock Threshold</Label>
-                  <Input
-                    id="edit-lowStockThreshold"
-                    type="number"
-                    value={selectedProduct.lowStockThreshold}
-                    onChange={(e) =>
-                      setSelectedProduct({
-                        ...selectedProduct,
-                        lowStockThreshold: parseInt(e.target.value) || 0,
-                      })
-                    }
-                    className="border-spa-sand mt-1"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-spa-sand"
-              onClick={() => setIsEditProductOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-              onClick={handleEditProduct}
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Product Details</DialogTitle>
-          </DialogHeader>
-          {selectedProduct && (
-            <div className="py-4">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-semibold">{selectedProduct.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedProduct.category}</p>
-                </div>
-                <Separator />
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Description</h4>
-                  <p className="text-sm">{selectedProduct.description}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Size/Volume</h4>
-                    <p className="text-sm">{selectedProduct.size || "Not specified"}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Current Stock</h4>
-                    <p className="text-sm">{selectedProduct.stockQuantity} units</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Ingredients</h4>
-                  <p className="text-sm">{selectedProduct.ingredients || "Not specified"}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Skin Concerns</h4>
-                  <p className="text-sm">{selectedProduct.skinConcerns || "Not specified"}</p>
-                </div>
-                <Separator />
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Cost Price</h4>
-                    <p className="text-sm">${selectedProduct.costPrice.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-medium mb-1">Retail Price</h4>
-                    <p className="text-sm">${selectedProduct.sellPrice.toFixed(2)}</p>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Last Restocked</h4>
-                  <p className="text-sm">{formatDate(selectedProduct.lastRestocked)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              onClick={() => setIsDetailOpen(false)}
-              className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-            >
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Restock Product</DialogTitle>
-            <DialogDescription>
-              Add inventory to {selectedProduct?.name}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedProduct && (
-            <div className="py-4">
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Inventory Management</CardTitle>
+              <CardDescription>View and modify your product inventory</CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="mb-4">
-                <p className="text-sm text-muted-foreground">Current Stock:</p>
-                <p className="text-lg font-medium">{selectedProduct.stockQuantity}</p>
-              </div>
-              <Separator className="my-4" />
-              <div>
-                <Label htmlFor="restock-amount">How many to add?</Label>
-                <Input
-                  id="restock-amount"
-                  type="number"
-                  min="1"
-                  value={restockAmount}
-                  onChange={(e) => setRestockAmount(parseInt(e.target.value) || 0)}
-                  className="border-spa-sand mt-1"
+                <Input 
+                  placeholder="Search products..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
                 />
               </div>
-              {restockAmount > 0 && (
-                <div className="mt-4 p-3 bg-spa-sage/10 rounded-md">
-                  <p className="text-sm">
-                    Adding {restockAmount} to inventory will set the new stock
-                    level to:
-                  </p>
-                  <p className="text-lg font-medium mt-1">
-                    {selectedProduct.stockQuantity + restockAmount} items
-                  </p>
+              
+              <ScrollArea className="h-[500px] pr-4">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Stock</TableHead>
+                        <TableHead className="text-right">Cost</TableHead>
+                        <TableHead className="text-right">Price</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProducts.length > 0 ? (
+                        filteredProducts.map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium">
+                              <div>
+                                {product.name}
+                                {product.stockQuantity <= product.lowStockThreshold && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
+                                  >
+                                    Low Stock
+                                  </Badge>
+                                )}
+                              </div>
+                              {product.description && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {product.description}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>{product.category}</TableCell>
+                            <TableCell className="text-right">
+                              {product.stockQuantity}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ${product.costPrice.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              ${product.sellPrice.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => openRestockModal(product)}
+                                >
+                                  <Package className="h-4 w-4 mr-1" /> 
+                                  Restock
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => openEditModal(product)}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                            {searchQuery ? "No products found matching your search." : "No products have been added yet."}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
-              )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Add New Product</CardTitle>
+              <CardDescription>Add a new product to your inventory</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={openAddModal} className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="lg:col-span-1 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Actions</CardTitle>
+              <CardDescription>Manage your inventory with ease</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Low Stock Threshold</h4>
+                <p className="text-sm text-muted-foreground">
+                  Set the threshold for low stock alerts.
+                </p>
+                <Input type="number" placeholder="Enter threshold" />
+              </div>
+              <Button variant="outline" className="w-full">
+                Apply Changes
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+      
+      {/* Add Product Modal */}
+      <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add New Product">
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Name
+            </Label>
+            <Input type="text" id="name" name="name" value={newProduct.name} onChange={handleInputChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="description" className="text-right">
+              Description
+            </Label>
+            <Textarea id="description" name="description" value={newProduct.description} onChange={handleInputChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="category" className="text-right">
+              Category
+            </Label>
+            <Select onValueChange={(value) => setNewProduct(prev => ({ ...prev, category: value }))}>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Skincare">Skincare</SelectItem>
+                <SelectItem value="Makeup">Makeup</SelectItem>
+                <SelectItem value="Haircare">Haircare</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="costPrice" className="text-right">
+              Cost Price
+            </Label>
+            <Input type="number" id="costPrice" name="costPrice" value={newProduct.costPrice} onChange={handleNumberInputChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="sellPrice" className="text-right">
+              Sell Price
+            </Label>
+            <Input type="number" id="sellPrice" name="sellPrice" value={newProduct.sellPrice} onChange={handleNumberInputChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="stockQuantity" className="text-right">
+              Stock Quantity
+            </Label>
+            <Input type="number" id="stockQuantity" name="stockQuantity" value={newProduct.stockQuantity} onChange={handleNumberInputChange} className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="lowStockThreshold" className="text-right">
+              Low Stock Threshold
+            </Label>
+            <Input type="number" id="lowStockThreshold" name="lowStockThreshold" value={newProduct.lowStockThreshold} onChange={handleNumberInputChange} className="col-span-3" />
+          </div>
+        </div>
+        <Button onClick={handleAddProduct} className="w-full">
+          Add Product
+        </Button>
+      </Modal>
+      
+      {/* Edit Product Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={closeEditModal}
+        title="Edit Product"
+        footer={
+          <div className="flex justify-between">
+            <Button variant="destructive" onClick={() => selectedProduct && handleDeleteProduct(selectedProduct.id)}>
+              Delete Product
+            </Button>
+            <Button onClick={handleUpdateProduct}>Update Product</Button>
+          </div>
+        }
+      >
+        {selectedProduct && (
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input
+                type="text"
+                id="name"
+                name="name"
+                value={selectedProduct.name}
+                onChange={(e) =>
+                  setSelectedProduct({ ...selectedProduct, name: e.target.value })
+                }
+                className="col-span-3"
+              />
             </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              className="border-spa-sand"
-              onClick={() => setIsRestockOpen(false)}
-            >
-              Cancel
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={selectedProduct.description}
+                onChange={(e) =>
+                  setSelectedProduct({ ...selectedProduct, description: e.target.value })
+                }
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category" className="text-right">
+                Category
+              </Label>
+              <Select
+                onValueChange={(value) =>
+                  setSelectedProduct({ ...selectedProduct, category: value })
+                }
+                defaultValue={selectedProduct.category}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Skincare">Skincare</SelectItem>
+                  <SelectItem value="Makeup">Makeup</SelectItem>
+                  <SelectItem value="Haircare">Haircare</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="costPrice" className="text-right">
+                Cost Price
+              </Label>
+              <Input
+                type="number"
+                id="costPrice"
+                name="costPrice"
+                value={selectedProduct.costPrice}
+                onChange={(e) =>
+                  setSelectedProduct({
+                    ...selectedProduct,
+                    costPrice: parseFloat(e.target.value),
+                  })
+                }
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sellPrice" className="text-right">
+                Sell Price
+              </Label>
+              <Input
+                type="number"
+                id="sellPrice"
+                name="sellPrice"
+                value={selectedProduct.sellPrice}
+                onChange={(e) =>
+                  setSelectedProduct({
+                    ...selectedProduct,
+                    sellPrice: parseFloat(e.target.value),
+                  })
+                }
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="stockQuantity" className="text-right">
+                Stock Quantity
+              </Label>
+              <Input
+                type="number"
+                id="stockQuantity"
+                name="stockQuantity"
+                value={selectedProduct.stockQuantity}
+                onChange={(e) =>
+                  setSelectedProduct({
+                    ...selectedProduct,
+                    stockQuantity: parseInt(e.target.value),
+                  })
+                }
+                className="col-span-3"
+              />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="lowStockThreshold" className="text-right">
+                Low Stock Threshold
+              </Label>
+              <Input
+                type="number"
+                id="lowStockThreshold"
+                name="lowStockThreshold"
+                value={selectedProduct.lowStockThreshold}
+                onChange={(e) =>
+                  setSelectedProduct({
+                    ...selectedProduct,
+                    lowStockThreshold: parseInt(e.target.value),
+                  })
+                }
+                className="col-span-3"
+              />
+            </div>
+          </div>
+        )}
+      </Modal>
+      
+      {/* Restock Modal */}
+      <Modal isOpen={isRestockModalOpen} onClose={closeRestockModal} title="Restock Product">
+        {selectedProduct && (
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="restockQuantity" className="text-right">
+                Restock Quantity
+              </Label>
+              <Input
+                type="number"
+                id="restockQuantity"
+                name="restockQuantity"
+                value={restockQuantity}
+                onChange={(e) => setRestockQuantity(parseInt(e.target.value))}
+                className="col-span-3"
+              />
+            </div>
+            <Button onClick={handleRestock} className="w-full">
+              Restock Product
             </Button>
-            <Button
-              className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-              onClick={handleRestock}
-              disabled={restockAmount <= 0}
-            >
-              Confirm Restock
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
 
-export default Inventory;
+export default InventoryPage;
