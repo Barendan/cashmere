@@ -1,66 +1,80 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { v4 as uuidv4 } from "uuid";
 
-// Sample product data
+// Sample product data with the new skincare products
 const SAMPLE_PRODUCTS: Product[] = [
   {
     id: "p1",
-    name: "Hydrating Facial Serum",
-    description: "Deep hydration for all skin types",
-    stockQuantity: 15,
-    costPrice: 12.5,
-    sellPrice: 34.99,
-    category: "Facial Care",
-    lowStockThreshold: 5,
-    lastRestocked: new Date("2023-03-15")
+    name: "Facial Wash",
+    description: "A gentle cleanser suitable for daily use, effectively removing makeup and impurities while leaving the skin pH balanced.",
+    stockQuantity: 5,
+    costPrice: 20.00,  // Assuming 50% of retail as cost price
+    sellPrice: 40.00,
+    category: "Cleanser",
+    lowStockThreshold: 3,
+    lastRestocked: new Date(),
+    size: "7 oz",
+    ingredients: "Aloe vera, lactic acid, citric acid",
+    skinConcerns: "All skin types"
   },
   {
     id: "p2",
-    name: "Exfoliating Scrub",
-    description: "Gentle exfoliation for smooth skin",
-    stockQuantity: 8,
-    costPrice: 8.75,
-    sellPrice: 24.99,
-    category: "Cleansers",
+    name: "Smoothing Toner",
+    description: "An alcohol-free toner with lactic and citric acids to help refine pores, remove excess debris and leave the skin refreshed.",
+    stockQuantity: 5,
+    costPrice: 20.00,
+    sellPrice: 40.00,
+    category: "Toner",
     lowStockThreshold: 3,
-    lastRestocked: new Date("2023-03-10")
+    lastRestocked: new Date(),
+    size: "7 oz",
+    ingredients: "Lactic acid, citric acid, aloe vera",
+    skinConcerns: "Oily, breakout-prone skin"
   },
   {
     id: "p3",
-    name: "Calming Rose Toner",
-    description: "Alcohol-free toner with rose water",
-    stockQuantity: 12,
-    costPrice: 5.25,
-    sellPrice: 18.99,
-    category: "Toners",
-    lowStockThreshold: 4,
-    lastRestocked: new Date("2023-03-12")
+    name: "Acne Cream",
+    description: "A spot treatment cream with benzoyl peroxide that clears existing blemishes and prevents future breakouts.",
+    stockQuantity: 5,
+    costPrice: 19.00,
+    sellPrice: 38.00,
+    category: "Corrective",
+    lowStockThreshold: 3,
+    lastRestocked: new Date(),
+    size: "0.5 oz",
+    ingredients: "Benzoyl peroxide 5%",
+    skinConcerns: "Acne, oily skin"
   },
   {
     id: "p4",
-    name: "Overnight Recovery Mask",
-    description: "Intensive repair while you sleep",
-    stockQuantity: 0,
-    costPrice: 15.00,
-    sellPrice: 39.99,
-    category: "Masks",
+    name: "Intensive Age Refining Treatment: 0.5% Pure Retinol Night",
+    description: "A powerful retinol night treatment with peptides and antioxidants for age control.",
+    stockQuantity: 5,
+    costPrice: 60.00,
+    sellPrice: 120.00,
+    category: "Corrective",
     lowStockThreshold: 3,
-    lastRestocked: new Date("2023-02-28")
+    lastRestocked: new Date(),
+    size: "1 oz",
+    ingredients: "Retinol, niacinamide, Hexylresorcinol",
+    skinConcerns: "Fine lines, uneven tone"
   },
   {
     id: "p5",
-    name: "Vitamin C Brightening Cream",
-    description: "For even tone and radiance",
-    stockQuantity: 2,
-    costPrice: 11.25,
-    sellPrice: 29.99,
-    category: "Moisturizers",
+    name: "Weightless Protection Broad Spectrum SPF 45",
+    description: "A lightweight sunscreen that provides broad-spectrum protection with a matte finish.",
+    stockQuantity: 5,
+    costPrice: 22.00,
+    sellPrice: 44.00,
+    category: "Moisturizer",
     lowStockThreshold: 3,
-    lastRestocked: new Date("2023-03-05")
+    lastRestocked: new Date(),
+    size: "1.7 oz",
+    ingredients: "Zinc oxide, octinoxate",
+    skinConcerns: "Sun protection"
   }
 ];
 

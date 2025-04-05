@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useData } from "../contexts/DataContext";
 import { Product } from "../models/types";
@@ -25,6 +24,7 @@ import {
   Trash2,
   RefreshCw,
   Undo2,
+  Info,
 } from "lucide-react";
 
 const Inventory = () => {
@@ -42,6 +42,7 @@ const Inventory = () => {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [isRestockOpen, setIsRestockOpen] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -51,10 +52,12 @@ const Inventory = () => {
     sellPrice: 0,
     category: "",
     lowStockThreshold: 5,
+    size: "",
+    ingredients: "",
+    skinConcerns: "",
   });
   const [restockAmount, setRestockAmount] = useState(0);
 
-  // Filter products based on search term
   const filteredProducts = products
     .filter(
       (product) =>
@@ -64,17 +67,14 @@ const Inventory = () => {
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Separate in-stock and out-of-stock products
   const inStockProducts = filteredProducts.filter((product) => product.stockQuantity > 0);
   const outOfStockProducts = filteredProducts.filter((product) => product.stockQuantity === 0);
 
-  // Calculate total inventory value
   const totalInventoryValue = products.reduce(
     (total, product) => total + product.costPrice * product.stockQuantity,
     0
   );
-  
-  // Calculate total retail value
+
   const totalRetailValue = products.reduce(
     (total, product) => total + product.sellPrice * product.stockQuantity,
     0
@@ -90,6 +90,9 @@ const Inventory = () => {
       sellPrice: 0,
       category: "",
       lowStockThreshold: 5,
+      size: "",
+      ingredients: "",
+      skinConcerns: "",
     });
     setIsAddProductOpen(false);
   };
@@ -122,6 +125,11 @@ const Inventory = () => {
     setIsRestockOpen(true);
   };
 
+  const openDetailModal = (product: Product) => {
+    setSelectedProduct({ ...product });
+    setIsDetailOpen(true);
+  };
+
   const confirmDeleteProduct = (productId: string) => {
     if (confirm("Are you sure you want to delete this product?")) {
       deleteProduct(productId);
@@ -146,7 +154,6 @@ const Inventory = () => {
 
   return (
     <div className="w-full space-y-6">
-      {/* Stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="bg-white">
           <CardContent className="p-6">
@@ -196,7 +203,6 @@ const Inventory = () => {
         </Card>
       </div>
 
-      {/* Inventory management */}
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -231,8 +237,7 @@ const Inventory = () => {
             />
           </div>
 
-          {/* In Stock Products */}
-          <div className="rounded-md border border-spa-sand">
+          <div className="rounded-md border border-spa-sand overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -241,7 +246,7 @@ const Inventory = () => {
                   <TableHead>Stock</TableHead>
                   <TableHead>Cost Price</TableHead>
                   <TableHead>Sell Price</TableHead>
-                  <TableHead>Last Restocked</TableHead>
+                  <TableHead className="hidden md:table-cell">Last Restocked</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -269,9 +274,18 @@ const Inventory = () => {
                       </TableCell>
                       <TableCell>${product.costPrice.toFixed(2)}</TableCell>
                       <TableCell>${product.sellPrice.toFixed(2)}</TableCell>
-                      <TableCell>{formatDate(product.lastRestocked)}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatDate(product.lastRestocked)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => openDetailModal(product)}
+                          >
+                            <Info className="h-4 w-4" />
+                            <span className="sr-only">Details</span>
+                          </Button>
                           <Button
                             size="sm"
                             variant="ghost"
@@ -314,7 +328,6 @@ const Inventory = () => {
             </Table>
           </div>
 
-          {/* Out of Stock Products */}
           {outOfStockProducts.length > 0 && (
             <div className="mt-8">
               <h3 className="text-lg font-medium mb-4">Out of Stock Products</h3>
@@ -379,9 +392,8 @@ const Inventory = () => {
         </CardContent>
       </Card>
 
-      {/* Add Product Dialog */}
       <Dialog open={isAddProductOpen} onOpenChange={setIsAddProductOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
             <DialogDescription>
@@ -434,6 +446,39 @@ const Inventory = () => {
                       ...newProduct,
                       stockQuantity: parseInt(e.target.value) || 0,
                     })
+                  }
+                  className="border-spa-sand mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="size">Size/Volume</Label>
+                <Input
+                  id="size"
+                  value={newProduct.size}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, size: e.target.value })
+                  }
+                  className="border-spa-sand mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="ingredients">Ingredients</Label>
+                <Input
+                  id="ingredients"
+                  value={newProduct.ingredients}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, ingredients: e.target.value })
+                  }
+                  className="border-spa-sand mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="skinConcerns">Skin Concerns</Label>
+                <Input
+                  id="skinConcerns"
+                  value={newProduct.skinConcerns}
+                  onChange={(e) =>
+                    setNewProduct({ ...newProduct, skinConcerns: e.target.value })
                   }
                   className="border-spa-sand mt-1"
                 />
@@ -506,9 +551,8 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Product Dialog */}
       <Dialog open={isEditProductOpen} onOpenChange={setIsEditProductOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>
@@ -567,6 +611,48 @@ const Inventory = () => {
                       setSelectedProduct({
                         ...selectedProduct,
                         stockQuantity: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="border-spa-sand mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-size">Size/Volume</Label>
+                  <Input
+                    id="edit-size"
+                    value={selectedProduct.size || ""}
+                    onChange={(e) =>
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        size: e.target.value,
+                      })
+                    }
+                    className="border-spa-sand mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-ingredients">Ingredients</Label>
+                  <Input
+                    id="edit-ingredients"
+                    value={selectedProduct.ingredients || ""}
+                    onChange={(e) =>
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        ingredients: e.target.value,
+                      })
+                    }
+                    className="border-spa-sand mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-skinConcerns">Skin Concerns</Label>
+                  <Input
+                    id="edit-skinConcerns"
+                    value={selectedProduct.skinConcerns || ""}
+                    onChange={(e) =>
+                      setSelectedProduct({
+                        ...selectedProduct,
+                        skinConcerns: e.target.value,
                       })
                     }
                     className="border-spa-sand mt-1"
@@ -640,7 +726,70 @@ const Inventory = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Restock Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Product Details</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="py-4">
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedProduct.name}</h3>
+                  <p className="text-sm text-muted-foreground">{selectedProduct.category}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Description</h4>
+                  <p className="text-sm">{selectedProduct.description}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Size/Volume</h4>
+                    <p className="text-sm">{selectedProduct.size || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Current Stock</h4>
+                    <p className="text-sm">{selectedProduct.stockQuantity} units</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Ingredients</h4>
+                  <p className="text-sm">{selectedProduct.ingredients || "Not specified"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Skin Concerns</h4>
+                  <p className="text-sm">{selectedProduct.skinConcerns || "Not specified"}</p>
+                </div>
+                <Separator />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Cost Price</h4>
+                    <p className="text-sm">${selectedProduct.costPrice.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Retail Price</h4>
+                    <p className="text-sm">${selectedProduct.sellPrice.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Last Restocked</h4>
+                  <p className="text-sm">{formatDate(selectedProduct.lastRestocked)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              onClick={() => setIsDetailOpen(false)}
+              className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isRestockOpen} onOpenChange={setIsRestockOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

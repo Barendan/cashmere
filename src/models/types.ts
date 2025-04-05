@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -10,6 +9,9 @@ export interface Product {
   lowStockThreshold: number;
   imageUrl?: string;
   lastRestocked?: Date;
+  size?: string;
+  ingredients?: string;
+  skinConcerns?: string;
 }
 
 export interface Transaction {
