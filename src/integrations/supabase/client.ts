@@ -11,5 +11,11 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Export type-safe helper for table references
+// Export type-safe helper types for table references
 export type Tables = Database['public']['Tables']
+export type ProductRow = Tables['products']['Row']
+export type ProductInsert = Tables['products']['Insert'] 
+export type ProductUpdate = Tables['products']['Update']
+export type TransactionRow = Tables['transactions']['Row']
+export type TransactionInsert = Tables['transactions']['Insert']
+export type TransactionUpdate = Tables['transactions']['Update']

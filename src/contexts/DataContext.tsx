@@ -3,7 +3,7 @@ import { Product, Transaction } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { v4 as uuidv4 } from "uuid";
-import { supabase, Tables } from "../integrations/supabase/client";
+import { supabase, ProductRow, ProductInsert, TransactionRow, TransactionInsert } from "../integrations/supabase/client";
 
 interface DataContextType {
   products: Product[];
@@ -54,11 +54,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           sellPrice: item.sell_price,
           category: item.category,
           lowStockThreshold: item.low_stock_threshold,
-          imageUrl: item.image_url,
+          imageUrl: item.image_url ?? undefined, // Handle potential missing field
           lastRestocked: item.last_restocked ? new Date(item.last_restocked) : undefined,
-          size: item.size,
-          ingredients: item.ingredients,
-          skinConcerns: item.skin_concerns
+          size: item.size ?? undefined,
+          ingredients: item.ingredients ?? undefined,
+          skinConcerns: item.skin_concerns ?? undefined
         }));
         setProducts(transformedProducts);
 
@@ -110,22 +110,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addProduct = async (product: Omit<Product, "id">) => {
     try {
+      const productToInsert: ProductInsert = {
+        name: product.name,
+        description: product.description,
+        stock_quantity: product.stockQuantity,
+        cost_price: product.costPrice,
+        sell_price: product.sellPrice,
+        category: product.category,
+        low_stock_threshold: product.lowStockThreshold,
+        size: product.size,
+        ingredients: product.ingredients,
+        skin_concerns: product.skinConcerns,
+      }
+      
+      if (product.lastRestocked) {
+        productToInsert.last_restocked = product.lastRestocked.toISOString();
+      }
+
       const { data, error } = await supabase
         .from('products')
-        .insert({
-          name: product.name,
-          description: product.description,
-          stock_quantity: product.stockQuantity,
-          cost_price: product.costPrice,
-          sell_price: product.sellPrice,
-          category: product.category,
-          low_stock_threshold: product.lowStockThreshold,
-          image_url: product.imageUrl,
-          last_restocked: product.lastRestocked,
-          size: product.size,
-          ingredients: product.ingredients,
-          skin_concerns: product.skinConcerns
-        })
+        .insert(productToInsert)
         .select();
       
       if (error) {
@@ -169,7 +173,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     saveLastAction("updateProduct", { id, oldData: { ...oldProduct } });
     
     try {
-      const supabaseUpdates: Partial<Tables['products']['Update']> = {};
+      const supabaseUpdates: Record<string, any> = {};
       if (updates.name !== undefined) supabaseUpdates.name = updates.name;
       if (updates.description !== undefined) supabaseUpdates.description = updates.description;
       if (updates.stockQuantity !== undefined) supabaseUpdates.stock_quantity = updates.stockQuantity;
@@ -178,11 +182,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updates.category !== undefined) supabaseUpdates.category = updates.category;
       if (updates.lowStockThreshold !== undefined) supabaseUpdates.low_stock_threshold = updates.lowStockThreshold;
       if (updates.imageUrl !== undefined) supabaseUpdates.image_url = updates.imageUrl;
-      if (updates.lastRestocked !== undefined) supabaseUpdates.last_restocked = updates.lastRestocked;
+      if (updates.lastRestocked !== undefined) {
+        supabaseUpdates.last_restocked = updates.lastRestocked ? updates.lastRestocked.toISOString() : null;
+      }
       if (updates.size !== undefined) supabaseUpdates.size = updates.size;
       if (updates.ingredients !== undefined) supabaseUpdates.ingredients = updates.ingredients;
       if (updates.skinConcerns !== undefined) supabaseUpdates.skin_concerns = updates.skinConcerns;
-      supabaseUpdates.updated_at = new Date();
+      supabaseUpdates.updated_at = new Date().toISOString();
       
       const { error } = await supabase
         .from('products')
@@ -254,11 +260,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     try {
+      const now = new Date();
       const { error: updateError } = await supabase
         .from('products')
         .update({ 
           stock_quantity: product.stockQuantity - quantity,
-          updated_at: new Date()
+          updated_at: now.toISOString()
         })
         .eq('id', productId);
 
@@ -266,13 +273,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw updateError;
       }
 
-      const newTransactionData = {
+      const newTransactionData: TransactionInsert = {
         product_id: productId,
         product_name: product.name,
         quantity,
         price: product.sellPrice * quantity,
         type: 'sale',
-        date: new Date(),
+        date: now.toISOString(),
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User'
       };
@@ -338,8 +345,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .from('products')
         .update({ 
           stock_quantity: product.stockQuantity + quantity,
-          last_restocked: now,
-          updated_at: now
+          last_restocked: now.toISOString(),
+          updated_at: now.toISOString()
         })
         .eq('id', productId);
 
@@ -347,13 +354,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw updateError;
       }
 
-      const newTransactionData = {
+      const newTransactionData: TransactionInsert = {
         product_id: productId,
         product_name: product.name,
         quantity,
         price: product.costPrice * quantity,
         type: 'restock',
-        date: now,
+        date: now.toISOString(),
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User'
       };
@@ -420,12 +427,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       const difference = newQuantity - product.stockQuantity;
+      const now = new Date();
       
       const { error: updateError } = await supabase
         .from('products')
         .update({ 
           stock_quantity: newQuantity,
-          updated_at: new Date()
+          updated_at: now.toISOString()
         })
         .eq('id', productId);
 
@@ -433,13 +441,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw updateError;
       }
 
-      const newTransactionData = {
+      const newTransactionData: TransactionInsert = {
         product_id: productId,
         product_name: product.name,
         quantity: Math.abs(difference),
         price: 0, // No price impact for adjustment
         type: 'adjustment',
-        date: new Date(),
+        date: now.toISOString(),
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User'
       };
@@ -468,7 +476,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           quantity: Math.abs(difference),
           price: 0,
           type: "adjustment",
-          date: new Date(data[0].date),
+          date: now,
           userId: data[0].user_id,
           userName: data[0].user_name
         };
