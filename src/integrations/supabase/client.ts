@@ -19,6 +19,12 @@ export type ProductUpdate = Tables['products']['Update']
 export type TransactionRow = Tables['transactions']['Row']
 export type TransactionInsert = Tables['transactions']['Insert']
 export type TransactionUpdate = Tables['transactions']['Update']
+export type ServiceRow = Tables['services']['Row']
+export type ServiceInsert = Tables['services']['Insert']
+export type ServiceUpdate = Tables['services']['Update']
+export type FinanceRow = Tables['finances']['Row']
+export type FinanceInsert = Tables['finances']['Insert']
+export type FinanceUpdate = Tables['finances']['Update']
 
 // Add imageUrl mapping helper to standardize with our model
 export const mapProductRowToProduct = (row: ProductRow) => ({

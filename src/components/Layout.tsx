@@ -3,7 +3,7 @@ import React from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Leaf, LayoutDashboard, Package, LogOut, BarChart3 } from "lucide-react";
+import { Leaf, LayoutDashboard, Package, LogOut, BarChart3, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LayoutProps {
@@ -34,6 +34,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       name: "Metrics",
       path: "/metrics",
       icon: <BarChart3 size={20} />,
+      adminOnly: false,
+    },
+    {
+      name: "Finance",
+      path: "/finance",
+      icon: <DollarSign size={20} />,
       adminOnly: false,
     },
   ];

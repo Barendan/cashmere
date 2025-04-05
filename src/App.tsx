@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import SalesLog from "./pages/SalesLog";
 import Inventory from "./pages/Inventory";
 import Metrics from "./pages/Metrics";
+import Finance from "./pages/Finance";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<SalesLog />} />
                 <Route path="/metrics" element={<Metrics />} />
+                <Route path="/finance" element={<Finance />} />
               </Route>
               
               {/* Admin-only routes */}

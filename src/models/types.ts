@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -50,4 +51,29 @@ export interface RestockHistory {
   }[];
   userId: string;
   userName: string;
+}
+
+// New types for finance tracking
+export interface Service {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+}
+
+export interface FinanceRecord {
+  id: string;
+  type: 'income' | 'expense';
+  date: Date;
+  amount: number;
+  description?: string;
+  
+  // Income specific fields
+  customerName?: string;
+  serviceId?: string;
+  paymentMethod?: string;
+  
+  // Expense specific fields
+  vendor?: string;
+  category?: string;
 }
