@@ -19,3 +19,20 @@ export type ProductUpdate = Tables['products']['Update']
 export type TransactionRow = Tables['transactions']['Row']
 export type TransactionInsert = Tables['transactions']['Insert']
 export type TransactionUpdate = Tables['transactions']['Update']
+
+// Add imageUrl mapping helper to standardize with our model
+export const mapProductRowToProduct = (row: ProductRow) => ({
+  id: row.id,
+  name: row.name,
+  description: row.description || '',
+  stockQuantity: row.stock_quantity,
+  costPrice: row.cost_price,
+  sellPrice: row.sell_price,
+  category: row.category,
+  lowStockThreshold: row.low_stock_threshold,
+  imageUrl: undefined, // The database doesn't have this field
+  lastRestocked: row.last_restocked ? new Date(row.last_restocked) : undefined,
+  size: row.size ?? undefined,
+  ingredients: row.ingredients ?? undefined,
+  skinConcerns: row.skin_concerns ?? undefined
+});

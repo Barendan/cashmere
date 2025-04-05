@@ -3,7 +3,14 @@ import { Product, Transaction } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { v4 as uuidv4 } from "uuid";
-import { supabase, ProductRow, ProductInsert, TransactionRow, TransactionInsert } from "../integrations/supabase/client";
+import { 
+  supabase, 
+  ProductRow, 
+  ProductInsert, 
+  TransactionRow, 
+  TransactionInsert, 
+  mapProductRowToProduct 
+} from "../integrations/supabase/client";
 
 interface DataContextType {
   products: Product[];
@@ -45,21 +52,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           throw productsError;
         }
 
-        const transformedProducts: Product[] = productsData.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description || '',
-          stockQuantity: item.stock_quantity,
-          costPrice: item.cost_price,
-          sellPrice: item.sell_price,
-          category: item.category,
-          lowStockThreshold: item.low_stock_threshold,
-          imageUrl: item.image_url ?? undefined, // Handle potential missing field
-          lastRestocked: item.last_restocked ? new Date(item.last_restocked) : undefined,
-          size: item.size ?? undefined,
-          ingredients: item.ingredients ?? undefined,
-          skinConcerns: item.skin_concerns ?? undefined
-        }));
+        const transformedProducts: Product[] = productsData.map(row => mapProductRowToProduct(row));
         setProducts(transformedProducts);
 
         const { data: transactionsData, error: transactionsError } = await supabase
@@ -137,21 +130,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (data && data.length > 0) {
-        const newProduct: Product = {
-          id: data[0].id,
-          name: data[0].name,
-          description: data[0].description || '',
-          stockQuantity: data[0].stock_quantity,
-          costPrice: data[0].cost_price,
-          sellPrice: data[0].sell_price,
-          category: data[0].category,
-          lowStockThreshold: data[0].low_stock_threshold,
-          imageUrl: data[0].image_url,
-          lastRestocked: data[0].last_restocked ? new Date(data[0].last_restocked) : undefined,
-          size: data[0].size,
-          ingredients: data[0].ingredients,
-          skinConcerns: data[0].skin_concerns
-        };
+        const newProduct: Product = mapProductRowToProduct(data[0]);
         
         setProducts([...products, newProduct]);
         toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
@@ -181,7 +160,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updates.sellPrice !== undefined) supabaseUpdates.sell_price = updates.sellPrice;
       if (updates.category !== undefined) supabaseUpdates.category = updates.category;
       if (updates.lowStockThreshold !== undefined) supabaseUpdates.low_stock_threshold = updates.lowStockThreshold;
-      if (updates.imageUrl !== undefined) supabaseUpdates.image_url = updates.imageUrl;
       if (updates.lastRestocked !== undefined) {
         supabaseUpdates.last_restocked = updates.lastRestocked ? updates.lastRestocked.toISOString() : null;
       }
@@ -526,7 +504,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .from('products')
             .update({ 
               stock_quantity: data.oldQuantity,
-              updated_at: new Date()
+              updated_at: new Date().toISOString()
             })
             .eq('id', data.productId);
           
@@ -550,7 +528,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .from('products')
             .update({ 
               stock_quantity: data.oldQuantity,
-              updated_at: new Date()
+              updated_at: new Date().toISOString()
             })
             .eq('id', data.productId);
           
@@ -574,7 +552,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             .from('products')
             .update({ 
               stock_quantity: data.oldQuantity,
-              updated_at: new Date()
+              updated_at: new Date().toISOString()
             })
             .eq('id', data.productId);
           
@@ -600,6 +578,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         case "updateProduct":
           const supabaseUpdates: any = {};
           Object.keys(data.oldData).forEach(key => {
+            if (key === 'imageUrl') return; // Skip imageUrl as it's not in database schema
+            if (key === 'lastRestocked' && data.oldData[key]) {
+              supabaseUpdates.last_restocked = data.oldData[key].toISOString();
+              return;
+            }
             const snakeCaseKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
             supabaseUpdates[snakeCaseKey] = data.oldData[key];
           });
@@ -618,23 +601,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
         case "deleteProduct":
           const restoredProduct = data.product;
+          const productInsert: ProductInsert = {
+            id: restoredProduct.id,
+            name: restoredProduct.name,
+            description: restoredProduct.description,
+            stock_quantity: restoredProduct.stockQuantity,
+            cost_price: restoredProduct.costPrice,
+            sell_price: restoredProduct.sellPrice,
+            category: restoredProduct.category,
+            low_stock_threshold: restoredProduct.lowStockThreshold,
+            size: restoredProduct.size,
+            ingredients: restoredProduct.ingredients,
+            skin_concerns: restoredProduct.skinConcerns
+          };
+          
+          if (restoredProduct.lastRestocked) {
+            productInsert.last_restocked = restoredProduct.lastRestocked.toISOString();
+          }
+          
           const { data: insertedProduct, error: insertError } = await supabase
             .from('products')
-            .insert({
-              id: restoredProduct.id,
-              name: restoredProduct.name,
-              description: restoredProduct.description,
-              stock_quantity: restoredProduct.stockQuantity,
-              cost_price: restoredProduct.costPrice,
-              sell_price: restoredProduct.sellPrice,
-              category: restoredProduct.category,
-              low_stock_threshold: restoredProduct.lowStockThreshold,
-              image_url: restoredProduct.imageUrl,
-              last_restocked: restoredProduct.lastRestocked,
-              size: restoredProduct.size,
-              ingredients: restoredProduct.ingredients,
-              skin_concerns: restoredProduct.skinConcerns
-            })
+            .insert(productInsert)
             .select();
             
           if (insertError) {
