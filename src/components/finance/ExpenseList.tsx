@@ -28,7 +28,7 @@ const categoryColors: Record<string, string> = {
   other: "bg-gray-100 text-gray-800",
 };
 
-const ExpenseList = () => {
+const ExpenseList = ({ newExpense }) => {
   const [expenses, setExpenses] = useState<FinanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -66,6 +66,14 @@ const ExpenseList = () => {
 
     fetchExpenses();
   }, [toast]);
+
+  // When a new expense is added, update the list
+  useEffect(() => {
+    if (newExpense) {
+      const formattedExpense = mapFinanceRowToFinanceRecord(newExpense);
+      setExpenses(prev => [formattedExpense, ...prev]);
+    }
+  }, [newExpense]);
 
   if (isLoading) {
     return (

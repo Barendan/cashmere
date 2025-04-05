@@ -46,7 +46,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const IncomeForm = () => {
+const IncomeForm = ({ onIncomeAdded }) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
@@ -102,7 +102,7 @@ const IncomeForm = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase
+      const { data: newIncome, error } = await supabase
         .from("finances")
         .insert({
           type: "income",
@@ -112,7 +112,8 @@ const IncomeForm = () => {
           amount: selectedService.price,
           payment_method: data.paymentMethod,
           description: data.description || null,
-        });
+        })
+        .select('*, services:service_id(name, price)');
 
       if (error) throw error;
 
@@ -121,6 +122,11 @@ const IncomeForm = () => {
         description: `Service for ${data.customerName} recorded successfully`,
       });
 
+      // Call the callback with the new income record
+      if (newIncome && newIncome.length > 0) {
+        onIncomeAdded(newIncome[0]);
+      }
+
       form.reset({
         customerName: "",
         serviceId: "",
@@ -128,6 +134,7 @@ const IncomeForm = () => {
         paymentMethod: "cash",
         description: "",
       });
+      
       setSelectedService(null);
     } catch (error) {
       console.error("Error recording income:", error);

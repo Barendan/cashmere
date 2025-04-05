@@ -1,178 +1,170 @@
 
 import React, { useState, useEffect } from "react";
-import { supabase, mapFinanceRowToFinanceRecord, mapServiceRowToService } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { startOfMonth, endOfMonth, format } from "date-fns";
-import { PiggyBank, CreditCard } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
+import { format } from "date-fns";
 
-interface FinanceSummaryData {
+interface Summary {
   totalIncome: number;
   totalExpenses: number;
   netProfit: number;
-  topService: string | null;
-  topVendor: string | null;
+  topServiceName: string;
+  topServiceAmount: number;
+  topVendor: string;
+  topVendorAmount: number;
 }
 
-const FinanceSummary = () => {
-  const [summary, setSummary] = useState<FinanceSummaryData>({
+const FinanceSummary = ({ newIncome, newExpense }) => {
+  const [summary, setSummary] = useState<Summary>({
     totalIncome: 0,
     totalExpenses: 0,
     netProfit: 0,
-    topService: null,
-    topVendor: null,
+    topServiceName: "",
+    topServiceAmount: 0,
+    topVendor: "",
+    topVendorAmount: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-  const currentMonth = format(new Date(), "MMMM yyyy");
 
-  useEffect(() => {
-    const fetchSummaryData = async () => {
-      try {
-        // Get date range for current month
-        const startDate = startOfMonth(new Date()).toISOString();
-        const endDate = endOfMonth(new Date()).toISOString();
+  const fetchFinancialSummary = async () => {
+    try {
+      // Fetch total income for current month
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
 
-        // Get income sum
-        const { data: incomeData, error: incomeError } = await supabase
-          .from("finances")
-          .select("amount")
-          .eq("type", "income")
-          .gte("date", startDate)
-          .lte("date", endDate);
+      const { data: incomeData, error: incomeError } = await supabase
+        .from("finances")
+        .select("amount")
+        .eq("type", "income")
+        .gte("date", startOfMonth.toISOString());
 
-        if (incomeError) throw incomeError;
+      // Fetch total expenses for current month
+      const { data: expenseData, error: expenseError } = await supabase
+        .from("finances")
+        .select("amount")
+        .eq("type", "expense")
+        .gte("date", startOfMonth.toISOString());
 
-        // Get expense sum
-        const { data: expenseData, error: expenseError } = await supabase
-          .from("finances")
-          .select("amount")
-          .eq("type", "expense")
-          .gte("date", startDate)
-          .lte("date", endDate);
-
-        if (expenseError) throw expenseError;
-
-        // Calculate totals
-        const totalIncome = incomeData ? incomeData.reduce((sum, record) => sum + (record.amount || 0), 0) : 0;
-        const totalExpenses = expenseData ? expenseData.reduce((sum, record) => sum + (record.amount || 0), 0) : 0;
-        const netProfit = totalIncome - totalExpenses;
-
-        // Get top service
-        const { data: topServiceData, error: topServiceError } = await supabase
-          .from("finances")
-          .select(`
-            service_id,
-            services:service_id (
-              name
-            )
-          `)
-          .eq("type", "income")
-          .order("amount", { ascending: false })
-          .limit(1);
-
-        if (topServiceError) throw topServiceError;
-
-        // Get top vendor
-        const { data: topVendorData, error: topVendorError } = await supabase
-          .from("finances")
-          .select("vendor")
-          .eq("type", "expense")
-          .order("amount", { ascending: false })
-          .limit(1);
-
-        if (topVendorError) throw topVendorError;
-
-        setSummary({
-          totalIncome,
-          totalExpenses,
-          netProfit,
-          topService: topServiceData && topServiceData.length > 0 && topServiceData[0].services 
-            ? topServiceData[0].services.name 
-            : null,
-          topVendor: topVendorData && topVendorData.length > 0 && topVendorData[0].vendor 
-            ? topVendorData[0].vendor 
-            : null,
-        });
-      } catch (error) {
-        console.error("Error fetching finance summary:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load financial summary",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
+      if (incomeError || expenseError) {
+        throw incomeError || expenseError;
       }
-    };
 
-    fetchSummaryData();
-  }, [toast]);
+      // Calculate totals
+      const totalIncome = incomeData?.reduce((sum, record) => sum + record.amount, 0) || 0;
+      const totalExpenses = expenseData?.reduce((sum, record) => sum + record.amount, 0) || 0;
+      const netProfit = totalIncome - totalExpenses;
+
+      // Fetch top service
+      const { data: topServiceData, error: topServiceError } = await supabase
+        .from("finances")
+        .select(`
+          amount, 
+          services:service_id (name)
+        `)
+        .eq("type", "income")
+        .not("service_id", "is", null)
+        .order("amount", { ascending: false })
+        .limit(1);
+
+      // Fetch top vendor
+      const { data: topVendorData, error: topVendorError } = await supabase
+        .from("finances")
+        .select(`amount, vendor`)
+        .eq("type", "expense")
+        .not("vendor", "is", null)
+        .order("amount", { ascending: false })
+        .limit(1);
+
+      const topServiceName = topServiceData?.[0]?.services?.name || "No services";
+      const topServiceAmount = topServiceData?.[0]?.amount || 0;
+      const topVendor = topVendorData?.[0]?.vendor || "No vendors";
+      const topVendorAmount = topVendorData?.[0]?.amount || 0;
+
+      setSummary({
+        totalIncome,
+        totalExpenses,
+        netProfit,
+        topServiceName,
+        topServiceAmount,
+        topVendor,
+        topVendorAmount,
+      });
+    } catch (error) {
+      console.error("Error fetching financial summary:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial load and refresh when new transactions are added
+  useEffect(() => {
+    fetchFinancialSummary();
+  }, [newIncome, newExpense]);
 
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
       </div>
     );
   }
 
+  const currentMonth = format(new Date(), "MMMM yyyy");
+
   return (
     <div className="space-y-4">
-      <h4 className="text-sm font-medium text-muted-foreground">
+      <div className="text-sm text-muted-foreground mb-2">
         Summary for {currentMonth}
-      </h4>
-
+      </div>
       <div className="grid gap-4">
         <Card className="bg-green-50">
-          <CardContent className="p-4 flex items-center">
-            <PiggyBank className="h-8 w-8 mr-4 text-green-600" />
-            <div>
-              <p className="text-sm font-medium text-green-800">Income</p>
-              <p className="text-xl font-bold text-green-700">
-                ${summary.totalIncome.toFixed(2)}
-              </p>
+          <CardContent className="p-4">
+            <div className="text-sm font-medium text-gray-500">Total Income</div>
+            <div className="text-2xl font-bold text-green-600">
+              ${summary.totalIncome.toFixed(2)}
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-red-50">
-          <CardContent className="p-4 flex items-center">
-            <CreditCard className="h-8 w-8 mr-4 text-red-600" />
-            <div>
-              <p className="text-sm font-medium text-red-800">Expenses</p>
-              <p className="text-xl font-bold text-red-700">
-                ${summary.totalExpenses.toFixed(2)}
-              </p>
+          <CardContent className="p-4">
+            <div className="text-sm font-medium text-gray-500">Total Expenses</div>
+            <div className="text-2xl font-bold text-red-600">
+              ${summary.totalExpenses.toFixed(2)}
             </div>
           </CardContent>
         </Card>
 
-        <Card className={summary.netProfit >= 0 ? "bg-blue-50" : "bg-amber-50"}>
+        <Card className={`${summary.netProfit >= 0 ? "bg-blue-50" : "bg-amber-50"}`}>
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-muted-foreground">Net Profit</p>
-            <p className={`text-2xl font-bold ${
-              summary.netProfit >= 0 ? "text-blue-700" : "text-amber-700"
-            }`}>
+            <div className="text-sm font-medium text-gray-500">Net Profit</div>
+            <div className={`text-2xl font-bold ${summary.netProfit >= 0 ? "text-blue-600" : "text-amber-600"}`}>
               ${summary.netProfit.toFixed(2)}
-            </p>
+            </div>
           </CardContent>
         </Card>
+      </div>
 
-        <div className="pt-2">
-          {summary.topService && (
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Top service:</span> {summary.topService}
-            </p>
-          )}
-          {summary.topVendor && (
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Top vendor:</span> {summary.topVendor}
-            </p>
-          )}
+      <div className="pt-4">
+        <div className="text-sm font-medium mb-2">Top Service</div>
+        <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+          <span className="font-medium">{summary.topServiceName}</span>
+          <span>${summary.topServiceAmount.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-sm font-medium mb-2">Top Vendor</div>
+        <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+          <span className="font-medium">{summary.topVendor}</span>
+          <span>${summary.topVendorAmount.toFixed(2)}</span>
         </div>
       </div>
     </div>

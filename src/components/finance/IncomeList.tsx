@@ -18,7 +18,7 @@ interface ServiceIncome extends FinanceRecord {
   serviceName: string;
 }
 
-const IncomeList = () => {
+const IncomeList = ({ newIncome }) => {
   const [incomeRecords, setIncomeRecords] = useState<ServiceIncome[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -66,6 +66,18 @@ const IncomeList = () => {
 
     fetchIncomeRecords();
   }, [toast]);
+
+  // When a new income record is added, update the list
+  useEffect(() => {
+    if (newIncome) {
+      const financeRecord = mapFinanceRowToFinanceRecord(newIncome);
+      const newIncomeRecord: ServiceIncome = {
+        ...financeRecord,
+        serviceName: newIncome.services?.name || "Unknown Service",
+      };
+      setIncomeRecords(prev => [newIncomeRecord, ...prev]);
+    }
+  }, [newIncome]);
 
   if (isLoading) {
     return (

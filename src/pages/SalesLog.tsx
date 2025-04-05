@@ -1,53 +1,129 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
 import { Product, Transaction } from "../models/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Undo2, PlusCircle, MinusCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Undo2, Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import usePageTitle from "@/hooks/usePageTitle";
+import ShoppingCart from "@/components/sales/ShoppingCart";
+import ProductCard from "@/components/sales/ProductCard";
+import { formatDate } from "@/lib/format";
 
 const SalesLog = () => {
+  usePageTitle("Sales Log");
   const { products, transactions, recordSale, undoLastTransaction } = useData();
-  const { isAdmin } = useAuth();
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [quantity, setQuantity] = useState<number>(1);
+  const { isAdmin, user } = useAuth();
+  const { toast } = useToast();
   const [filterType, setFilterType] = useState<string>("all");
-
-  const inStockProducts = [...products]
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [cartItems, setCartItems] = useState<{product: Product, quantity: number}[]>([]);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  // Filter products that have stock
+  const availableProducts = products
     .filter((product) => product.stockQuantity > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
-
-  const handleSale = () => {
-    if (selectedProductId && quantity > 0) {
-      recordSale(selectedProductId, quantity);
-      setSelectedProductId("");
-      setQuantity(1);
+  
+  // Handle adding item to cart
+  const handleAddToCart = (product: Product) => {
+    // Check if product is already in cart
+    const existingItem = cartItems.find(item => item.product.id === product.id);
+    if (existingItem) return;
+    
+    // Add to cart with quantity 1
+    setCartItems([...cartItems, { product, quantity: 1 }]);
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart`,
+    });
+  };
+  
+  // Handle updating item quantity
+  const handleUpdateQuantity = (productId: string, quantity: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    // Make sure quantity doesn't exceed stock
+    const safeQuantity = Math.min(quantity, product.stockQuantity);
+    
+    setCartItems(cartItems.map(item => 
+      item.product.id === productId 
+        ? { ...item, quantity: safeQuantity }
+        : item
+    ));
+  };
+  
+  // Handle removing item from cart
+  const handleRemoveItem = (productId: string) => {
+    setCartItems(cartItems.filter(item => item.product.id !== productId));
+  };
+  
+  // Clear the entire cart
+  const handleClearCart = () => {
+    setCartItems([]);
+  };
+  
+  // Complete the sale by processing all items in cart
+  const handleCompleteSale = async () => {
+    if (cartItems.length === 0) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      // Process each item in cart
+      for (const item of cartItems) {
+        await recordSale(item.product.id, item.quantity);
+      }
+      
+      // Clear cart after successful sale
+      setCartItems([]);
+      toast({
+        title: "Sale completed",
+        description: `Successfully processed ${cartItems.length} product${cartItems.length > 1 ? 's' : ''}`,
+      });
+    } catch (error) {
+      console.error("Error processing sale:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process the sale. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const filteredTransactions = transactions.filter((transaction) => {
-    if (filterType === "all") return true;
-    return transaction.type === filterType;
+    if (filterType !== "all" && transaction.type !== filterType) return false;
+    
+    // Apply search filter if search term exists
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return transaction.productName.toLowerCase().includes(searchLower) ||
+             transaction.userName.toLowerCase().includes(searchLower);
+    }
+    return true;
   });
 
-  const formatDate = (date: Date) => {
-    if (typeof date === 'string') {
-      date = new Date(date);
-    }
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    }).format(date);
+  // Check if product is in cart
+  const isProductInCart = (productId: string) => {
+    return cartItems.some(item => item.product.id === productId);
   };
+  
+  // Filter products based on search term
+  const filteredProducts = availableProducts.filter(product => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    return product.name.toLowerCase().includes(searchLower) ||
+           (product.description && product.description.toLowerCase().includes(searchLower));
+  });
 
   const getTransactionTypeColor = (type: string) => {
     switch (type) {
@@ -64,176 +140,82 @@ const SalesLog = () => {
     }
   };
 
-  const selectedProduct = products.find((p) => p.id === selectedProductId);
-  const maxQuantity = selectedProduct ? selectedProduct.stockQuantity : 0;
-
   return (
     <div className="w-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <Card className="lg:col-span-2 bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Record Sale</CardTitle>
-            <CardDescription>Enter product sale details</CardDescription>
+            <CardTitle className="text-spa-deep">Available Products</CardTitle>
+            <CardDescription>Select products to add to cart</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="product">Product</Label>
-                <Select value={selectedProductId} onValueChange={setSelectedProductId}>
-                  <SelectTrigger className="border-spa-sand">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Products</SelectLabel>
-                      {inStockProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} ({product.stockQuantity} in stock)
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="border-spa-sand"
-                    disabled={!selectedProductId || quantity <= 1}
-                    onClick={() => setQuantity(quantity - 1)}
-                  >
-                    <MinusCircle size={18} />
-                  </Button>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    value={quantity}
-                    min={1}
-                    max={maxQuantity}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      if (val >= 1 && val <= maxQuantity) {
-                        setQuantity(val);
-                      }
-                    }}
-                    className="text-center border-spa-sand"
-                    disabled={!selectedProductId}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    className="border-spa-sand"
-                    disabled={!selectedProductId || quantity >= maxQuantity}
-                    onClick={() => setQuantity(quantity + 1)}
-                  >
-                    <PlusCircle size={18} />
-                  </Button>
-                </div>
-                {selectedProductId && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {maxQuantity} available
-                  </p>
-                )}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search" 
+                  placeholder="Search products..." 
+                  className="pl-8 border-spa-sand"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
             </div>
-            {selectedProductId && selectedProduct && (
-              <div className="mt-6 p-4 border border-spa-sand rounded-md bg-spa-cream/30">
-                <h3 className="font-medium mb-2">Sale Summary</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>Product:</div>
-                  <div className="font-medium">{selectedProduct.name}</div>
-                  <div>Price per Item:</div>
-                  <div className="font-medium">${selectedProduct.sellPrice.toFixed(2)}</div>
-                  <div>Quantity:</div>
-                  <div className="font-medium">{quantity}</div>
-                  <div>Total:</div>
-                  <div className="font-medium text-lg text-spa-deep">
-                    ${(selectedProduct.sellPrice * quantity).toFixed(2)}
-                  </div>
-                </div>
+            
+            {filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredProducts.map((product) => (
+                  <ProductCard 
+                    key={product.id}
+                    product={product}
+                    onAddToCart={handleAddToCart}
+                    isInCart={isProductInCart(product.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No products found</p>
+                <p className="text-sm mt-1">
+                  {searchTerm ? 
+                    "Try a different search term" : 
+                    "There are no products with available stock"}
+                </p>
               </div>
             )}
-            <div className="flex justify-between mt-6">
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
+            <CardDescription>Review and complete sale</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShoppingCart 
+              items={cartItems}
+              updateQuantity={handleUpdateQuantity}
+              removeItem={handleRemoveItem}
+              clearCart={handleClearCart}
+              recordSale={handleCompleteSale}
+              isProcessing={isProcessing}
+            />
+            
+            <div className="mt-6">
               <Button
                 type="button"
                 variant="outline"
-                className="border-spa-sand"
+                className="border-spa-sand w-full"
                 onClick={() => undoLastTransaction()}
               >
                 <Undo2 size={16} className="mr-2" />
                 Undo Last Action
               </Button>
-              <Button
-                type="button"
-                className="bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                onClick={handleSale}
-                disabled={!selectedProductId || quantity <= 0}
-              >
-                Record Sale
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white">
-          <CardHeader>
-            <CardTitle className="text-spa-deep">Today's Activity</CardTitle>
-            <CardDescription>Summary for today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 bg-spa-sage/10 rounded-md">
-                <div className="text-sm text-muted-foreground">Total Sales Today</div>
-                <div className="text-2xl font-medium mt-1">
-                  ${transactions
-                    .filter(
-                      (t) =>
-                        t.type === "sale" &&
-                        new Date(t.date).toDateString() === new Date().toDateString()
-                    )
-                    .reduce((sum, t) => sum + t.price, 0)
-                    .toFixed(2)}
-                </div>
-              </div>
-              <div className="p-4 bg-spa-water/10 rounded-md">
-                <div className="text-sm text-muted-foreground">Items Sold Today</div>
-                <div className="text-2xl font-medium mt-1">
-                  {transactions
-                    .filter(
-                      (t) =>
-                        t.type === "sale" &&
-                        new Date(t.date).toDateString() === new Date().toDateString()
-                    )
-                    .reduce((sum, t) => sum + t.quantity, 0)}
-                </div>
-              </div>
-              <div className="mt-6">
-                <h3 className="text-sm font-medium mb-2">Recently Sold Products</h3>
-                <div className="space-y-2">
-                  {transactions
-                    .filter((t) => t.type === "sale")
-                    .slice(0, 3)
-                    .map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="p-2 border border-spa-sand rounded-md flex justify-between items-center"
-                      >
-                        <div className="text-sm truncate">{transaction.productName}</div>
-                        <Badge variant="outline" className="text-xs">
-                          {transaction.quantity} sold
-                        </Badge>
-                      </div>
-                    ))}
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
       </div>
+      
       <Card className="bg-white">
         <CardHeader>
           <div className="flex justify-between items-center">

@@ -14,6 +14,16 @@ const Finance = () => {
   const { isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("income");
+  const [newIncome, setNewIncome] = useState(null);
+  const [newExpense, setNewExpense] = useState(null);
+
+  const handleIncomeAdded = (income) => {
+    setNewIncome(income);
+  };
+
+  const handleExpenseAdded = (expense) => {
+    setNewExpense(expense);
+  };
 
   useEffect(() => {
     // Simulate loading
@@ -49,7 +59,7 @@ const Finance = () => {
             <CardDescription>Overview of income and expenses</CardDescription>
           </CardHeader>
           <CardContent>
-            <FinanceSummary />
+            <FinanceSummary newIncome={newIncome} newExpense={newExpense} />
           </CardContent>
         </Card>
 
@@ -69,12 +79,12 @@ const Finance = () => {
                 <TabsTrigger value="expense">Expenses</TabsTrigger>
               </TabsList>
               <TabsContent value="income" className="space-y-6">
-                <IncomeForm />
-                <IncomeList />
+                <IncomeForm onIncomeAdded={handleIncomeAdded} />
+                <IncomeList newIncome={newIncome} />
               </TabsContent>
               <TabsContent value="expense" className="space-y-6">
-                <ExpenseForm />
-                <ExpenseList />
+                <ExpenseForm onExpenseAdded={handleExpenseAdded} />
+                <ExpenseList newExpense={newExpense} />
               </TabsContent>
             </Tabs>
           </CardContent>

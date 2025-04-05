@@ -60,7 +60,7 @@ const EXPENSE_CATEGORIES = [
   "Other"
 ];
 
-const ExpenseForm = () => {
+const ExpenseForm = ({ onExpenseAdded }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -81,7 +81,7 @@ const ExpenseForm = () => {
     try {
       const amount = parseFloat(data.amount);
       
-      const { error } = await supabase
+      const { data: newExpense, error } = await supabase
         .from("finances")
         .insert({
           type: "expense",
@@ -90,7 +90,8 @@ const ExpenseForm = () => {
           category: data.category,
           date: data.date.toISOString(),
           description: data.description || null,
-        });
+        })
+        .select('*');
 
       if (error) throw error;
 
@@ -98,6 +99,11 @@ const ExpenseForm = () => {
         title: "Expense recorded",
         description: `$${amount.toFixed(2)} expense to ${data.vendor} recorded successfully`,
       });
+
+      // Call the callback with the new expense
+      if (newExpense && newExpense.length > 0) {
+        onExpenseAdded(newExpense[0]);
+      }
 
       form.reset({
         amount: "",
