@@ -1,119 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { v4 as uuidv4 } from "uuid";
-
-// Sample product data with the new skincare products
-const SAMPLE_PRODUCTS: Product[] = [
-  {
-    id: "p1",
-    name: "Facial Wash",
-    description: "A gentle cleanser suitable for daily use, effectively removing makeup and impurities while leaving the skin pH balanced.",
-    stockQuantity: 5,
-    costPrice: 20.00,  // Assuming 50% of retail as cost price
-    sellPrice: 40.00,
-    category: "Cleanser",
-    lowStockThreshold: 3,
-    lastRestocked: new Date(),
-    size: "7 oz",
-    ingredients: "Aloe vera, lactic acid, citric acid",
-    skinConcerns: "All skin types"
-  },
-  {
-    id: "p2",
-    name: "Smoothing Toner",
-    description: "An alcohol-free toner with lactic and citric acids to help refine pores, remove excess debris and leave the skin refreshed.",
-    stockQuantity: 5,
-    costPrice: 20.00,
-    sellPrice: 40.00,
-    category: "Toner",
-    lowStockThreshold: 3,
-    lastRestocked: new Date(),
-    size: "7 oz",
-    ingredients: "Lactic acid, citric acid, aloe vera",
-    skinConcerns: "Oily, breakout-prone skin"
-  },
-  {
-    id: "p3",
-    name: "Acne Cream",
-    description: "A spot treatment cream with benzoyl peroxide that clears existing blemishes and prevents future breakouts.",
-    stockQuantity: 5,
-    costPrice: 19.00,
-    sellPrice: 38.00,
-    category: "Corrective",
-    lowStockThreshold: 3,
-    lastRestocked: new Date(),
-    size: "0.5 oz",
-    ingredients: "Benzoyl peroxide 5%",
-    skinConcerns: "Acne, oily skin"
-  },
-  {
-    id: "p4",
-    name: "Intensive Age Refining Treatment: 0.5% Pure Retinol Night",
-    description: "A powerful retinol night treatment with peptides and antioxidants for age control.",
-    stockQuantity: 5,
-    costPrice: 60.00,
-    sellPrice: 120.00,
-    category: "Corrective",
-    lowStockThreshold: 3,
-    lastRestocked: new Date(),
-    size: "1 oz",
-    ingredients: "Retinol, niacinamide, Hexylresorcinol",
-    skinConcerns: "Fine lines, uneven tone"
-  },
-  {
-    id: "p5",
-    name: "Weightless Protection Broad Spectrum SPF 45",
-    description: "A lightweight sunscreen that provides broad-spectrum protection with a matte finish.",
-    stockQuantity: 5,
-    costPrice: 22.00,
-    sellPrice: 44.00,
-    category: "Moisturizer",
-    lowStockThreshold: 3,
-    lastRestocked: new Date(),
-    size: "1.7 oz",
-    ingredients: "Zinc oxide, octinoxate",
-    skinConcerns: "Sun protection"
-  }
-];
-
-// Sample transaction data
-const SAMPLE_TRANSACTIONS: Transaction[] = [
-  {
-    id: "t1",
-    productId: "p1",
-    productName: "Hydrating Facial Serum",
-    quantity: 2,
-    price: 34.99 * 2,
-    type: "sale",
-    date: new Date("2023-03-20T14:30:00"),
-    userId: "2",
-    userName: "Employee"
-  },
-  {
-    id: "t2",
-    productId: "p2",
-    productName: "Exfoliating Scrub",
-    quantity: 1,
-    price: 24.99,
-    type: "sale",
-    date: new Date("2023-03-20T15:45:00"),
-    userId: "2",
-    userName: "Employee"
-  },
-  {
-    id: "t3",
-    productId: "p3",
-    productName: "Calming Rose Toner",
-    quantity: 5,
-    price: 18.99 * 5,
-    type: "restock",
-    date: new Date("2023-03-12T10:00:00"),
-    userId: "1",
-    userName: "Admin User"
-  }
-];
+import { supabase } from "../integrations/supabase/client";
 
 interface DataContextType {
   products: Product[];
@@ -128,6 +19,7 @@ interface DataContextType {
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
+  isLoading: boolean;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -137,75 +29,230 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [lastRestockDate, setLastRestockDate] = useState<Date | null>(null);
   const [lastAction, setLastAction] = useState<{ action: string; data: any } | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  // Load data from Supabase
   useEffect(() => {
-    // Load data from localStorage or use sample data
-    const savedProducts = localStorage.getItem("spaProducts");
-    const savedTransactions = localStorage.getItem("spaTransactions");
-    const savedRestockDate = localStorage.getItem("lastRestockDate");
-    
-    setProducts(savedProducts ? JSON.parse(savedProducts) : SAMPLE_PRODUCTS);
-    setTransactions(savedTransactions ? JSON.parse(savedTransactions) : SAMPLE_TRANSACTIONS);
-    setLastRestockDate(savedRestockDate ? new Date(JSON.parse(savedRestockDate)) : null);
-  }, []);
+    async function fetchData() {
+      setIsLoading(true);
+      
+      try {
+        // Fetch products
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (productsError) {
+          throw productsError;
+        }
 
-  // Save data to localStorage whenever it changes
-  useEffect(() => {
-    if (products.length > 0) {
-      localStorage.setItem("spaProducts", JSON.stringify(products));
-    }
-  }, [products]);
+        // Transform the data to match our Product interface
+        const transformedProducts: Product[] = productsData.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          stockQuantity: item.stock_quantity,
+          costPrice: item.cost_price,
+          sellPrice: item.sell_price,
+          category: item.category,
+          lowStockThreshold: item.low_stock_threshold,
+          imageUrl: item.image_url,
+          lastRestocked: item.last_restocked ? new Date(item.last_restocked) : undefined,
+          size: item.size,
+          ingredients: item.ingredients,
+          skinConcerns: item.skin_concerns
+        }));
+        setProducts(transformedProducts);
 
-  useEffect(() => {
-    if (transactions.length > 0) {
-      localStorage.setItem("spaTransactions", JSON.stringify(transactions));
-    }
-  }, [transactions]);
+        // Fetch transactions
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        if (transactionsError) {
+          throw transactionsError;
+        }
 
-  useEffect(() => {
-    if (lastRestockDate) {
-      localStorage.setItem("lastRestockDate", JSON.stringify(lastRestockDate));
+        // Transform the data to match our Transaction interface
+        const transformedTransactions: Transaction[] = transactionsData.map(item => ({
+          id: item.id,
+          productId: item.product_id,
+          productName: item.product_name,
+          quantity: item.quantity,
+          price: item.price,
+          type: item.type as 'sale' | 'restock' | 'adjustment' | 'return',
+          date: new Date(item.date),
+          userId: item.user_id,
+          userName: item.user_name
+        }));
+        setTransactions(transformedTransactions);
+
+        // Get last restock date (from most recent restock transaction)
+        const restockTransactions = transformedTransactions.filter(t => t.type === 'restock');
+        if (restockTransactions.length > 0) {
+          setLastRestockDate(restockTransactions[0].date);
+        }
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({ 
+          title: "Error Loading Data", 
+          description: "Failed to load data from database.", 
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [lastRestockDate]);
+
+    fetchData();
+  }, [toast]);
 
   const saveLastAction = (action: string, data: any) => {
     setLastAction({ action, data });
   };
 
-  const addProduct = (product: Omit<Product, "id">) => {
-    const newProduct = { ...product, id: uuidv4() };
-    setProducts([...products, newProduct]);
-    toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
+  const addProduct = async (product: Omit<Product, "id">) => {
+    try {
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from('products')
+        .insert({
+          name: product.name,
+          description: product.description,
+          stock_quantity: product.stockQuantity,
+          cost_price: product.costPrice,
+          sell_price: product.sellPrice,
+          category: product.category,
+          low_stock_threshold: product.lowStockThreshold,
+          image_url: product.imageUrl,
+          last_restocked: product.lastRestocked,
+          size: product.size,
+          ingredients: product.ingredients,
+          skin_concerns: product.skinConcerns
+        })
+        .select();
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        // Transform the returned data to match our Product interface
+        const newProduct: Product = {
+          id: data[0].id,
+          name: data[0].name,
+          description: data[0].description || '',
+          stockQuantity: data[0].stock_quantity,
+          costPrice: data[0].cost_price,
+          sellPrice: data[0].sell_price,
+          category: data[0].category,
+          lowStockThreshold: data[0].low_stock_threshold,
+          imageUrl: data[0].image_url,
+          lastRestocked: data[0].last_restocked ? new Date(data[0].last_restocked) : undefined,
+          size: data[0].size,
+          ingredients: data[0].ingredients,
+          skinConcerns: data[0].skin_concerns
+        };
+        
+        setProducts([...products, newProduct]);
+        toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to add product.", 
+        variant: "destructive" 
+      });
+    }
   };
 
-  const updateProduct = (id: string, updates: Partial<Product>) => {
+  const updateProduct = async (id: string, updates: Partial<Product>) => {
     const oldProduct = products.find(p => p.id === id);
     if (!oldProduct) return;
     
     // Save the old state for potential undo
     saveLastAction("updateProduct", { id, oldData: { ...oldProduct } });
     
-    setProducts(products.map(p => 
-      p.id === id ? { ...p, ...updates } : p
-    ));
-    
-    toast({ title: "Product Updated", description: `${oldProduct.name} was updated.` });
+    try {
+      // Transform updates to match Supabase schema
+      const supabaseUpdates: any = {};
+      if (updates.name !== undefined) supabaseUpdates.name = updates.name;
+      if (updates.description !== undefined) supabaseUpdates.description = updates.description;
+      if (updates.stockQuantity !== undefined) supabaseUpdates.stock_quantity = updates.stockQuantity;
+      if (updates.costPrice !== undefined) supabaseUpdates.cost_price = updates.costPrice;
+      if (updates.sellPrice !== undefined) supabaseUpdates.sell_price = updates.sellPrice;
+      if (updates.category !== undefined) supabaseUpdates.category = updates.category;
+      if (updates.lowStockThreshold !== undefined) supabaseUpdates.low_stock_threshold = updates.lowStockThreshold;
+      if (updates.imageUrl !== undefined) supabaseUpdates.image_url = updates.imageUrl;
+      if (updates.lastRestocked !== undefined) supabaseUpdates.last_restocked = updates.lastRestocked;
+      if (updates.size !== undefined) supabaseUpdates.size = updates.size;
+      if (updates.ingredients !== undefined) supabaseUpdates.ingredients = updates.ingredients;
+      if (updates.skinConcerns !== undefined) supabaseUpdates.skin_concerns = updates.skinConcerns;
+      supabaseUpdates.updated_at = new Date();
+      
+      // Update in Supabase
+      const { error } = await supabase
+        .from('products')
+        .update(supabaseUpdates)
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setProducts(products.map(p => 
+        p.id === id ? { ...p, ...updates } : p
+      ));
+      
+      toast({ title: "Product Updated", description: `${oldProduct.name} was updated.` });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to update product.", 
+        variant: "destructive" 
+      });
+    }
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
     const product = products.find(p => p.id === id);
     if (!product) return;
     
     // Save the old state for potential undo
     saveLastAction("deleteProduct", { product });
     
-    setProducts(products.filter(p => p.id !== id));
-    toast({ title: "Product Deleted", description: `${product.name} was removed from inventory.` });
+    try {
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setProducts(products.filter(p => p.id !== id));
+      toast({ title: "Product Deleted", description: `${product.name} was removed from inventory.` });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete product.", 
+        variant: "destructive" 
+      });
+    }
   };
 
-  const recordSale = (productId: string, quantity: number) => {
+  const recordSale = async (productId: string, quantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({ title: "Error", description: "Product not found.", variant: "destructive" });
@@ -223,32 +270,77 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       oldQuantity: product.stockQuantity 
     });
 
-    // Update product quantity
-    const updatedProducts = products.map(p =>
-      p.id === productId
-        ? { ...p, stockQuantity: p.stockQuantity - quantity }
-        : p
-    );
-    setProducts(updatedProducts);
+    try {
+      // Update product quantity in Supabase
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          stock_quantity: product.stockQuantity - quantity,
+          updated_at: new Date()
+        })
+        .eq('id', productId);
 
-    // Add transaction record
-    const newTransaction: Transaction = {
-      id: uuidv4(),
-      productId,
-      productName: product.name,
-      quantity,
-      price: product.sellPrice * quantity,
-      type: "sale",
-      date: new Date(),
-      userId: user?.id || "unknown",
-      userName: user?.name || "Unknown User"
-    };
-    
-    setTransactions([newTransaction, ...transactions]);
-    toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Add transaction record in Supabase
+      const newTransaction = {
+        product_id: productId,
+        product_name: product.name,
+        quantity,
+        price: product.sellPrice * quantity,
+        type: 'sale',
+        date: new Date(),
+        user_id: user?.id || 'unknown',
+        user_name: user?.name || 'Unknown User'
+      };
+      
+      const { data, error: insertError } = await supabase
+        .from('transactions')
+        .insert(newTransaction)
+        .select();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // Update local state
+      const updatedProducts = products.map(p =>
+        p.id === productId
+          ? { ...p, stockQuantity: p.stockQuantity - quantity }
+          : p
+      );
+      setProducts(updatedProducts);
+      
+      if (data && data.length > 0) {
+        const newLocalTransaction: Transaction = {
+          id: data[0].id,
+          productId,
+          productName: product.name,
+          quantity,
+          price: product.sellPrice * quantity,
+          type: "sale",
+          date: new Date(data[0].date),
+          userId: data[0].user_id,
+          userName: data[0].user_name
+        };
+        
+        setTransactions([newLocalTransaction, ...transactions]);
+      }
+      
+      toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
+    } catch (error) {
+      console.error('Error recording sale:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to record sale.", 
+        variant: "destructive" 
+      });
+    }
   };
 
-  const recordRestock = (productId: string, quantity: number) => {
+  const recordRestock = async (productId: string, quantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({ title: "Error", description: "Product not found.", variant: "destructive" });
@@ -261,36 +353,84 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       oldQuantity: product.stockQuantity 
     });
 
-    // Update product quantity and last restocked date
-    const updatedProducts = products.map(p =>
-      p.id === productId
-        ? { 
-            ...p, 
-            stockQuantity: p.stockQuantity + quantity,
-            lastRestocked: new Date()
-          }
-        : p
-    );
-    setProducts(updatedProducts);
+    try {
+      const now = new Date();
+      // Update product quantity in Supabase
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          stock_quantity: product.stockQuantity + quantity,
+          last_restocked: now,
+          updated_at: now
+        })
+        .eq('id', productId);
 
-    // Add transaction record
-    const newTransaction: Transaction = {
-      id: uuidv4(),
-      productId,
-      productName: product.name,
-      quantity,
-      price: product.costPrice * quantity,
-      type: "restock",
-      date: new Date(),
-      userId: user?.id || "unknown",
-      userName: user?.name || "Unknown User"
-    };
-    
-    setTransactions([newTransaction, ...transactions]);
-    toast({ title: "Restock Recorded", description: `Added ${quantity} ${product.name} to inventory.` });
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Add transaction record in Supabase
+      const newTransaction = {
+        product_id: productId,
+        product_name: product.name,
+        quantity,
+        price: product.costPrice * quantity,
+        type: 'restock',
+        date: now,
+        user_id: user?.id || 'unknown',
+        user_name: user?.name || 'Unknown User'
+      };
+      
+      const { data, error: insertError } = await supabase
+        .from('transactions')
+        .insert(newTransaction)
+        .select();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // Update local state
+      const updatedProducts = products.map(p =>
+        p.id === productId
+          ? { 
+              ...p, 
+              stockQuantity: p.stockQuantity + quantity,
+              lastRestocked: now
+            }
+          : p
+      );
+      setProducts(updatedProducts);
+      
+      if (data && data.length > 0) {
+        const newLocalTransaction: Transaction = {
+          id: data[0].id,
+          productId,
+          productName: product.name,
+          quantity,
+          price: product.costPrice * quantity,
+          type: "restock",
+          date: now,
+          userId: data[0].user_id,
+          userName: data[0].user_name
+        };
+        
+        setTransactions([newLocalTransaction, ...transactions]);
+        setLastRestockDate(now);
+      }
+      
+      toast({ title: "Restock Recorded", description: `Added ${quantity} ${product.name} to inventory.` });
+    } catch (error) {
+      console.error('Error recording restock:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to record restock.", 
+        variant: "destructive" 
+      });
+    }
   };
 
-  const adjustInventory = (productId: string, newQuantity: number) => {
+  const adjustInventory = async (productId: string, newQuantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
       toast({ title: "Error", description: "Product not found.", variant: "destructive" });
@@ -303,37 +443,82 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       oldQuantity: product.stockQuantity 
     });
 
-    const difference = newQuantity - product.stockQuantity;
-    
-    // Update product quantity
-    const updatedProducts = products.map(p =>
-      p.id === productId
-        ? { ...p, stockQuantity: newQuantity }
-        : p
-    );
-    setProducts(updatedProducts);
+    try {
+      const difference = newQuantity - product.stockQuantity;
+      
+      // Update product quantity in Supabase
+      const { error: updateError } = await supabase
+        .from('products')
+        .update({ 
+          stock_quantity: newQuantity,
+          updated_at: new Date()
+        })
+        .eq('id', productId);
 
-    // Add transaction record
-    const newTransaction: Transaction = {
-      id: uuidv4(),
-      productId,
-      productName: product.name,
-      quantity: Math.abs(difference),
-      price: 0, // No price impact for adjustment
-      type: "adjustment",
-      date: new Date(),
-      userId: user?.id || "unknown",
-      userName: user?.name || "Unknown User"
-    };
-    
-    setTransactions([newTransaction, ...transactions]);
-    toast({ 
-      title: "Inventory Adjusted", 
-      description: `${product.name} quantity updated to ${newQuantity}.` 
-    });
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Add transaction record in Supabase
+      const newTransaction = {
+        product_id: productId,
+        product_name: product.name,
+        quantity: Math.abs(difference),
+        price: 0, // No price impact for adjustment
+        type: 'adjustment',
+        date: new Date(),
+        user_id: user?.id || 'unknown',
+        user_name: user?.name || 'Unknown User'
+      };
+      
+      const { data, error: insertError } = await supabase
+        .from('transactions')
+        .insert(newTransaction)
+        .select();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // Update local state
+      const updatedProducts = products.map(p =>
+        p.id === productId
+          ? { ...p, stockQuantity: newQuantity }
+          : p
+      );
+      setProducts(updatedProducts);
+      
+      if (data && data.length > 0) {
+        const newLocalTransaction: Transaction = {
+          id: data[0].id,
+          productId,
+          productName: product.name,
+          quantity: Math.abs(difference),
+          price: 0,
+          type: "adjustment",
+          date: new Date(data[0].date),
+          userId: data[0].user_id,
+          userName: data[0].user_name
+        };
+        
+        setTransactions([newLocalTransaction, ...transactions]);
+      }
+      
+      toast({ 
+        title: "Inventory Adjusted", 
+        description: `${product.name} quantity updated to ${newQuantity}.` 
+      });
+    } catch (error) {
+      console.error('Error adjusting inventory:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to adjust inventory.", 
+        variant: "destructive" 
+      });
+    }
   };
 
-  const updateLastRestockDate = () => {
+  const updateLastRestockDate = async () => {
     // Save current date for undo
     saveLastAction("updateLastRestockDate", { 
       oldDate: lastRestockDate
@@ -347,7 +532,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   };
 
-  const undoLastTransaction = () => {
+  const undoLastTransaction = async () => {
     if (!lastAction) {
       toast({ title: "No Action to Undo", description: "There is no recent action to undo." });
       return;
@@ -355,70 +540,165 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const { action, data } = lastAction;
 
-    switch (action) {
-      case "recordSale":
-        // Restore product quantity
-        setProducts(products.map(p =>
-          p.id === data.productId
-            ? { ...p, stockQuantity: data.oldQuantity }
-            : p
-        ));
-        // Remove the last transaction
-        setTransactions(transactions.slice(1));
-        break;
-        
-      case "recordRestock":
-        // Restore product quantity
-        setProducts(products.map(p =>
-          p.id === data.productId
-            ? { ...p, stockQuantity: data.oldQuantity }
-            : p
-        ));
-        // Remove the last transaction
-        setTransactions(transactions.slice(1));
-        break;
-        
-      case "adjustInventory":
-        // Restore product quantity
-        setProducts(products.map(p =>
-          p.id === data.productId
-            ? { ...p, stockQuantity: data.oldQuantity }
-            : p
-        ));
-        // Remove the last transaction
-        setTransactions(transactions.slice(1));
-        break;
-        
-      case "updateLastRestockDate":
-        // Restore the previous date
-        setLastRestockDate(data.oldDate);
-        break;
-        
-      case "updateProduct":
-        // Restore the previous product state
-        setProducts(products.map(p =>
-          p.id === data.id
-            ? { ...data.oldData }
-            : p
-        ));
-        break;
-        
-      case "deleteProduct":
-        // Restore the deleted product
-        setProducts([...products, data.product]);
-        break;
-        
-      default:
-        toast({ 
-          title: "Cannot Undo", 
-          description: "This action cannot be undone.", 
-          variant: "destructive" 
-        });
-        return;
-    }
+    try {
+      switch (action) {
+        case "recordSale":
+          // Restore product quantity
+          await supabase
+            .from('products')
+            .update({ 
+              stock_quantity: data.oldQuantity,
+              updated_at: new Date()
+            })
+            .eq('id', data.productId);
+          
+          // Remove the transaction
+          if (transactions.length > 0) {
+            await supabase
+              .from('transactions')
+              .delete()
+              .eq('id', transactions[0].id);
+            
+            // Update local state
+            setProducts(products.map(p =>
+              p.id === data.productId
+                ? { ...p, stockQuantity: data.oldQuantity }
+                : p
+            ));
+            setTransactions(transactions.slice(1));
+          }
+          break;
+          
+        case "recordRestock":
+          // Restore product quantity
+          await supabase
+            .from('products')
+            .update({ 
+              stock_quantity: data.oldQuantity,
+              updated_at: new Date()
+            })
+            .eq('id', data.productId);
+          
+          // Remove the transaction
+          if (transactions.length > 0) {
+            await supabase
+              .from('transactions')
+              .delete()
+              .eq('id', transactions[0].id);
+            
+            // Update local state
+            setProducts(products.map(p =>
+              p.id === data.productId
+                ? { ...p, stockQuantity: data.oldQuantity }
+                : p
+            ));
+            setTransactions(transactions.slice(1));
+          }
+          break;
+          
+        case "adjustInventory":
+          // Restore product quantity
+          await supabase
+            .from('products')
+            .update({ 
+              stock_quantity: data.oldQuantity,
+              updated_at: new Date()
+            })
+            .eq('id', data.productId);
+          
+          // Remove the transaction
+          if (transactions.length > 0) {
+            await supabase
+              .from('transactions')
+              .delete()
+              .eq('id', transactions[0].id);
+            
+            // Update local state
+            setProducts(products.map(p =>
+              p.id === data.productId
+                ? { ...p, stockQuantity: data.oldQuantity }
+                : p
+            ));
+            setTransactions(transactions.slice(1));
+          }
+          break;
+          
+        case "updateLastRestockDate":
+          // Restore the previous date
+          setLastRestockDate(data.oldDate);
+          break;
+          
+        case "updateProduct":
+          // Restore the previous product state
+          const supabaseUpdates: any = {};
+          Object.keys(data.oldData).forEach(key => {
+            const snakeCaseKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+            supabaseUpdates[snakeCaseKey] = data.oldData[key];
+          });
+          
+          await supabase
+            .from('products')
+            .update(supabaseUpdates)
+            .eq('id', data.id);
+          
+          // Update local state
+          setProducts(products.map(p =>
+            p.id === data.id
+              ? { ...data.oldData }
+              : p
+          ));
+          break;
+          
+        case "deleteProduct":
+          // Restore the deleted product
+          const restoredProduct = data.product;
+          const { data: insertedProduct, error: insertError } = await supabase
+            .from('products')
+            .insert({
+              id: restoredProduct.id,
+              name: restoredProduct.name,
+              description: restoredProduct.description,
+              stock_quantity: restoredProduct.stockQuantity,
+              cost_price: restoredProduct.costPrice,
+              sell_price: restoredProduct.sellPrice,
+              category: restoredProduct.category,
+              low_stock_threshold: restoredProduct.lowStockThreshold,
+              image_url: restoredProduct.imageUrl,
+              last_restocked: restoredProduct.lastRestocked,
+              size: restoredProduct.size,
+              ingredients: restoredProduct.ingredients,
+              skin_concerns: restoredProduct.skinConcerns
+            })
+            .select();
+            
+          if (insertError) {
+            throw insertError;
+          }
+          
+          if (insertedProduct) {
+            setProducts([...products, restoredProduct]);
+          }
+          break;
+          
+        default:
+          toast({ 
+            title: "Cannot Undo", 
+            description: "This action cannot be undone.", 
+            variant: "destructive" 
+          });
+          return;
+      }
 
-    toast({ title: "Action Undone", description: "The last action has been reversed." });
-    setLastAction(null); // Clear the last action after undoing
+      toast({ title: "Action Undone", description: "The last action has been reversed." });
+      setLastAction(null); // Clear the last action after undoing
+    } catch (error) {
+      console.error('Error undoing action:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to undo action.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   const getProduct = (id: string) => {
@@ -439,7 +719,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         adjustInventory,
         updateLastRestockDate,
         undoLastTransaction,
-        getProduct
+        getProduct,
+        isLoading
       }}
     >
       {children}

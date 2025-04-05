@@ -9,7 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      products: {
+        Row: {
+          category: string
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          ingredients: string | null
+          last_restocked: string | null
+          low_stock_threshold: number
+          name: string
+          sell_price: number
+          size: string | null
+          skin_concerns: string | null
+          stock_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          cost_price: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          ingredients?: string | null
+          last_restocked?: string | null
+          low_stock_threshold?: number
+          name: string
+          sell_price: number
+          size?: string | null
+          skin_concerns?: string | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          ingredients?: string | null
+          last_restocked?: string | null
+          low_stock_threshold?: number
+          name?: string
+          sell_price?: number
+          size?: string | null
+          skin_concerns?: string | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          price: number
+          product_id: string
+          product_name: string
+          quantity: number
+          type: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          price: number
+          product_id: string
+          product_name: string
+          quantity: number
+          type: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          price?: number
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          type?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

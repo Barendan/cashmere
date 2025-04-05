@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Download, Calendar, DollarSign, ArrowUp, ShoppingBag, BarChart as BarChartIcon } from "lucide-react";
+import { Download, Calendar, DollarSign, ArrowUp, ShoppingBag, Loader2 } from "lucide-react";
 
 const Metrics = () => {
-  const { products, transactions } = useData();
+  const { products, transactions, isLoading } = useData();
   const [timeRange, setTimeRange] = useState<"7days" | "30days" | "monthly">("7days");
 
   const today = new Date();
@@ -198,6 +199,17 @@ const Metrics = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-[70vh] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-spa-deep mx-auto mb-4" />
+          <h3 className="text-xl font-medium text-spa-deep">Loading metrics data...</h3>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full space-y-6">
