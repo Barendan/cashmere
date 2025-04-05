@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, mapServiceRowToService } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
@@ -67,17 +67,15 @@ const IncomeForm = () => {
   useEffect(() => {
     const fetchServices = async () => {
       try {
-        const { data, error } = await supabase.from("services").select("*");
+        const { data, error } = await supabase
+          .from("services")
+          .select("*");
+          
         if (error) throw error;
         
-        setServices(
-          data.map((service) => ({
-            id: service.id,
-            name: service.name,
-            description: service.description || "",
-            price: service.price,
-          }))
-        );
+        if (data) {
+          setServices(data.map(service => mapServiceRowToService(service)));
+        }
       } catch (error) {
         console.error("Error fetching services:", error);
         toast({
@@ -104,15 +102,17 @@ const IncomeForm = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.from("finances").insert({
-        type: "income",
-        customer_name: data.customerName,
-        service_id: data.serviceId,
-        date: data.date.toISOString(),
-        amount: selectedService.price,
-        payment_method: data.paymentMethod,
-        description: data.description || null,
-      });
+      const { error } = await supabase
+        .from("finances")
+        .insert({
+          type: "income",
+          customer_name: data.customerName,
+          service_id: data.serviceId,
+          date: data.date.toISOString(),
+          amount: selectedService.price,
+          payment_method: data.paymentMethod,
+          description: data.description || null,
+        });
 
       if (error) throw error;
 

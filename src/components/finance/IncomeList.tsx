@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -12,16 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Service } from "@/models/types";
+import { FinanceRecord, Service } from "@/models/types";
 
-interface ServiceIncome {
-  id: string;
-  customerName: string;
+interface ServiceIncome extends FinanceRecord {
   serviceName: string;
-  servicePrice: number;
-  date: Date;
-  paymentMethod: string;
-  description?: string;
 }
 
 const IncomeList = () => {
@@ -47,17 +41,17 @@ const IncomeList = () => {
 
         if (error) throw error;
 
-        const formattedData: ServiceIncome[] = data.map((record) => ({
-          id: record.id,
-          customerName: record.customer_name || "Unknown",
-          serviceName: record.services?.name || "Unknown Service",
-          servicePrice: record.amount || record.services?.price || 0,
-          date: new Date(record.date),
-          paymentMethod: record.payment_method || "Unknown",
-          description: record.description,
-        }));
+        if (data) {
+          const formattedData: ServiceIncome[] = data.map((record) => {
+            const financeRecord = mapFinanceRowToFinanceRecord(record);
+            return {
+              ...financeRecord,
+              serviceName: record.services?.name || "Unknown Service",
+            };
+          });
 
-        setIncomeRecords(formattedData);
+          setIncomeRecords(formattedData);
+        }
       } catch (error) {
         console.error("Error fetching income records:", error);
         toast({
@@ -110,10 +104,10 @@ const IncomeList = () => {
             {incomeRecords.map((record) => (
               <TableRow key={record.id}>
                 <TableCell>{format(record.date, "PP")}</TableCell>
-                <TableCell>{record.customerName}</TableCell>
+                <TableCell>{record.customerName || "Unknown"}</TableCell>
                 <TableCell>{record.serviceName}</TableCell>
-                <TableCell className="capitalize">{record.paymentMethod}</TableCell>
-                <TableCell className="text-right">${record.servicePrice.toFixed(2)}</TableCell>
+                <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
+                <TableCell className="text-right">${record.amount.toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

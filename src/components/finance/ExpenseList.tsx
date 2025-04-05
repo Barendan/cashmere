@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -13,15 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface Expense {
-  id: string;
-  vendor: string;
-  amount: number;
-  date: Date;
-  category: string;
-  description?: string;
-}
+import { FinanceRecord } from "@/models/types";
 
 const categoryColors: Record<string, string> = {
   supplies: "bg-blue-100 text-blue-800",
@@ -37,7 +29,7 @@ const categoryColors: Record<string, string> = {
 };
 
 const ExpenseList = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] = useState<FinanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -53,16 +45,13 @@ const ExpenseList = () => {
 
         if (error) throw error;
 
-        const formattedData: Expense[] = data.map((record) => ({
-          id: record.id,
-          vendor: record.vendor || "Unknown",
-          amount: record.amount,
-          date: new Date(record.date),
-          category: record.category || "other",
-          description: record.description,
-        }));
+        if (data) {
+          const formattedData: FinanceRecord[] = data.map(record => 
+            mapFinanceRowToFinanceRecord(record)
+          );
 
-        setExpenses(formattedData);
+          setExpenses(formattedData);
+        }
       } catch (error) {
         console.error("Error fetching expenses:", error);
         toast({
@@ -114,13 +103,13 @@ const ExpenseList = () => {
             {expenses.map((expense) => (
               <TableRow key={expense.id}>
                 <TableCell>{format(expense.date, "PP")}</TableCell>
-                <TableCell>{expense.vendor}</TableCell>
+                <TableCell>{expense.vendor || "Unknown"}</TableCell>
                 <TableCell>
                   <Badge 
                     variant="outline"
-                    className={`capitalize ${categoryColors[expense.category.toLowerCase()] || categoryColors.other}`}
+                    className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
                   >
-                    {expense.category}
+                    {expense.category || "Other"}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>

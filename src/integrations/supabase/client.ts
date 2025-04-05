@@ -42,3 +42,24 @@ export const mapProductRowToProduct = (row: ProductRow) => ({
   ingredients: row.ingredients ?? undefined,
   skinConcerns: row.skin_concerns ?? undefined
 });
+
+// Add mapping helpers for the new Service and Finance types
+export const mapServiceRowToService = (row: ServiceRow) => ({
+  id: row.id,
+  name: row.name,
+  description: row.description || '',
+  price: row.price
+});
+
+export const mapFinanceRowToFinanceRecord = (row: FinanceRow) => ({
+  id: row.id,
+  type: row.type as 'income' | 'expense',
+  date: new Date(row.date),
+  amount: row.amount,
+  description: row.description || undefined,
+  customerName: row.customer_name || undefined,
+  serviceId: row.service_id || undefined,
+  paymentMethod: row.payment_method || undefined,
+  vendor: row.vendor || undefined,
+  category: row.category || undefined
+});

@@ -81,14 +81,16 @@ const ExpenseForm = () => {
     try {
       const amount = parseFloat(data.amount);
       
-      const { error } = await supabase.from("finances").insert({
-        type: "expense",
-        amount,
-        vendor: data.vendor,
-        category: data.category,
-        date: data.date.toISOString(),
-        description: data.description || null,
-      });
+      const { error } = await supabase
+        .from("finances")
+        .insert({
+          type: "expense",
+          amount,
+          vendor: data.vendor,
+          category: data.category,
+          date: data.date.toISOString(),
+          description: data.description || null,
+        });
 
       if (error) throw error;
 

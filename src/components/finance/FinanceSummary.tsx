@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, mapFinanceRowToFinanceRecord, mapServiceRowToService } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { startOfMonth, endOfMonth, format } from "date-fns";
@@ -55,14 +55,19 @@ const FinanceSummary = () => {
         if (expenseError) throw expenseError;
 
         // Calculate totals
-        const totalIncome = incomeData.reduce((sum, record) => sum + record.amount, 0);
-        const totalExpenses = expenseData.reduce((sum, record) => sum + record.amount, 0);
+        const totalIncome = incomeData ? incomeData.reduce((sum, record) => sum + (record.amount || 0), 0) : 0;
+        const totalExpenses = expenseData ? expenseData.reduce((sum, record) => sum + (record.amount || 0), 0) : 0;
         const netProfit = totalIncome - totalExpenses;
 
         // Get top service
         const { data: topServiceData, error: topServiceError } = await supabase
           .from("finances")
-          .select("services:service_id(name)")
+          .select(`
+            service_id,
+            services:service_id (
+              name
+            )
+          `)
           .eq("type", "income")
           .order("amount", { ascending: false })
           .limit(1);
@@ -83,10 +88,12 @@ const FinanceSummary = () => {
           totalIncome,
           totalExpenses,
           netProfit,
-          topService: topServiceData.length > 0 && topServiceData[0].services 
+          topService: topServiceData && topServiceData.length > 0 && topServiceData[0].services 
             ? topServiceData[0].services.name 
             : null,
-          topVendor: topVendorData.length > 0 ? topVendorData[0].vendor : null,
+          topVendor: topVendorData && topVendorData.length > 0 && topVendorData[0].vendor 
+            ? topVendorData[0].vendor 
+            : null,
         });
       } catch (error) {
         console.error("Error fetching finance summary:", error);
