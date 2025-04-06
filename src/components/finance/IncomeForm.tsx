@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -122,7 +121,6 @@ const IncomeForm = ({ onIncomeAdded }) => {
         description: `Service for ${data.customerName} recorded successfully`,
       });
 
-      // Call the callback with the new income record
       if (newIncome && newIncome.length > 0) {
         onIncomeAdded(newIncome[0]);
       }
@@ -148,7 +146,6 @@ const IncomeForm = ({ onIncomeAdded }) => {
     }
   };
 
-  // Handle service selection to update selectedService
   const handleServiceChange = (serviceId: string) => {
     const service = services.find((s) => s.id === serviceId);
     setSelectedService(service || null);
@@ -260,8 +257,7 @@ const IncomeForm = ({ onIncomeAdded }) => {
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="credit">Credit Card</SelectItem>
                     <SelectItem value="debit">Debit Card</SelectItem>
-                    <SelectItem value="transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="venmo">Venmo</SelectItem>
+                    <SelectItem value="zelle">Zelle</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>

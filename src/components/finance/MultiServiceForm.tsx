@@ -145,39 +145,54 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
     setIsLoading(true);
 
     try {
-      // Create one record per service
-      const incomeRecords = [];
+      // Create a single income record with the total amount
+      const totalAmount = getTotalAmount();
+      const serviceNames = selectedServices.map(s => s.name).join(", ");
       
-      for (const service of selectedServices) {
-        const { data: newIncome, error } = await supabase
-          .from("finances")
-          .insert({
-            type: "income",
-            customer_name: data.customerName,
-            service_id: service.id,
-            date: data.date.toISOString(),
-            amount: service.price,
-            payment_method: data.paymentMethod,
-            description: data.description || null,
-          })
-          .select('*, services:service_id(name, price)');
+      // Store the service IDs as an array in the description (for reference)
+      const serviceIds = selectedServices.map(s => s.id);
+      const serviceDetails = JSON.stringify({
+        serviceIds,
+        serviceNames: selectedServices.map(s => s.name),
+        servicePrices: selectedServices.map(s => s.price)
+      });
+      
+      // Add additional note if provided
+      const descriptionText = data.description 
+        ? `${serviceNames}\n\nServices: ${serviceNames}\n\nNote: ${data.description}` 
+        : `Services: ${serviceNames}`;
+      
+      const { data: newIncome, error } = await supabase
+        .from("finances")
+        .insert({
+          type: "income",
+          customer_name: data.customerName,
+          // Use the first service as the main service_id for filtering purposes
+          service_id: serviceIds[0],
+          date: data.date.toISOString(),
+          amount: totalAmount,
+          payment_method: data.paymentMethod,
+          description: descriptionText,
+          // Store the full service details in the category field for now
+          category: serviceDetails
+        })
+        .select('*, services:service_id(name, price)');
 
-        if (error) throw error;
-        
-        if (newIncome && newIncome.length > 0) {
-          incomeRecords.push(newIncome[0]);
-        }
-      }
+      if (error) throw error;
 
       toast({
         title: "Income recorded",
         description: `Services for ${data.customerName} recorded successfully`,
       });
 
-      // Call the callback with the new income records
-      if (incomeRecords.length > 0) {
-        // Pass only the first record for now, to maintain compatibility
-        onIncomeAdded(incomeRecords[0]);
+      // Call the callback with the new consolidated income record
+      if (newIncome && newIncome.length > 0) {
+        // Add the list of services to the record for display
+        const incomeRecord = {
+          ...newIncome[0],
+          servicesList: selectedServices
+        };
+        onIncomeAdded(incomeRecord);
       }
 
       // Reset form
@@ -279,8 +294,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                     <SelectItem value="cash">Cash</SelectItem>
                     <SelectItem value="credit">Credit Card</SelectItem>
                     <SelectItem value="debit">Debit Card</SelectItem>
-                    <SelectItem value="transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="venmo">Venmo</SelectItem>
+                    <SelectItem value="zelle">Zelle</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>

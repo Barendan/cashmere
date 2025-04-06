@@ -13,9 +13,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FinanceRecord, Service } from "@/models/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ServiceIncome extends FinanceRecord {
   serviceName: string;
+  servicesList?: Array<{ id: string, name: string, price: number }>;
 }
 
 const IncomeList = ({ newIncome }) => {
@@ -44,9 +51,28 @@ const IncomeList = ({ newIncome }) => {
         if (data) {
           const formattedData: ServiceIncome[] = data.map((record) => {
             const financeRecord = mapFinanceRowToFinanceRecord(record);
+            
+            // Check if this record has multiple services stored in the category field
+            let servicesList = undefined;
+            if (record.category) {
+              try {
+                const parsedCategory = JSON.parse(record.category);
+                if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds)) {
+                  servicesList = parsedCategory.serviceNames.map((name: string, index: number) => ({
+                    id: parsedCategory.serviceIds[index],
+                    name,
+                    price: parsedCategory.servicePrices[index]
+                  }));
+                }
+              } catch (e) {
+                console.error("Error parsing service details:", e);
+              }
+            }
+            
             return {
               ...financeRecord,
-              serviceName: record.services?.name || "Unknown Service",
+              serviceName: record.services?.name || "Multiple Services",
+              servicesList
             };
           });
 
@@ -71,13 +97,72 @@ const IncomeList = ({ newIncome }) => {
   useEffect(() => {
     if (newIncome) {
       const financeRecord = mapFinanceRowToFinanceRecord(newIncome);
+      
+      // Check if the new income has multiple services
+      let servicesList = newIncome.servicesList;
+      
+      // If no servicesList is provided directly but category has the data
+      if (!servicesList && newIncome.category) {
+        try {
+          const parsedCategory = JSON.parse(newIncome.category);
+          if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds)) {
+            servicesList = parsedCategory.serviceNames.map((name: string, index: number) => ({
+              id: parsedCategory.serviceIds[index],
+              name,
+              price: parsedCategory.servicePrices[index]
+            }));
+          }
+        } catch (e) {
+          console.error("Error parsing service details for new income:", e);
+        }
+      }
+      
       const newIncomeRecord: ServiceIncome = {
         ...financeRecord,
-        serviceName: newIncome.services?.name || "Unknown Service",
+        serviceName: servicesList && servicesList.length > 1 
+          ? "Multiple Services" 
+          : newIncome.services?.name || "Unknown Service",
+        servicesList
       };
+      
       setIncomeRecords(prev => [newIncomeRecord, ...prev]);
     }
   }, [newIncome]);
+
+  const formatServiceNames = (record: ServiceIncome) => {
+    if (!record.servicesList || record.servicesList.length === 0) {
+      return record.serviceName;
+    }
+    
+    if (record.servicesList.length === 1) {
+      return record.servicesList[0].name;
+    }
+    
+    // For multiple services
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger className="text-left underline decoration-dotted">
+            Multiple Services ({record.servicesList.length})
+          </TooltipTrigger>
+          <TooltipContent className="bg-white p-2 border rounded shadow-md max-w-xs">
+            <div className="space-y-1 text-xs">
+              {record.servicesList.map((service, idx) => (
+                <div key={idx} className="flex justify-between gap-2">
+                  <span>{service.name}:</span>
+                  <span className="font-medium">${service.price.toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="border-t pt-1 mt-1 flex justify-between font-medium">
+                <span>Total:</span>
+                <span>${record.amount.toFixed(2)}</span>
+              </div>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -117,7 +202,7 @@ const IncomeList = ({ newIncome }) => {
               <TableRow key={record.id}>
                 <TableCell>{format(record.date, "PP")}</TableCell>
                 <TableCell>{record.customerName || "Unknown"}</TableCell>
-                <TableCell>{record.serviceName}</TableCell>
+                <TableCell>{formatServiceNames(record)}</TableCell>
                 <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
                 <TableCell className="text-right">${record.amount.toFixed(2)}</TableCell>
               </TableRow>
