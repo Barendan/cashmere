@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Modal } from "@/components/ui/modal";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Package, Edit, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
@@ -125,6 +125,7 @@ const InventoryPage = () => {
         title: "Success",
         description: "Product deleted successfully.",
       });
+      closeEditModal();
     } catch (error) {
       console.error("Error deleting product:", error);
       toast({
@@ -160,7 +161,7 @@ const InventoryPage = () => {
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
@@ -302,122 +303,30 @@ const InventoryPage = () => {
         </div>
       </div>
       
-      {/* Add Product Modal */}
-      <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add New Product">
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input type="text" id="name" name="name" value={newProduct.name} onChange={handleInputChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="description" className="text-right">
-              Description
-            </Label>
-            <Textarea id="description" name="description" value={newProduct.description} onChange={handleInputChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">
-              Category
-            </Label>
-            <Select onValueChange={(value) => setNewProduct(prev => ({ ...prev, category: value }))}>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Skincare">Skincare</SelectItem>
-                <SelectItem value="Makeup">Makeup</SelectItem>
-                <SelectItem value="Haircare">Haircare</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="costPrice" className="text-right">
-              Cost Price
-            </Label>
-            <Input type="number" id="costPrice" name="costPrice" value={newProduct.costPrice} onChange={handleNumberInputChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="sellPrice" className="text-right">
-              Sell Price
-            </Label>
-            <Input type="number" id="sellPrice" name="sellPrice" value={newProduct.sellPrice} onChange={handleNumberInputChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="stockQuantity" className="text-right">
-              Stock Quantity
-            </Label>
-            <Input type="number" id="stockQuantity" name="stockQuantity" value={newProduct.stockQuantity} onChange={handleNumberInputChange} className="col-span-3" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="lowStockThreshold" className="text-right">
-              Low Stock Threshold
-            </Label>
-            <Input type="number" id="lowStockThreshold" name="lowStockThreshold" value={newProduct.lowStockThreshold} onChange={handleNumberInputChange} className="col-span-3" />
-          </div>
-        </div>
-        <Button onClick={handleAddProduct} className="w-full">
-          Add Product
-        </Button>
-      </Modal>
-      
-      {/* Edit Product Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={closeEditModal}
-        title="Edit Product"
-        footer={
-          <div className="flex justify-between">
-            <Button variant="destructive" onClick={() => selectedProduct && handleDeleteProduct(selectedProduct.id)}>
-              Delete Product
-            </Button>
-            <Button onClick={handleUpdateProduct}>Update Product</Button>
-          </div>
-        }
-      >
-        {selectedProduct && (
+      {/* Add Product Dialog */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+          </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Name
               </Label>
-              <Input
-                type="text"
-                id="name"
-                name="name"
-                value={selectedProduct.name}
-                onChange={(e) =>
-                  setSelectedProduct({ ...selectedProduct, name: e.target.value })
-                }
-                className="col-span-3"
-              />
+              <Input type="text" id="name" name="name" value={newProduct.name} onChange={handleInputChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="description" className="text-right">
                 Description
               </Label>
-              <Textarea
-                id="description"
-                name="description"
-                value={selectedProduct.description}
-                onChange={(e) =>
-                  setSelectedProduct({ ...selectedProduct, description: e.target.value })
-                }
-                className="col-span-3"
-              />
+              <Textarea id="description" name="description" value={newProduct.description} onChange={handleInputChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="category" className="text-right">
                 Category
               </Label>
-              <Select
-                onValueChange={(value) =>
-                  setSelectedProduct({ ...selectedProduct, category: value })
-                }
-                defaultValue={selectedProduct.category}
-              >
+              <Select onValueChange={(value) => setNewProduct(prev => ({ ...prev, category: value }))}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
@@ -433,101 +342,202 @@ const InventoryPage = () => {
               <Label htmlFor="costPrice" className="text-right">
                 Cost Price
               </Label>
-              <Input
-                type="number"
-                id="costPrice"
-                name="costPrice"
-                value={selectedProduct.costPrice}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    costPrice: parseFloat(e.target.value),
-                  })
-                }
-                className="col-span-3"
-              />
+              <Input type="number" id="costPrice" name="costPrice" value={newProduct.costPrice} onChange={handleNumberInputChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="sellPrice" className="text-right">
                 Sell Price
               </Label>
-              <Input
-                type="number"
-                id="sellPrice"
-                name="sellPrice"
-                value={selectedProduct.sellPrice}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    sellPrice: parseFloat(e.target.value),
-                  })
-                }
-                className="col-span-3"
-              />
+              <Input type="number" id="sellPrice" name="sellPrice" value={newProduct.sellPrice} onChange={handleNumberInputChange} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="stockQuantity" className="text-right">
                 Stock Quantity
               </Label>
-              <Input
-                type="number"
-                id="stockQuantity"
-                name="stockQuantity"
-                value={selectedProduct.stockQuantity}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    stockQuantity: parseInt(e.target.value),
-                  })
-                }
-                className="col-span-3"
-              />
+              <Input type="number" id="stockQuantity" name="stockQuantity" value={newProduct.stockQuantity} onChange={handleNumberInputChange} className="col-span-3" />
             </div>
-             <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="lowStockThreshold" className="text-right">
                 Low Stock Threshold
               </Label>
-              <Input
-                type="number"
-                id="lowStockThreshold"
-                name="lowStockThreshold"
-                value={selectedProduct.lowStockThreshold}
-                onChange={(e) =>
-                  setSelectedProduct({
-                    ...selectedProduct,
-                    lowStockThreshold: parseInt(e.target.value),
-                  })
-                }
-                className="col-span-3"
-              />
+              <Input type="number" id="lowStockThreshold" name="lowStockThreshold" value={newProduct.lowStockThreshold} onChange={handleNumberInputChange} className="col-span-3" />
             </div>
           </div>
-        )}
-      </Modal>
+          <Button onClick={handleAddProduct} className="w-full">
+            Add Product
+          </Button>
+        </DialogContent>
+      </Dialog>
       
-      {/* Restock Modal */}
-      <Modal isOpen={isRestockModalOpen} onClose={closeRestockModal} title="Restock Product">
-        {selectedProduct && (
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="restockQuantity" className="text-right">
-                Restock Quantity
-              </Label>
-              <Input
-                type="number"
-                id="restockQuantity"
-                name="restockQuantity"
-                value={restockQuantity}
-                onChange={(e) => setRestockQuantity(parseInt(e.target.value))}
-                className="col-span-3"
-              />
+      {/* Edit Product Dialog */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={selectedProduct.name}
+                  onChange={(e) =>
+                    setSelectedProduct({ ...selectedProduct, name: e.target.value })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={selectedProduct.description}
+                  onChange={(e) =>
+                    setSelectedProduct({ ...selectedProduct, description: e.target.value })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  onValueChange={(value) =>
+                    setSelectedProduct({ ...selectedProduct, category: value })
+                  }
+                  defaultValue={selectedProduct.category}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Skincare">Skincare</SelectItem>
+                    <SelectItem value="Makeup">Makeup</SelectItem>
+                    <SelectItem value="Haircare">Haircare</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="costPrice" className="text-right">
+                  Cost Price
+                </Label>
+                <Input
+                  type="number"
+                  id="costPrice"
+                  name="costPrice"
+                  value={selectedProduct.costPrice}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      costPrice: parseFloat(e.target.value),
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sellPrice" className="text-right">
+                  Sell Price
+                </Label>
+                <Input
+                  type="number"
+                  id="sellPrice"
+                  name="sellPrice"
+                  value={selectedProduct.sellPrice}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      sellPrice: parseFloat(e.target.value),
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="stockQuantity" className="text-right">
+                  Stock Quantity
+                </Label>
+                <Input
+                  type="number"
+                  id="stockQuantity"
+                  name="stockQuantity"
+                  value={selectedProduct.stockQuantity}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      stockQuantity: parseInt(e.target.value),
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="lowStockThreshold" className="text-right">
+                  Low Stock Threshold
+                </Label>
+                <Input
+                  type="number"
+                  id="lowStockThreshold"
+                  name="lowStockThreshold"
+                  value={selectedProduct.lowStockThreshold}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      lowStockThreshold: parseInt(e.target.value),
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <DialogFooter className="flex justify-between mt-4">
+                <Button variant="destructive" onClick={() => selectedProduct && handleDeleteProduct(selectedProduct.id)}>
+                  Delete Product
+                </Button>
+                <Button onClick={handleUpdateProduct}>Update Product</Button>
+              </DialogFooter>
             </div>
-            <Button onClick={handleRestock} className="w-full">
-              Restock Product
-            </Button>
-          </div>
-        )}
-      </Modal>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Restock Dialog */}
+      <Dialog open={isRestockModalOpen} onOpenChange={setIsRestockModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Restock Product</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="restockQuantity" className="text-right">
+                  Restock Quantity
+                </Label>
+                <Input
+                  type="number"
+                  id="restockQuantity"
+                  name="restockQuantity"
+                  value={restockQuantity}
+                  onChange={(e) => setRestockQuantity(parseInt(e.target.value))}
+                  className="col-span-3"
+                />
+              </div>
+              <Button onClick={handleRestock} className="w-full">
+                Restock Product
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
