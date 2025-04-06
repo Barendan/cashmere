@@ -4,6 +4,12 @@ import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Table,
   TableBody,
@@ -13,12 +19,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FinanceRecord, Service } from "@/models/types";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ServiceIncome extends FinanceRecord {
   serviceName: string;
@@ -28,7 +41,10 @@ interface ServiceIncome extends FinanceRecord {
 const IncomeList = ({ newIncome }) => {
   const [incomeRecords, setIncomeRecords] = useState<ServiceIncome[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [incomeToDelete, setIncomeToDelete] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     const fetchIncomeRecords = async () => {
@@ -129,6 +145,42 @@ const IncomeList = ({ newIncome }) => {
     }
   }, [newIncome]);
 
+  const handleDeleteIncome = async () => {
+    if (!incomeToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('finances')
+        .delete()
+        .eq('id', incomeToDelete);
+        
+      if (error) throw error;
+      
+      // Remove the deleted record from the state
+      setIncomeRecords(prev => prev.filter(record => record.id !== incomeToDelete));
+      
+      toast({
+        title: "Success",
+        description: "Income record deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting income record:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete income record",
+        variant: "destructive",
+      });
+    } finally {
+      setIncomeToDelete(null);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const openDeleteDialog = (id: string) => {
+    setIncomeToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+
   const formatServiceNames = (record: ServiceIncome) => {
     if (!record.servicesList || record.servicesList.length === 0) {
       return record.serviceName;
@@ -195,6 +247,7 @@ const IncomeList = ({ newIncome }) => {
               <TableHead>Service</TableHead>
               <TableHead>Payment Method</TableHead>
               <TableHead className="text-right">Amount</TableHead>
+              {isAdmin && <TableHead className="w-20">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -205,11 +258,39 @@ const IncomeList = ({ newIncome }) => {
                 <TableCell>{formatServiceNames(record)}</TableCell>
                 <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
                 <TableCell className="text-right">${record.amount.toFixed(2)}</TableCell>
+                {isAdmin && (
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => openDeleteDialog(record.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this income record. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteIncome} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

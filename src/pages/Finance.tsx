@@ -10,6 +10,8 @@ import ExpenseForm from "@/components/finance/ExpenseForm";
 import ExpenseList from "@/components/finance/ExpenseList";
 import FinanceSummary from "@/components/finance/FinanceSummary";
 import usePageTitle from "@/hooks/usePageTitle";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const Finance = () => {
   usePageTitle("Finance");
@@ -18,6 +20,13 @@ const Finance = () => {
   const [activeTab, setActiveTab] = useState("income");
   const [newIncome, setNewIncome] = useState(null);
   const [newExpense, setNewExpense] = useState(null);
+
+  // If user is not admin and tries to access expenses tab, redirect to income tab
+  useEffect(() => {
+    if (!isAdmin && activeTab === "expense") {
+      setActiveTab("income");
+    }
+  }, [isAdmin, activeTab]);
 
   const handleIncomeAdded = (income) => {
     setNewIncome(income);
@@ -73,21 +82,32 @@ const Finance = () => {
           <CardContent>
             <Tabs
               defaultValue={activeTab}
+              value={activeTab}
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-2 mb-6">
+              <TabsList className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} mb-6`}>
                 <TabsTrigger value="income">Service Income</TabsTrigger>
-                <TabsTrigger value="expense">Expenses</TabsTrigger>
+                {isAdmin && <TabsTrigger value="expense">Expenses</TabsTrigger>}
               </TabsList>
               <TabsContent value="income" className="space-y-6">
                 <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
                 <IncomeList newIncome={newIncome} />
               </TabsContent>
-              <TabsContent value="expense" className="space-y-6">
-                <ExpenseForm onExpenseAdded={handleExpenseAdded} />
-                <ExpenseList newExpense={newExpense} />
-              </TabsContent>
+              {isAdmin && (
+                <TabsContent value="expense" className="space-y-6">
+                  <ExpenseForm onExpenseAdded={handleExpenseAdded} />
+                  <ExpenseList newExpense={newExpense} />
+                </TabsContent>
+              )}
+              {!isAdmin && activeTab === "expense" && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You don't have permission to view the expenses tab.
+                  </AlertDescription>
+                </Alert>
+              )}
             </Tabs>
           </CardContent>
         </Card>

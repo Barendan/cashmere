@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -169,104 +170,107 @@ const InventoryPage = () => {
         <p className="text-muted-foreground">Add, edit and track your inventory</p>
       </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Inventory Management</CardTitle>
-              <CardDescription>View and modify your product inventory</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <Input 
-                  placeholder="Search products..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
-              </div>
-              
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Stock</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProducts.length > 0 ? (
-                        filteredProducts.map((product) => (
-                          <TableRow key={product.id}>
-                            <TableCell className="font-medium">
-                              <div>
-                                {product.name}
-                                {product.stockQuantity <= product.lowStockThreshold && (
-                                  <Badge 
-                                    variant="outline" 
-                                    className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
-                                  >
-                                    Low Stock
-                                  </Badge>
-                                )}
-                              </div>
-                              {product.description && (
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {product.description}
-                                </div>
+      <div className="space-y-6">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>Inventory Management</CardTitle>
+            <CardDescription>View and modify your product inventory</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <Input 
+                placeholder="Search products..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+            
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-right">Stock</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                      <TableHead className="text-right">Price</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.length > 0 ? (
+                      filteredProducts.map((product, index) => (
+                        <TableRow 
+                          key={product.id}
+                          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        >
+                          <TableCell className="font-medium">
+                            <div>
+                              {product.name}
+                              {product.stockQuantity <= product.lowStockThreshold && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
+                                >
+                                  Low Stock
+                                </Badge>
                               )}
-                            </TableCell>
-                            <TableCell>{product.category}</TableCell>
-                            <TableCell className="text-right">
-                              {product.stockQuantity}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              ${product.costPrice.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              ${product.sellPrice.toFixed(2)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => openRestockModal(product)}
-                                >
-                                  <Package className="h-4 w-4 mr-1" /> 
-                                  Restock
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => openEditModal(product)}
-                                >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  Edit
-                                </Button>
+                            </div>
+                            {product.description && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {product.description}
                               </div>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                            {searchQuery ? "No products found matching your search." : "No products have been added yet."}
+                            )}
+                          </TableCell>
+                          <TableCell>{product.category}</TableCell>
+                          <TableCell className="text-right">
+                            {product.stockQuantity}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ${product.costPrice.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            ${product.sellPrice.toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => openRestockModal(product)}
+                              >
+                                <Package className="h-4 w-4 mr-1" /> 
+                                Restock
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => openEditModal(product)}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-          
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                          {searchQuery ? "No products found matching your search." : "No products have been added yet."}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Add New Product</CardTitle>
@@ -279,9 +283,7 @@ const InventoryPage = () => {
               </Button>
             </CardContent>
           </Card>
-        </div>
-        
-        <div className="lg:col-span-1 space-y-6">
+          
           <Card>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
