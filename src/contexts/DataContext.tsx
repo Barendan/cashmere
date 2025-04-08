@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Product, Transaction } from "../models/types";
+import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { v4 as uuidv4 } from "uuid";
@@ -7,26 +8,30 @@ import {
   supabase, 
   ProductRow, 
   ProductInsert, 
-  TransactionRow, 
-  TransactionInsert, 
+  TransactionInsert,
+  SaleInsert,
   mapProductRowToProduct,
-  mapTransactionRowToTransaction
+  mapTransactionRowToTransaction,
+  mapSaleRowToSale
 } from "../integrations/supabase/client";
 
 interface DataContextType {
   products: Product[];
   transactions: Transaction[];
+  sales: Sale[];
   lastRestockDate: Date | null;
   addProduct: (product: Omit<Product, "id">) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
+  recordBulkSale: (items: {product: Product, quantity: number}[]) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   adjustInventory: (productId: string, newQuantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
   isLoading: boolean;
+  getTotalInventoryValue: () => number;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -34,6 +39,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [lastRestockDate, setLastRestockDate] = useState<Date | null>(null);
   const [lastAction, setLastAction] = useState<{ action: string; data: any } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -45,6 +51,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       
       try {
+        // Fetch products
         const { data: productsData, error: productsError } = await supabase
           .from('products')
           .select('*');
@@ -55,7 +62,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         const transformedProducts: Product[] = productsData.map(row => mapProductRowToProduct(row));
         setProducts(transformedProducts);
+        
+        // Fetch sales
+        const { data: salesData, error: salesError } = await supabase
+          .from('sales')
+          .select('*')
+          .order('date', { ascending: false });
+        
+        if (salesError) {
+          throw salesError;
+        }
+        
+        const transformedSales: Sale[] = salesData.map(row => mapSaleRowToSale(row));
 
+        // Fetch transactions
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select('*')
@@ -66,6 +86,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
 
         const transformedTransactions: Transaction[] = transactionsData.map(item => mapTransactionRowToTransaction(item));
+        
+        // Associate transactions with sales
+        const salesWithItems = transformedSales.map(sale => {
+          const items = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
+          return { ...sale, items };
+        });
+        
+        setSales(salesWithItems);
         setTransactions(transformedTransactions);
 
         const restockTransactions = transformedTransactions.filter(t => t.type === 'restock');
@@ -231,6 +259,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const now = new Date();
       
+      // Create a new sale
+      const saleData: SaleInsert = {
+        date: now.toISOString(),
+        total_amount: product.sellPrice * quantity,
+        user_id: user?.id || 'unknown',
+        user_name: user?.name || 'Unknown User'
+      };
+      
+      const { data: saleResult, error: saleError } = await supabase
+        .from('sales')
+        .insert(saleData)
+        .select();
+        
+      if (saleError) {
+        throw saleError;
+      }
+      
+      if (!saleResult || saleResult.length === 0) {
+        throw new Error('Failed to create sale record');
+      }
+      
+      const saleId = saleResult[0].id;
+      
+      // Update product stock
       const { error: updateError } = await supabase
         .from('products')
         .update({ 
@@ -243,6 +295,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw updateError;
       }
       
+      // Create transaction record
       const newTransactionData: TransactionInsert = {
         product_id: productId,
         product_name: product.name,
@@ -251,7 +304,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         type: 'sale',
         date: now.toISOString(),
         user_id: user?.id || 'unknown',
-        user_name: user?.name || 'Unknown User'
+        user_name: user?.name || 'Unknown User',
+        sale_id: saleId
       };
       
       const { data, error: insertError } = await supabase
@@ -263,29 +317,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Transaction insertion error:', insertError);
       }
 
+      // Update local state
       setProducts(products.map(p =>
         p.id === productId
           ? { ...p, stockQuantity: p.stockQuantity - quantity }
           : p
       ));
       
-      if (data && data.length > 0) {
-        const newLocalTransaction = mapTransactionRowToTransaction(data[0]);
-        setTransactions([newLocalTransaction, ...transactions]);
-      } else {
-        const tempTransaction: Transaction = {
-          id: uuidv4(),
-          productId,
-          productName: product.name,
-          quantity,
-          price: product.sellPrice * quantity,
-          type: "sale",
-          date: now,
-          userId: user?.id || 'unknown',
-          userName: user?.name || 'Unknown User'
-        };
+      // Add the new sale to local state
+      if (saleResult && saleResult.length > 0) {
+        const newSale = mapSaleRowToSale(saleResult[0]);
         
-        setTransactions([tempTransaction, ...transactions]);
+        if (data && data.length > 0) {
+          const newTransaction = mapTransactionRowToTransaction(data[0]);
+          newSale.items = [newTransaction];
+          
+          setSales([newSale, ...sales]);
+          setTransactions([newTransaction, ...transactions]);
+        }
       }
       
       toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
@@ -296,6 +345,131 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: "Failed to record sale.", 
         variant: "destructive" 
       });
+    }
+  };
+  
+  const recordBulkSale = async (items: {product: Product, quantity: number}[]) => {
+    if (items.length === 0) return;
+    
+    // Check stock availability for all items
+    for (const item of items) {
+      if (item.product.stockQuantity < item.quantity) {
+        toast({ 
+          title: "Error", 
+          description: `Not enough ${item.product.name} in stock.`, 
+          variant: "destructive" 
+        });
+        return;
+      }
+    }
+    
+    try {
+      const now = new Date();
+      const totalAmount = items.reduce(
+        (sum, item) => sum + (item.product.sellPrice * item.quantity), 
+        0
+      );
+      
+      // Create a new sale record
+      const saleData: SaleInsert = {
+        date: now.toISOString(),
+        total_amount: totalAmount,
+        user_id: user?.id || 'unknown',
+        user_name: user?.name || 'Unknown User'
+      };
+      
+      const { data: saleResult, error: saleError } = await supabase
+        .from('sales')
+        .insert(saleData)
+        .select();
+        
+      if (saleError) {
+        throw saleError;
+      }
+      
+      if (!saleResult || saleResult.length === 0) {
+        throw new Error('Failed to create sale record');
+      }
+      
+      const saleId = saleResult[0].id;
+      
+      // Create transactions and update product stock for each item
+      const newTransactions: TransactionInsert[] = [];
+      const productUpdates: Promise<any>[] = [];
+      
+      for (const item of items) {
+        // Create transaction record
+        newTransactions.push({
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          price: item.product.sellPrice * item.quantity,
+          type: 'sale',
+          date: now.toISOString(),
+          user_id: user?.id || 'unknown',
+          user_name: user?.name || 'Unknown User',
+          sale_id: saleId
+        });
+        
+        // Update product stock
+        productUpdates.push(
+          supabase
+            .from('products')
+            .update({ 
+              stock_quantity: item.product.stockQuantity - item.quantity,
+              updated_at: now.toISOString()
+            })
+            .eq('id', item.product.id)
+        );
+      }
+      
+      // Insert all transactions at once
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .insert(newTransactions)
+        .select();
+        
+      if (transactionsError) {
+        throw transactionsError;
+      }
+      
+      // Wait for all product updates
+      await Promise.all(productUpdates);
+      
+      // Update local state
+      setProducts(products.map(p => {
+        const soldItem = items.find(item => item.product.id === p.id);
+        if (soldItem) {
+          return { ...p, stockQuantity: p.stockQuantity - soldItem.quantity };
+        }
+        return p;
+      }));
+      
+      // Add the new sale and transactions to local state
+      if (saleResult && saleResult.length > 0) {
+        const newSale = mapSaleRowToSale(saleResult[0]);
+        
+        if (transactionsData && transactionsData.length > 0) {
+          const newLocalTransactions = transactionsData.map(t => mapTransactionRowToTransaction(t));
+          newSale.items = newLocalTransactions;
+          
+          setSales([newSale, ...sales]);
+          setTransactions([...newLocalTransactions, ...transactions]);
+        }
+      }
+      
+      toast({ 
+        title: "Sale Completed", 
+        description: `Sold ${items.length} different products.` 
+      });
+    } catch (error) {
+      console.error('Error recording bulk sale:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to process sale.", 
+        variant: "destructive" 
+      });
+      throw error;
     }
   };
 
@@ -605,23 +779,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getProduct = (id: string) => {
     return products.find(p => p.id === id);
   };
+  
+  const getTotalInventoryValue = () => {
+    return products.reduce((total, product) => {
+      return total + (product.costPrice * product.stockQuantity);
+    }, 0);
+  };
 
   return (
     <DataContext.Provider
       value={{
         products,
         transactions,
+        sales,
         lastRestockDate,
         addProduct,
         updateProduct,
         deleteProduct,
         recordSale,
+        recordBulkSale,
         recordRestock,
         adjustInventory,
         updateLastRestockDate,
         undoLastTransaction,
         getProduct,
-        isLoading
+        isLoading,
+        getTotalInventoryValue
       }}
     >
       {children}

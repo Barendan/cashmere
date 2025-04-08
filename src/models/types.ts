@@ -25,6 +25,18 @@ export interface Transaction {
   date: Date;
   userId: string;
   userName: string;
+  saleId?: string;
+}
+
+export interface Sale {
+  id: string;
+  date: Date;
+  totalAmount: number;
+  userId: string;
+  userName: string;
+  paymentMethod?: string;
+  notes?: string;
+  items?: Transaction[];
 }
 
 export interface SalesData {

@@ -113,6 +113,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sales: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          total_amount: number
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          total_amount?: number
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          total_amount?: number
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           created_at: string
@@ -149,6 +182,7 @@ export type Database = {
           product_id: string
           product_name: string
           quantity: number
+          sale_id: string | null
           type: string
           user_id: string
           user_name: string
@@ -161,6 +195,7 @@ export type Database = {
           product_id: string
           product_name: string
           quantity: number
+          sale_id?: string | null
           type: string
           user_id: string
           user_name: string
@@ -173,6 +208,7 @@ export type Database = {
           product_id?: string
           product_name?: string
           quantity?: number
+          sale_id?: string | null
           type?: string
           user_id?: string
           user_name?: string
@@ -183,6 +219,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]

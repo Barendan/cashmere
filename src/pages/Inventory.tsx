@@ -12,14 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, Edit, Plus } from "lucide-react";
+import { Package, Edit, Plus, DollarSign, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatCurrency } from "@/lib/format";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
-  const { products, addProduct, updateProduct, deleteProduct } = useData();
+  const { products, addProduct, updateProduct, deleteProduct, getTotalInventoryValue } = useData();
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -38,6 +39,7 @@ const InventoryPage = () => {
     lowStockThreshold: 5,
   });
   const [restockQuantity, setRestockQuantity] = useState(0);
+  const [thresholdValue, setThresholdValue] = useState(5);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -158,10 +160,24 @@ const InventoryPage = () => {
       });
     }
   };
+  
+  const handleApplyThreshold = () => {
+    products.forEach(product => {
+      updateProduct(product.id, { lowStockThreshold: thresholdValue });
+    });
+    
+    toast({
+      title: "Success",
+      description: "Low stock threshold updated for all products.",
+    });
+  };
 
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const totalInventoryValue = getTotalInventoryValue();
+  const lowStockCount = products.filter(p => p.stockQuantity <= p.lowStockThreshold).length;
 
   return (
     <div className="container mx-auto p-6">
@@ -170,140 +186,168 @@ const InventoryPage = () => {
         <p className="text-muted-foreground">Add, edit and track your inventory</p>
       </div>
       
-      <div className="space-y-6">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle>Inventory Management</CardTitle>
-            <CardDescription>View and modify your product inventory</CardDescription>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card className="bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-spa-deep flex items-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Inventory Value
+            </CardTitle>
+            <CardDescription>Total value of current inventory</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <Input 
-                placeholder="Search products..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-sm"
-              />
-            </div>
-            
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Stock</TableHead>
-                      <TableHead className="text-right">Cost</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.length > 0 ? (
-                      filteredProducts.map((product, index) => (
-                        <TableRow 
-                          key={product.id}
-                          className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                        >
-                          <TableCell className="font-medium">
-                            <div>
-                              {product.name}
-                              {product.stockQuantity <= product.lowStockThreshold && (
-                                <Badge 
-                                  variant="outline" 
-                                  className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
-                                >
-                                  Low Stock
-                                </Badge>
-                              )}
-                            </div>
-                            {product.description && (
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {product.description}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>{product.category}</TableCell>
-                          <TableCell className="text-right">
-                            {product.stockQuantity}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            ${product.costPrice.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            ${product.sellPrice.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => openRestockModal(product)}
-                              >
-                                <Package className="h-4 w-4 mr-1" /> 
-                                Restock
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => openEditModal(product)}
-                              >
-                                <Edit className="h-4 w-4 mr-1" />
-                                Edit
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                          {searchQuery ? "No products found matching your search." : "No products have been added yet."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </ScrollArea>
+            <div className="text-3xl font-bold">{formatCurrency(totalInventoryValue)}</div>
+            <p className="text-muted-foreground text-sm mt-1">Based on cost price</p>
           </CardContent>
         </Card>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Add New Product</CardTitle>
-              <CardDescription>Add a new product to your inventory</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={openAddModal} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Product
-              </Button>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Manage your inventory with ease</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Low Stock Threshold</h4>
-                <p className="text-sm text-muted-foreground">
-                  Set the threshold for low stock alerts.
-                </p>
-                <Input type="number" placeholder="Enter threshold" />
+        <Card className="bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-spa-deep flex items-center">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </CardTitle>
+            <CardDescription>Add a new product to inventory</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={openAddModal} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Product
+            </Button>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-spa-deep flex items-center">
+              <Archive className="h-4 w-4 mr-2" />
+              Low Stock Alert
+            </CardTitle>
+            <CardDescription>Set threshold for all products</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="threshold">Low Stock Threshold</Label>
+                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
+                  {lowStockCount} Low Stock Items
+                </Badge>
               </div>
-              <Button variant="outline" className="w-full">
-                Apply Changes
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="flex space-x-2">
+                <Input 
+                  id="threshold"
+                  type="number" 
+                  value={thresholdValue}
+                  onChange={e => setThresholdValue(parseInt(e.target.value) || 0)}
+                  className="flex-1"
+                />
+                <Button variant="outline" onClick={handleApplyThreshold}>
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+      
+      <Card className="w-full mb-8">
+        <CardHeader>
+          <CardTitle>Inventory Management</CardTitle>
+          <CardDescription>View and modify your product inventory</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <Input 
+              placeholder="Search products..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product, index) => (
+                      <TableRow 
+                        key={product.id}
+                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      >
+                        <TableCell className="font-medium">
+                          <div>
+                            {product.name}
+                            {product.stockQuantity <= product.lowStockThreshold && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
+                              >
+                                Low Stock
+                              </Badge>
+                            )}
+                          </div>
+                          {product.description && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {product.description}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{product.category}</TableCell>
+                        <TableCell className="text-right">
+                          {product.stockQuantity}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${product.costPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${product.sellPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openRestockModal(product)}
+                            >
+                              <Package className="h-4 w-4 mr-1" /> 
+                              Restock
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openEditModal(product)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        {searchQuery ? "No products found matching your search." : "No products have been added yet."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
       
       {/* Add Product Dialog */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

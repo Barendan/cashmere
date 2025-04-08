@@ -19,7 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 const SalesLog = () => {
   usePageTitle("Sales Log");
-  const { products, transactions, recordSale, undoLastTransaction } = useData();
+  const { products, transactions, recordBulkSale, undoLastTransaction } = useData();
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
   const [filterType, setFilterType] = useState<string>("all");
@@ -78,17 +78,12 @@ const SalesLog = () => {
     setIsProcessing(true);
     
     try {
-      // Process each item in cart
-      for (const item of cartItems) {
-        await recordSale(item.product.id, item.quantity);
-      }
+      // Process all items in a single transaction
+      await recordBulkSale(cartItems);
       
       // Clear cart after successful sale
       setCartItems([]);
-      toast({
-        title: "Sale completed",
-        description: `Successfully processed ${cartItems.length} product${cartItems.length > 1 ? 's' : ''}`,
-      });
+      
     } catch (error) {
       console.error("Error processing sale:", error);
       toast({
@@ -251,8 +246,8 @@ const SalesLog = () => {
               </TableHeader>
               <TableBody>
                 {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
+                  filteredTransactions.map((transaction, index) => (
+                    <TableRow key={transaction.id} className={index % 2 === 0 ? "" : "bg-gray-50"}>
                       <TableCell className="text-sm">
                         {formatDate(transaction.date)}
                       </TableCell>

@@ -25,6 +25,9 @@ export type ServiceUpdate = Tables['services']['Update']
 export type FinanceRow = Tables['finances']['Row']
 export type FinanceInsert = Tables['finances']['Insert']
 export type FinanceUpdate = Tables['finances']['Update']
+export type SaleRow = Tables['sales']['Row']
+export type SaleInsert = Tables['sales']['Insert']
+export type SaleUpdate = Tables['sales']['Update']
 
 // Add imageUrl mapping helper to standardize with our model
 export const mapProductRowToProduct = (row: ProductRow) => ({
@@ -73,5 +76,16 @@ export const mapTransactionRowToTransaction = (row: TransactionRow) => ({
   type: row.type as 'sale' | 'restock' | 'adjustment' | 'return',
   date: new Date(row.date),
   userId: row.user_id,
-  userName: row.user_name
+  userName: row.user_name,
+  saleId: row.sale_id || undefined
+});
+
+export const mapSaleRowToSale = (row: SaleRow) => ({
+  id: row.id,
+  date: new Date(row.date),
+  totalAmount: row.total_amount,
+  userId: row.user_id,
+  userName: row.user_name,
+  paymentMethod: row.payment_method || undefined,
+  notes: row.notes || undefined
 });
