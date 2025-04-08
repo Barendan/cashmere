@@ -16,8 +16,8 @@ export const fetchTransactions = async () => {
 };
 
 export const fetchSales = async () => {
-  // Using explicit type for the RPC call without parameters
-  const { data, error } = await supabase.rpc<RpcSaleResult[]>('get_sales');
+  // Using correct type parameters for the RPC call without parameters
+  const { data, error } = await supabase.rpc<RpcSaleResult[], Record<string, never>>('get_sales');
   
   if (error) {
     throw error;
@@ -31,8 +31,8 @@ export const fetchSales = async () => {
 };
 
 export const recordSaleInDb = async (saleData: any) => {
-  // Using explicit type for the RPC call with parameters
-  const { data, error } = await supabase.rpc<RpcSaleResult[]>('insert_sale', { 
+  // Using correct type parameters for the RPC call with parameters
+  const { data, error } = await supabase.rpc<RpcSaleResult[], { p_sale: any }>('insert_sale', { 
     p_sale: saleData 
   });
   
@@ -48,8 +48,8 @@ export const recordSaleInDb = async (saleData: any) => {
 };
 
 export const recordTransactionInDb = async (transactionData: any) => {
-  // Using explicit type for the RPC call with parameters
-  const { data, error } = await supabase.rpc<RpcTransactionResult[]>('insert_transaction_with_sale', { 
+  // Using correct type parameters for the RPC call with parameters
+  const { data, error } = await supabase.rpc<RpcTransactionResult[], { p_transaction: any }>('insert_transaction_with_sale', { 
     p_transaction: transactionData 
   });
   
@@ -65,8 +65,8 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  // Using explicit type for the RPC call with parameters
-  const { data, error } = await supabase.rpc<RpcTransactionResult[]>('insert_bulk_transactions', { 
+  // Using correct type parameters for the RPC call with parameters
+  const { data, error } = await supabase.rpc<RpcTransactionResult[], { transactions: any[] }>('insert_bulk_transactions', { 
     transactions 
   });
   
