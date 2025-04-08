@@ -69,6 +69,12 @@ export type RpcTransactionResult = {
   created_at: string;
 };
 
+// Define specific return types for RPC functions
+export type GetSalesFunction = typeof supabase.rpc<RpcSaleResult[]>;
+export type InsertSaleFunction = typeof supabase.rpc<RpcSaleResult[]>;
+export type InsertTransactionWithSaleFunction = typeof supabase.rpc<RpcTransactionResult[]>;
+export type InsertBulkTransactionsFunction = typeof supabase.rpc<RpcTransactionResult[]>;
+
 // Add imageUrl mapping helper to standardize with our model
 export const mapProductRowToProduct = (row: ProductRow) => ({
   id: row.id,

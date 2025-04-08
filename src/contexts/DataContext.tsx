@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -14,7 +15,11 @@ import {
   mapTransactionRowToTransaction,
   mapSaleRowToSale,
   RpcSaleResult,
-  RpcTransactionResult
+  RpcTransactionResult,
+  GetSalesFunction,
+  InsertSaleFunction,
+  InsertTransactionWithSaleFunction,
+  InsertBulkTransactionsFunction
 } from "../integrations/supabase/client";
 
 interface DataContextType {
@@ -67,7 +72,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // Fetch sales using the RPC function
         const { data: salesData, error: salesError } = await supabase
-          .rpc('get_sales');
+          .rpc('get_sales') as { data: RpcSaleResult[] | null, error: any };
         
         if (salesError) {
           console.error('Error fetching sales:', salesError);
@@ -75,8 +80,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setSales([]);
         } else {
           // Transform sales data - make sure we handle the array properly
-          const transformedSales: Sale[] = Array.isArray(salesData) && salesData 
-            ? salesData.map((row) => mapSaleRowToSale(row as RpcSaleResult))
+          const transformedSales: Sale[] = salesData && Array.isArray(salesData)
+            ? salesData.map(row => mapSaleRowToSale(row))
             : [];
           
           // Fetch transactions
@@ -280,17 +285,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       const { data: saleResult, error: saleError } = await supabase
-        .rpc('insert_sale', { p_sale: saleData });
+        .rpc('insert_sale', { p_sale: saleData }) as { data: RpcSaleResult[] | null, error: any };
         
       if (saleError) {
         throw saleError;
       }
       
-      if (!saleResult || !Array.isArray(saleResult) || (saleResult as any[]).length === 0) {
+      if (!saleResult || !Array.isArray(saleResult) || saleResult.length === 0) {
         throw new Error('Failed to create sale record');
       }
       
-      const saleId = (saleResult as RpcSaleResult[])[0].id;
+      const saleId = saleResult[0].id;
       
       // Update product stock
       const { error: updateError } = await supabase
@@ -319,7 +324,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       const { data: transData, error: insertError } = await supabase
-        .rpc('insert_transaction_with_sale', { p_transaction: newTransactionData });
+        .rpc('insert_transaction_with_sale', { p_transaction: newTransactionData }) as { data: RpcTransactionResult[] | null, error: any };
 
       if (insertError) {
         console.error('Transaction insertion error:', insertError);
@@ -334,11 +339,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ));
       
       // Add the new sale to local state
-      if (saleResult && Array.isArray(saleResult) && (saleResult as any[]).length > 0) {
-        const newSale = mapSaleRowToSale(saleResult[0] as RpcSaleResult);
+      if (saleResult && Array.isArray(saleResult) && saleResult.length > 0) {
+        const newSale = mapSaleRowToSale(saleResult[0]);
         
-        if (transData && Array.isArray(transData) && (transData as any[]).length > 0) {
-          const newTransaction = mapTransactionRowToTransaction(transData[0] as RpcTransactionResult);
+        if (transData && Array.isArray(transData) && transData.length > 0) {
+          const newTransaction = mapTransactionRowToTransaction(transData[0]);
           const saleWithItems: Sale = {
             ...newSale,
             items: [newTransaction]
@@ -391,17 +396,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       const { data: saleResult, error: saleError } = await supabase
-        .rpc('insert_sale', { p_sale: saleData });
+        .rpc('insert_sale', { p_sale: saleData }) as { data: RpcSaleResult[] | null, error: any };
         
       if (saleError) {
         throw saleError;
       }
       
-      if (!saleResult || !Array.isArray(saleResult) || (saleResult as any[]).length === 0) {
+      if (!saleResult || !Array.isArray(saleResult) || saleResult.length === 0) {
         throw new Error('Failed to create sale record');
       }
       
-      const saleId = (saleResult as RpcSaleResult[])[0].id;
+      const saleId = saleResult[0].id;
       
       // Create transactions and update product stock for each item
       const newTransactions: ExtendedTransactionInsert[] = [];
@@ -422,7 +427,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         
         // Update product stock - convert to a proper Promise
-        const promise: Promise<any> = supabase
+        const promise = supabase
           .from('products')
           .update({ 
             stock_quantity: item.product.stockQuantity - item.quantity,
@@ -431,12 +436,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .eq('id', item.product.id)
           .then(result => result);
           
-        productUpdatesPromises.push(promise);
+        productUpdatesPromises.push(promise as Promise<any>);
       }
       
       // Insert all transactions at once using the RPC function
       const { data: transactionsData, error: transactionsError } = await supabase
-        .rpc('insert_bulk_transactions', { transactions: newTransactions });
+        .rpc('insert_bulk_transactions', { transactions: newTransactions }) as { data: RpcTransactionResult[] | null, error: any };
         
       if (transactionsError) {
         throw transactionsError;
@@ -455,11 +460,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
       
       // Add the new sale and transactions to local state
-      if (saleResult && Array.isArray(saleResult) && (saleResult as any[]).length > 0) {
-        const newSale = mapSaleRowToSale(saleResult[0] as RpcSaleResult);
+      if (saleResult && Array.isArray(saleResult) && saleResult.length > 0) {
+        const newSale = mapSaleRowToSale(saleResult[0]);
         
-        if (transactionsData && Array.isArray(transactionsData) && (transactionsData as any[]).length > 0) {
-          const newLocalTransactions = (transactionsData as RpcTransactionResult[]).map(t => 
+        if (transactionsData && Array.isArray(transactionsData) && transactionsData.length > 0) {
+          const newLocalTransactions = transactionsData.map(t => 
             mapTransactionRowToTransaction(t)
           );
           
