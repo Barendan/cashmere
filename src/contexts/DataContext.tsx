@@ -9,7 +9,8 @@ import {
   ProductInsert, 
   TransactionRow, 
   TransactionInsert, 
-  mapProductRowToProduct 
+  mapProductRowToProduct,
+  mapTransactionRowToTransaction
 } from "../integrations/supabase/client";
 
 interface DataContextType {
@@ -64,17 +65,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           throw transactionsError;
         }
 
-        const transformedTransactions: Transaction[] = transactionsData.map(item => ({
-          id: item.id,
-          productId: item.product_id,
-          productName: item.product_name,
-          quantity: item.quantity,
-          price: item.price,
-          type: item.type as 'sale' | 'restock' | 'adjustment' | 'return',
-          date: new Date(item.date),
-          userId: item.user_id,
-          userName: item.user_name
-        }));
+        const transformedTransactions: Transaction[] = transactionsData.map(item => mapTransactionRowToTransaction(item));
         setTransactions(transformedTransactions);
 
         const restockTransactions = transformedTransactions.filter(t => t.type === 'restock');
@@ -239,6 +230,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       const now = new Date();
+      
       const { error: updateError } = await supabase
         .from('products')
         .update({ 
@@ -250,7 +242,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updateError) {
         throw updateError;
       }
-
+      
       const newTransactionData: TransactionInsert = {
         product_id: productId,
         product_name: product.name,
@@ -268,30 +260,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .select();
 
       if (insertError) {
-        throw insertError;
+        console.error('Transaction insertion error:', insertError);
       }
 
-      const updatedProducts = products.map(p =>
+      setProducts(products.map(p =>
         p.id === productId
           ? { ...p, stockQuantity: p.stockQuantity - quantity }
           : p
-      );
-      setProducts(updatedProducts);
+      ));
       
       if (data && data.length > 0) {
-        const newLocalTransaction: Transaction = {
-          id: data[0].id,
+        const newLocalTransaction = mapTransactionRowToTransaction(data[0]);
+        setTransactions([newLocalTransaction, ...transactions]);
+      } else {
+        const tempTransaction: Transaction = {
+          id: uuidv4(),
           productId,
           productName: product.name,
           quantity,
           price: product.sellPrice * quantity,
           type: "sale",
-          date: new Date(data[0].date),
-          userId: data[0].user_id,
-          userName: data[0].user_name
+          date: now,
+          userId: user?.id || 'unknown',
+          userName: user?.name || 'Unknown User'
         };
         
-        setTransactions([newLocalTransaction, ...transactions]);
+        setTransactions([tempTransaction, ...transactions]);
       }
       
       toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
@@ -500,53 +494,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       switch (action) {
         case "recordSale":
-          await supabase
-            .from('products')
-            .update({ 
-              stock_quantity: data.oldQuantity,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', data.productId);
-          
-          if (transactions.length > 0) {
-            await supabase
-              .from('transactions')
-              .delete()
-              .eq('id', transactions[0].id);
-            
-            setProducts(products.map(p =>
-              p.id === data.productId
-                ? { ...p, stockQuantity: data.oldQuantity }
-                : p
-            ));
-            setTransactions(transactions.slice(1));
-          }
-          break;
-          
         case "recordRestock":
-          await supabase
-            .from('products')
-            .update({ 
-              stock_quantity: data.oldQuantity,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', data.productId);
-          
-          if (transactions.length > 0) {
-            await supabase
-              .from('transactions')
-              .delete()
-              .eq('id', transactions[0].id);
-            
-            setProducts(products.map(p =>
-              p.id === data.productId
-                ? { ...p, stockQuantity: data.oldQuantity }
-                : p
-            ));
-            setTransactions(transactions.slice(1));
-          }
-          break;
-          
         case "adjustInventory":
           await supabase
             .from('products')

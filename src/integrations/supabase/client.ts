@@ -63,3 +63,15 @@ export const mapFinanceRowToFinanceRecord = (row: FinanceRow) => ({
   vendor: row.vendor || undefined,
   category: row.category || undefined
 });
+
+export const mapTransactionRowToTransaction = (row: TransactionRow) => ({
+  id: row.id,
+  productId: row.product_id,
+  productName: row.product_name,
+  quantity: row.quantity,
+  price: row.price,
+  type: row.type as 'sale' | 'restock' | 'adjustment' | 'return',
+  date: new Date(row.date),
+  userId: row.user_id,
+  userName: row.user_name
+});
