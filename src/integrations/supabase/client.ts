@@ -43,15 +43,15 @@ export type ExtendedTransactionInsert = {
   created_at?: string;
 };
 
-// RPC function result types
+// RPC function result types - properly defined as records
 export type RpcSaleResult = {
   id: string;
   date: string;
   total_amount: number;
   user_id: string;
   user_name: string;
-  payment_method?: string;
-  notes?: string;
+  payment_method?: string | null;
+  notes?: string | null;
   created_at: string;
 };
 
@@ -65,7 +65,7 @@ export type RpcTransactionResult = {
   date: string;
   user_id: string;
   user_name: string;
-  sale_id?: string;
+  sale_id?: string | null;
   created_at: string;
 };
 
@@ -107,7 +107,7 @@ export const mapFinanceRowToFinanceRecord = (row: FinanceRow) => ({
   category: row.category || undefined
 });
 
-export const mapTransactionRowToTransaction = (row: TransactionRow & { sale_id?: string }) => ({
+export const mapTransactionRowToTransaction = (row: TransactionRow | RpcTransactionResult) => ({
   id: row.id,
   productId: row.product_id,
   productName: row.product_name,
@@ -117,7 +117,7 @@ export const mapTransactionRowToTransaction = (row: TransactionRow & { sale_id?:
   date: new Date(row.date),
   userId: row.user_id,
   userName: row.user_name,
-  saleId: row.sale_id
+  saleId: row.sale_id || undefined
 });
 
 export const mapSaleRowToSale = (row: SaleRow | RpcSaleResult) => ({

@@ -75,8 +75,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Fallback to avoid blocking the app
           setSales([]);
         } else {
-          // Transform sales data
-          const transformedSales: Sale[] = (salesData || []).map((row: RpcSaleResult) => mapSaleRowToSale(row));
+          // Transform sales data - make sure we handle the array properly
+          const transformedSales: Sale[] = Array.isArray(salesData) 
+            ? salesData.map((row: RpcSaleResult) => mapSaleRowToSale(row))
+            : [];
           
           // Fetch transactions
           const { data: transactionsData, error: transactionsError } = await supabase
@@ -285,7 +287,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw saleError;
       }
       
-      if (!saleResult || saleResult.length === 0) {
+      if (!saleResult || !Array.isArray(saleResult) || saleResult.length === 0) {
         throw new Error('Failed to create sale record');
       }
       
@@ -333,10 +335,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ));
       
       // Add the new sale to local state
-      if (saleResult && saleResult.length > 0) {
+      if (saleResult && Array.isArray(saleResult) && saleResult.length > 0) {
         const newSale = mapSaleRowToSale(saleResult[0]);
         
-        if (transData && transData.length > 0) {
+        if (transData && Array.isArray(transData) && transData.length > 0) {
           const newTransaction = mapTransactionRowToTransaction(transData[0]);
           const saleWithItems: Sale = {
             ...newSale,
@@ -396,7 +398,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw saleError;
       }
       
-      if (!saleResult || saleResult.length === 0) {
+      if (!saleResult || !Array.isArray(saleResult) || saleResult.length === 0) {
         throw new Error('Failed to create sale record');
       }
       
@@ -420,7 +422,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           sale_id: saleId
         });
         
-        // Update product stock
+        // Update product stock - convert to a proper Promise
         productUpdatesPromises.push(
           supabase
             .from('products')
@@ -429,7 +431,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               updated_at: now.toISOString()
             })
             .eq('id', item.product.id)
-            .then()
+            .then(result => result)
         );
       }
       
@@ -454,11 +456,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
       
       // Add the new sale and transactions to local state
-      if (saleResult && saleResult.length > 0) {
+      if (saleResult && Array.isArray(saleResult) && saleResult.length > 0) {
         const newSale = mapSaleRowToSale(saleResult[0]);
         
-        if (transactionsData && transactionsData.length > 0) {
-          const newLocalTransactions = transactionsData.map((t: RpcTransactionResult) => mapTransactionRowToTransaction(t));
+        if (transactionsData && Array.isArray(transactionsData) && transactionsData.length > 0) {
+          const newLocalTransactions = transactionsData.map((t: RpcTransactionResult) => 
+            mapTransactionRowToTransaction(t)
+          );
+          
           const saleWithItems: Sale = {
             ...newSale,
             items: newLocalTransactions
