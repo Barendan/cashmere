@@ -235,7 +235,64 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_sales: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          total_amount: number
+          user_id: string
+          user_name: string
+        }[]
+      }
+      insert_bulk_transactions: {
+        Args: { transactions: Json[] }
+        Returns: {
+          created_at: string
+          date: string
+          id: string
+          price: number
+          product_id: string
+          product_name: string
+          quantity: number
+          sale_id: string | null
+          type: string
+          user_id: string
+          user_name: string
+        }[]
+      }
+      insert_sale: {
+        Args: { p_sale: Json }
+        Returns: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          total_amount: number
+          user_id: string
+          user_name: string
+        }[]
+      }
+      insert_transaction_with_sale: {
+        Args: { p_transaction: Json }
+        Returns: {
+          created_at: string
+          date: string
+          id: string
+          price: number
+          product_id: string
+          product_name: string
+          quantity: number
+          sale_id: string | null
+          type: string
+          user_id: string
+          user_name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

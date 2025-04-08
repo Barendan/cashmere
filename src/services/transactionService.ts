@@ -16,11 +16,8 @@ export const fetchTransactions = async () => {
 };
 
 export const fetchSales = async () => {
-  // Using explicit type for the RPC call
-  const { data, error } = await supabase.rpc('get_sales') as { 
-    data: RpcSaleResult[] | null, 
-    error: any 
-  };
+  // Using explicit type for the RPC call without parameters
+  const { data, error } = await supabase.rpc<RpcSaleResult[]>('get_sales');
   
   if (error) {
     throw error;
@@ -34,13 +31,10 @@ export const fetchSales = async () => {
 };
 
 export const recordSaleInDb = async (saleData: any) => {
-  // Using explicit type for the RPC call
-  const { data, error } = await supabase.rpc('insert_sale', { 
+  // Using explicit type for the RPC call with parameters
+  const { data, error } = await supabase.rpc<RpcSaleResult[]>('insert_sale', { 
     p_sale: saleData 
-  }) as { 
-    data: RpcSaleResult[] | null, 
-    error: any 
-  };
+  });
   
   if (error) {
     throw error;
@@ -54,13 +48,10 @@ export const recordSaleInDb = async (saleData: any) => {
 };
 
 export const recordTransactionInDb = async (transactionData: any) => {
-  // Using explicit type for the RPC call
-  const { data, error } = await supabase.rpc('insert_transaction_with_sale', { 
+  // Using explicit type for the RPC call with parameters
+  const { data, error } = await supabase.rpc<RpcTransactionResult[]>('insert_transaction_with_sale', { 
     p_transaction: transactionData 
-  }) as { 
-    data: RpcTransactionResult[] | null, 
-    error: any 
-  };
+  });
   
   if (error) {
     throw error;
@@ -74,13 +65,10 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  // Using explicit type for the RPC call
-  const { data, error } = await supabase.rpc('insert_bulk_transactions', { 
+  // Using explicit type for the RPC call with parameters
+  const { data, error } = await supabase.rpc<RpcTransactionResult[]>('insert_bulk_transactions', { 
     transactions 
-  }) as { 
-    data: RpcTransactionResult[] | null, 
-    error: any 
-  };
+  });
   
   if (error) {
     throw error;
