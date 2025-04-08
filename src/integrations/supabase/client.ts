@@ -43,7 +43,7 @@ export type ExtendedTransactionInsert = {
   created_at?: string;
 };
 
-// RPC function result types - properly defined as arrays of records
+// Define RPC result types for better type safety
 export type RpcSaleResult = {
   id: string;
   date: string;
@@ -69,11 +69,8 @@ export type RpcTransactionResult = {
   created_at: string;
 };
 
-// Define specific return types for RPC functions
-export type GetSalesFunction = typeof supabase.rpc<RpcSaleResult[]>;
-export type InsertSaleFunction = typeof supabase.rpc<RpcSaleResult[]>;
-export type InsertTransactionWithSaleFunction = typeof supabase.rpc<RpcTransactionResult[]>;
-export type InsertBulkTransactionsFunction = typeof supabase.rpc<RpcTransactionResult[]>;
+// Remove problematic type definitions that were causing errors
+// and replace with simpler type assertions in the DataContext
 
 // Add imageUrl mapping helper to standardize with our model
 export const mapProductRowToProduct = (row: ProductRow) => ({

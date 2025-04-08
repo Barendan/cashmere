@@ -1,26 +1,24 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
-import { v4 as uuidv4 } from "uuid";
 import { 
-  supabase, 
-  ProductRow, 
-  ProductInsert, 
-  TransactionInsert,
-  SaleInsert,
-  ExtendedTransactionInsert,
-  mapProductRowToProduct,
-  mapTransactionRowToTransaction,
-  mapSaleRowToSale,
-  RpcSaleResult,
-  RpcTransactionResult,
-  GetSalesFunction,
-  InsertSaleFunction,
-  InsertTransactionWithSaleFunction,
-  InsertBulkTransactionsFunction
-} from "../integrations/supabase/client";
+  fetchProducts, 
+  addProductToDb, 
+  updateProductInDb, 
+  deleteProductFromDb 
+} from "../services/productService";
+import {
+  fetchTransactions,
+  fetchSales,
+  recordSaleInDb,
+  recordTransactionInDb,
+  recordBulkTransactionsInDb,
+  updateProductStock,
+  updateProductRestockDate,
+  getLastRestockDate
+} from "../services/transactionService";
+import { mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
 
 interface DataContextType {
   products: Product[];
@@ -59,42 +57,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       try {
         // Fetch products
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*');
-        
-        if (productsError) {
-          throw productsError;
-        }
-
-        const transformedProducts: Product[] = productsData.map(row => mapProductRowToProduct(row));
+        const transformedProducts = await fetchProducts();
         setProducts(transformedProducts);
         
         // Fetch sales using the RPC function
-        const { data: salesData, error: salesError } = await supabase
-          .rpc('get_sales') as { data: RpcSaleResult[] | null, error: any };
-        
-        if (salesError) {
-          console.error('Error fetching sales:', salesError);
-          // Fallback to avoid blocking the app
-          setSales([]);
-        } else {
-          // Transform sales data - make sure we handle the array properly
-          const transformedSales: Sale[] = salesData && Array.isArray(salesData)
-            ? salesData.map(row => mapSaleRowToSale(row))
-            : [];
+        try {
+          const transformedSales = await fetchSales();
           
           // Fetch transactions
-          const { data: transactionsData, error: transactionsError } = await supabase
-            .from('transactions')
-            .select('*')
-            .order('date', { ascending: false });
-          
-          if (transactionsError) {
-            throw transactionsError;
-          }
-
-          const transformedTransactions: Transaction[] = transactionsData.map(item => mapTransactionRowToTransaction(item));
+          const transformedTransactions = await fetchTransactions();
           
           // Associate transactions with sales
           const salesWithItems: Sale[] = transformedSales.map(sale => {
@@ -104,18 +75,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           setSales(salesWithItems);
           setTransactions(transformedTransactions);
+        } catch (error) {
+          console.error('Error fetching sales:', error);
+          // Fallback to avoid blocking the app
+          setSales([]);
         }
 
         // Get restock dates from transactions
-        const { data: restockData, error: restockError } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('type', 'restock')
-          .order('date', { ascending: false })
-          .limit(1);
-        
-        if (!restockError && restockData && restockData.length > 0) {
-          setLastRestockDate(new Date(restockData[0].date));
+        const restockDate = await getLastRestockDate();
+        if (restockDate) {
+          setLastRestockDate(restockDate);
         }
 
       } catch (error) {
@@ -139,38 +108,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addProduct = async (product: Omit<Product, "id">) => {
     try {
-      const productToInsert: ProductInsert = {
-        name: product.name,
-        description: product.description,
-        stock_quantity: product.stockQuantity,
-        cost_price: product.costPrice,
-        sell_price: product.sellPrice,
-        category: product.category,
-        low_stock_threshold: product.lowStockThreshold,
-        size: product.size,
-        ingredients: product.ingredients,
-        skin_concerns: product.skinConcerns,
-      }
+      const newProduct = await addProductToDb(product);
       
-      if (product.lastRestocked) {
-        productToInsert.last_restocked = product.lastRestocked.toISOString();
-      }
-
-      const { data, error } = await supabase
-        .from('products')
-        .insert(productToInsert)
-        .select();
-      
-      if (error) {
-        throw error;
-      }
-
-      if (data && data.length > 0) {
-        const newProduct: Product = mapProductRowToProduct(data[0]);
-        
-        setProducts([...products, newProduct]);
-        toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
-      }
+      setProducts([...products, newProduct]);
+      toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
     } catch (error) {
       console.error('Error adding product:', error);
       toast({ 
@@ -188,30 +129,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     saveLastAction("updateProduct", { id, oldData: { ...oldProduct } });
     
     try {
-      const supabaseUpdates: Record<string, any> = {};
-      if (updates.name !== undefined) supabaseUpdates.name = updates.name;
-      if (updates.description !== undefined) supabaseUpdates.description = updates.description;
-      if (updates.stockQuantity !== undefined) supabaseUpdates.stock_quantity = updates.stockQuantity;
-      if (updates.costPrice !== undefined) supabaseUpdates.cost_price = updates.costPrice;
-      if (updates.sellPrice !== undefined) supabaseUpdates.sell_price = updates.sellPrice;
-      if (updates.category !== undefined) supabaseUpdates.category = updates.category;
-      if (updates.lowStockThreshold !== undefined) supabaseUpdates.low_stock_threshold = updates.lowStockThreshold;
-      if (updates.lastRestocked !== undefined) {
-        supabaseUpdates.last_restocked = updates.lastRestocked ? updates.lastRestocked.toISOString() : null;
-      }
-      if (updates.size !== undefined) supabaseUpdates.size = updates.size;
-      if (updates.ingredients !== undefined) supabaseUpdates.ingredients = updates.ingredients;
-      if (updates.skinConcerns !== undefined) supabaseUpdates.skin_concerns = updates.skinConcerns;
-      supabaseUpdates.updated_at = new Date().toISOString();
-      
-      const { error } = await supabase
-        .from('products')
-        .update(supabaseUpdates)
-        .eq('id', id);
-
-      if (error) {
-        throw error;
-      }
+      await updateProductInDb(id, updates);
       
       setProducts(products.map(p => 
         p.id === id ? { ...p, ...updates } : p
@@ -235,14 +153,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     saveLastAction("deleteProduct", { product });
     
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        throw error;
-      }
+      await deleteProductFromDb(id);
 
       setProducts(products.filter(p => p.id !== id));
       toast({ title: "Product Deleted", description: `${product.name} was removed from inventory.` });
@@ -284,34 +195,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User'
       };
       
-      const { data: saleResult, error: saleError } = await supabase
-        .rpc('insert_sale', { p_sale: saleData }) as { data: RpcSaleResult[] | null, error: any };
-        
-      if (saleError) {
-        throw saleError;
-      }
-      
-      if (!saleResult || !Array.isArray(saleResult) || saleResult.length === 0) {
-        throw new Error('Failed to create sale record');
-      }
-      
-      const saleId = saleResult[0].id;
+      const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
       
       // Update product stock
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ 
-          stock_quantity: product.stockQuantity - quantity,
-          updated_at: now.toISOString()
-        })
-        .eq('id', productId);
-
-      if (updateError) {
-        throw updateError;
-      }
+      await updateProductStock(productId, product.stockQuantity - quantity);
       
       // Create transaction record using the RPC function
-      const newTransactionData: ExtendedTransactionInsert = {
+      const newTransactionData = {
         product_id: productId,
         product_name: product.name,
         quantity,
@@ -323,13 +213,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sale_id: saleId
       };
       
-      const { data: transData, error: insertError } = await supabase
-        .rpc('insert_transaction_with_sale', { p_transaction: newTransactionData }) as { data: RpcTransactionResult[] | null, error: any };
-
-      if (insertError) {
-        console.error('Transaction insertion error:', insertError);
-        throw insertError;
-      }
+      const newTransaction = await recordTransactionInDb(newTransactionData);
 
       // Update local state
       setProducts(products.map(p =>
@@ -339,20 +223,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ));
       
       // Add the new sale to local state
-      if (saleResult && Array.isArray(saleResult) && saleResult.length > 0) {
-        const newSale = mapSaleRowToSale(saleResult[0]);
-        
-        if (transData && Array.isArray(transData) && transData.length > 0) {
-          const newTransaction = mapTransactionRowToTransaction(transData[0]);
-          const saleWithItems: Sale = {
-            ...newSale,
-            items: [newTransaction]
-          };
-          
-          setSales([saleWithItems, ...sales]);
-          setTransactions([newTransaction, ...transactions]);
-        }
-      }
+      const saleWithItems: Sale = {
+        ...newSale,
+        items: [newTransaction]
+      };
+      
+      setSales([saleWithItems, ...sales]);
+      setTransactions([newTransaction, ...transactions]);
       
       toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
     } catch (error) {
@@ -395,21 +272,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User'
       };
       
-      const { data: saleResult, error: saleError } = await supabase
-        .rpc('insert_sale', { p_sale: saleData }) as { data: RpcSaleResult[] | null, error: any };
-        
-      if (saleError) {
-        throw saleError;
-      }
-      
-      if (!saleResult || !Array.isArray(saleResult) || saleResult.length === 0) {
-        throw new Error('Failed to create sale record');
-      }
-      
-      const saleId = saleResult[0].id;
+      const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
       
       // Create transactions and update product stock for each item
-      const newTransactions: ExtendedTransactionInsert[] = [];
+      const newTransactions: any[] = [];
       const productUpdatesPromises: Promise<any>[] = [];
       
       for (const item of items) {
@@ -427,25 +293,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         
         // Update product stock - convert to a proper Promise
-        const promise = supabase
-          .from('products')
-          .update({ 
-            stock_quantity: item.product.stockQuantity - item.quantity,
-            updated_at: now.toISOString()
-          })
-          .eq('id', item.product.id)
-          .then(result => result);
-          
-        productUpdatesPromises.push(promise as Promise<any>);
+        const promise = updateProductStock(item.product.id, item.product.stockQuantity - item.quantity);
+        productUpdatesPromises.push(promise);
       }
       
       // Insert all transactions at once using the RPC function
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .rpc('insert_bulk_transactions', { transactions: newTransactions }) as { data: RpcTransactionResult[] | null, error: any };
-        
-      if (transactionsError) {
-        throw transactionsError;
-      }
+      const newLocalTransactions = await recordBulkTransactionsInDb(newTransactions);
       
       // Wait for all product updates
       await Promise.all(productUpdatesPromises);
@@ -460,23 +313,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }));
       
       // Add the new sale and transactions to local state
-      if (saleResult && Array.isArray(saleResult) && saleResult.length > 0) {
-        const newSale = mapSaleRowToSale(saleResult[0]);
-        
-        if (transactionsData && Array.isArray(transactionsData) && transactionsData.length > 0) {
-          const newLocalTransactions = transactionsData.map(t => 
-            mapTransactionRowToTransaction(t)
-          );
-          
-          const saleWithItems: Sale = {
-            ...newSale,
-            items: newLocalTransactions
-          };
-          
-          setSales([saleWithItems, ...sales]);
-          setTransactions([...newLocalTransactions, ...transactions]);
-        }
-      }
+      const saleWithItems: Sale = {
+        ...newSale,
+        items: newLocalTransactions
+      };
+      
+      setSales([saleWithItems, ...sales]);
+      setTransactions([...newLocalTransactions, ...transactions]);
       
       toast({ 
         title: "Sale Completed", 
@@ -507,20 +350,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       const now = new Date();
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ 
-          stock_quantity: product.stockQuantity + quantity,
-          last_restocked: now.toISOString(),
-          updated_at: now.toISOString()
-        })
-        .eq('id', productId);
+      
+      // Update product stock and restock date
+      await updateProductStock(productId, product.stockQuantity + quantity);
+      await updateProductRestockDate(productId, now);
 
-      if (updateError) {
-        throw updateError;
-      }
-
-      const newTransactionData: TransactionInsert = {
+      // Create transaction record
+      const newTransactionData = {
         product_id: productId,
         product_name: product.name,
         quantity,
@@ -595,19 +431,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const difference = newQuantity - product.stockQuantity;
       const now = new Date();
       
-      const { error: updateError } = await supabase
-        .from('products')
-        .update({ 
-          stock_quantity: newQuantity,
-          updated_at: now.toISOString()
-        })
-        .eq('id', productId);
+      await updateProductStock(productId, newQuantity);
 
-      if (updateError) {
-        throw updateError;
-      }
-
-      const newTransactionData: TransactionInsert = {
+      const newTransactionData = {
         product_id: productId,
         product_name: product.name,
         quantity: Math.abs(difference),
@@ -690,13 +516,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         case "recordSale":
         case "recordRestock":
         case "adjustInventory":
-          await supabase
-            .from('products')
-            .update({ 
-              stock_quantity: data.oldQuantity,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', data.productId);
+          await updateProductStock(data.productId, data.oldQuantity);
           
           if (transactions.length > 0) {
             await supabase
@@ -743,7 +563,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
         case "deleteProduct":
           const restoredProduct = data.product;
-          const productInsert: ProductInsert = {
+          const productInsert = {
             id: restoredProduct.id,
             name: restoredProduct.name,
             description: restoredProduct.description,
