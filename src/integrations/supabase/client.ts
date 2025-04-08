@@ -25,6 +25,7 @@ export type ServiceUpdate = Tables['services']['Update']
 export type FinanceRow = Tables['finances']['Row']
 export type FinanceInsert = Tables['finances']['Insert']
 export type FinanceUpdate = Tables['finances']['Update']
+
 // Since we cannot modify types.ts directly, we need to work with what we have
 // and define types for the new tables ourselves
 export type SaleRow = {
@@ -37,6 +38,7 @@ export type SaleRow = {
   notes?: string;
   created_at: string;
 }
+
 export type SaleInsert = {
   id?: string;
   date?: string;
@@ -47,6 +49,7 @@ export type SaleInsert = {
   notes?: string;
   created_at?: string;
 }
+
 export type SaleUpdate = {
   id?: string;
   date?: string;
@@ -101,7 +104,7 @@ export const mapFinanceRowToFinanceRecord = (row: FinanceRow) => ({
   category: row.category || undefined
 });
 
-export const mapTransactionRowToTransaction = (row: TransactionRow) => ({
+export const mapTransactionRowToTransaction = (row: TransactionRow & { sale_id?: string }) => ({
   id: row.id,
   productId: row.product_id,
   productName: row.product_name,
@@ -111,7 +114,7 @@ export const mapTransactionRowToTransaction = (row: TransactionRow) => ({
   date: new Date(row.date),
   userId: row.user_id,
   userName: row.user_name,
-  saleId: (row as any).sale_id || undefined
+  saleId: row.sale_id
 });
 
 export const mapSaleRowToSale = (row: SaleRow) => ({
