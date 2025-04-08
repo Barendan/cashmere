@@ -120,7 +120,7 @@ export const mapTransactionRowToTransaction = (row: TransactionRow & { sale_id?:
   saleId: row.sale_id
 });
 
-export const mapSaleRowToSale = (row: SaleRow) => ({
+export const mapSaleRowToSale = (row: SaleRow | RpcSaleResult) => ({
   id: row.id,
   date: new Date(row.date),
   totalAmount: row.total_amount,
