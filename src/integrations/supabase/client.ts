@@ -62,8 +62,17 @@ export type SaleUpdate = {
 }
 
 // Update TransactionInsert to include sale_id
-export type ExtendedTransactionInsert = TransactionInsert & {
+export type ExtendedTransactionInsert = {
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  type: string;
+  date?: string;
+  user_id: string;
+  user_name: string;
   sale_id?: string;
+  created_at?: string;
 };
 
 // Add imageUrl mapping helper to standardize with our model

@@ -282,7 +282,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw saleError;
       }
       
-      if (!saleResult || !saleResult.length) {
+      if (!saleResult || saleResult.length === 0) {
         throw new Error('Failed to create sale record');
       }
       
@@ -302,7 +302,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Create transaction record using the RPC function
-      const newTransactionData = {
+      const newTransactionData: ExtendedTransactionInsert = {
         product_id: productId,
         product_name: product.name,
         quantity,
@@ -319,6 +319,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (insertError) {
         console.error('Transaction insertion error:', insertError);
+        throw insertError;
       }
 
       // Update local state
@@ -392,15 +393,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw saleError;
       }
       
-      if (!saleResult || !saleResult.length) {
+      if (!saleResult || saleResult.length === 0) {
         throw new Error('Failed to create sale record');
       }
       
       const saleId = saleResult[0].id;
       
       // Create transactions and update product stock for each item
-      const newTransactions: any[] = [];
-      const productUpdates: Promise<any>[] = [];
+      const newTransactions: ExtendedTransactionInsert[] = [];
+      const productUpdatesPromises: Promise<any>[] = [];
       
       for (const item of items) {
         // Create transaction record
@@ -417,7 +418,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
         
         // Update product stock
-        productUpdates.push(
+        productUpdatesPromises.push(
           supabase
             .from('products')
             .update({ 
@@ -437,7 +438,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Wait for all product updates
-      await Promise.all(productUpdates);
+      await Promise.all(productUpdatesPromises);
       
       // Update local state
       setProducts(products.map(p => {
@@ -453,7 +454,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newSale = mapSaleRowToSale(saleResult[0]);
         
         if (transactionsData && transactionsData.length > 0) {
-          const newLocalTransactions = (transactionsData as any[]).map(t => mapTransactionRowToTransaction(t));
+          const newLocalTransactions = transactionsData.map((t: any) => mapTransactionRowToTransaction(t));
           const saleWithItems: Sale = {
             ...newSale,
             items: newLocalTransactions
