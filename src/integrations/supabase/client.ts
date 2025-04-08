@@ -25,41 +25,9 @@ export type ServiceUpdate = Tables['services']['Update']
 export type FinanceRow = Tables['finances']['Row']
 export type FinanceInsert = Tables['finances']['Insert']
 export type FinanceUpdate = Tables['finances']['Update']
-
-// Since we cannot modify types.ts directly, we need to work with what we have
-// and define types for the new tables ourselves
-export type SaleRow = {
-  id: string;
-  date: string;
-  total_amount: number;
-  user_id: string;
-  user_name: string;
-  payment_method?: string;
-  notes?: string;
-  created_at: string;
-}
-
-export type SaleInsert = {
-  id?: string;
-  date?: string;
-  total_amount?: number;
-  user_id: string;
-  user_name: string;
-  payment_method?: string;
-  notes?: string;
-  created_at?: string;
-}
-
-export type SaleUpdate = {
-  id?: string;
-  date?: string;
-  total_amount?: number;
-  user_id?: string;
-  user_name?: string;
-  payment_method?: string;
-  notes?: string;
-  created_at?: string;
-}
+export type SaleRow = Tables['sales']['Row']
+export type SaleInsert = Tables['sales']['Insert']
+export type SaleUpdate = Tables['sales']['Update']
 
 // Update TransactionInsert to include sale_id
 export type ExtendedTransactionInsert = {
@@ -73,6 +41,32 @@ export type ExtendedTransactionInsert = {
   user_name: string;
   sale_id?: string;
   created_at?: string;
+};
+
+// RPC function result types
+export type RpcSaleResult = {
+  id: string;
+  date: string;
+  total_amount: number;
+  user_id: string;
+  user_name: string;
+  payment_method?: string;
+  notes?: string;
+  created_at: string;
+};
+
+export type RpcTransactionResult = {
+  id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  type: string;
+  date: string;
+  user_id: string;
+  user_name: string;
+  sale_id?: string;
+  created_at: string;
 };
 
 // Add imageUrl mapping helper to standardize with our model

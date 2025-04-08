@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -12,7 +13,9 @@ import {
   ExtendedTransactionInsert,
   mapProductRowToProduct,
   mapTransactionRowToTransaction,
-  mapSaleRowToSale
+  mapSaleRowToSale,
+  RpcSaleResult,
+  RpcTransactionResult
 } from "../integrations/supabase/client";
 
 interface DataContextType {
@@ -73,7 +76,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setSales([]);
         } else {
           // Transform sales data
-          const transformedSales: Sale[] = (salesData || []).map((row: any) => mapSaleRowToSale(row));
+          const transformedSales: Sale[] = (salesData || []).map((row: RpcSaleResult) => mapSaleRowToSale(row));
           
           // Fetch transactions
           const { data: transactionsData, error: transactionsError } = await supabase
@@ -426,6 +429,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               updated_at: now.toISOString()
             })
             .eq('id', item.product.id)
+            .then()
         );
       }
       
@@ -454,7 +458,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newSale = mapSaleRowToSale(saleResult[0]);
         
         if (transactionsData && transactionsData.length > 0) {
-          const newLocalTransactions = transactionsData.map((t: any) => mapTransactionRowToTransaction(t));
+          const newLocalTransactions = transactionsData.map((t: RpcTransactionResult) => mapTransactionRowToTransaction(t));
           const saleWithItems: Sale = {
             ...newSale,
             items: newLocalTransactions
