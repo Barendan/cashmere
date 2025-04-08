@@ -10,6 +10,8 @@ import {
   ProductInsert, 
   TransactionInsert,
   SaleInsert,
+  SaleRow,
+  ExtendedTransactionInsert,
   mapProductRowToProduct,
   mapTransactionRowToTransaction,
   mapSaleRowToSale
@@ -63,42 +65,53 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const transformedProducts: Product[] = productsData.map(row => mapProductRowToProduct(row));
         setProducts(transformedProducts);
         
-        // Fetch sales
+        // Fetch sales - using raw string query since typescript doesn't have sales table type yet
         const { data: salesData, error: salesError } = await supabase
-          .from('sales')
-          .select('*')
+          .rpc('get_sales')
           .order('date', { ascending: false });
         
         if (salesError) {
-          throw salesError;
-        }
-        
-        const transformedSales: Sale[] = salesData.map(row => mapSaleRowToSale(row));
+          console.error('Error fetching sales:', salesError);
+          // Fallback to avoid blocking the app
+          const emptyArray: SaleRow[] = [];
+          const transformedSales: Sale[] = emptyArray.map(row => mapSaleRowToSale(row));
+          setSales(transformedSales);
+        } else {
+          // Handle the case when salesData is available
+          const transformedSales: Sale[] = (salesData || []).map((row: SaleRow) => mapSaleRowToSale(row));
+          
+          // Fetch transactions
+          const { data: transactionsData, error: transactionsError } = await supabase
+            .from('transactions')
+            .select('*')
+            .order('date', { ascending: false });
+          
+          if (transactionsError) {
+            throw transactionsError;
+          }
 
-        // Fetch transactions
-        const { data: transactionsData, error: transactionsError } = await supabase
+          const transformedTransactions: Transaction[] = transactionsData.map(item => mapTransactionRowToTransaction(item));
+          
+          // Associate transactions with sales
+          const salesWithItems = transformedSales.map(sale => {
+            const items = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
+            return { ...sale, items };
+          });
+          
+          setSales(salesWithItems);
+          setTransactions(transformedTransactions);
+        }
+
+        // Get restock dates from transactions
+        const { data: restockData, error: restockError } = await supabase
           .from('transactions')
           .select('*')
-          .order('date', { ascending: false });
+          .eq('type', 'restock')
+          .order('date', { ascending: false })
+          .limit(1);
         
-        if (transactionsError) {
-          throw transactionsError;
-        }
-
-        const transformedTransactions: Transaction[] = transactionsData.map(item => mapTransactionRowToTransaction(item));
-        
-        // Associate transactions with sales
-        const salesWithItems = transformedSales.map(sale => {
-          const items = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
-          return { ...sale, items };
-        });
-        
-        setSales(salesWithItems);
-        setTransactions(transformedTransactions);
-
-        const restockTransactions = transformedTransactions.filter(t => t.type === 'restock');
-        if (restockTransactions.length > 0) {
-          setLastRestockDate(restockTransactions[0].date);
+        if (!restockError && restockData && restockData.length > 0) {
+          setLastRestockDate(new Date(restockData[0].date));
         }
 
       } catch (error) {
@@ -268,9 +281,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       const { data: saleResult, error: saleError } = await supabase
-        .from('sales')
-        .insert(saleData)
-        .select();
+        .rpc('insert_sale', saleData);
         
       if (saleError) {
         throw saleError;
@@ -296,7 +307,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       // Create transaction record
-      const newTransactionData: TransactionInsert = {
+      const newTransactionData: ExtendedTransactionInsert = {
         product_id: productId,
         product_name: product.name,
         quantity,
@@ -309,9 +320,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       const { data, error: insertError } = await supabase
-        .from('transactions')
-        .insert(newTransactionData)
-        .select();
+        .rpc('insert_transaction_with_sale', newTransactionData);
 
       if (insertError) {
         console.error('Transaction insertion error:', insertError);
@@ -379,9 +388,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       };
       
       const { data: saleResult, error: saleError } = await supabase
-        .from('sales')
-        .insert(saleData)
-        .select();
+        .rpc('insert_sale', saleData);
         
       if (saleError) {
         throw saleError;
@@ -394,7 +401,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const saleId = saleResult[0].id;
       
       // Create transactions and update product stock for each item
-      const newTransactions: TransactionInsert[] = [];
+      const newTransactions: ExtendedTransactionInsert[] = [];
       const productUpdates: Promise<any>[] = [];
       
       for (const item of items) {
@@ -423,11 +430,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         );
       }
       
-      // Insert all transactions at once
+      // Insert all transactions at once using a stored procedure
       const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .insert(newTransactions)
-        .select();
+        .rpc('insert_bulk_transactions', { transactions: newTransactions });
         
       if (transactionsError) {
         throw transactionsError;
@@ -450,7 +455,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const newSale = mapSaleRowToSale(saleResult[0]);
         
         if (transactionsData && transactionsData.length > 0) {
-          const newLocalTransactions = transactionsData.map(t => mapTransactionRowToTransaction(t));
+          const newLocalTransactions = transactionsData.map((t: any) => mapTransactionRowToTransaction(t));
           newSale.items = newLocalTransactions;
           
           setSales([newSale, ...sales]);

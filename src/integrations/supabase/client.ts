@@ -25,9 +25,43 @@ export type ServiceUpdate = Tables['services']['Update']
 export type FinanceRow = Tables['finances']['Row']
 export type FinanceInsert = Tables['finances']['Insert']
 export type FinanceUpdate = Tables['finances']['Update']
-export type SaleRow = Tables['sales']['Row']
-export type SaleInsert = Tables['sales']['Insert']
-export type SaleUpdate = Tables['sales']['Update']
+// Since we cannot modify types.ts directly, we need to work with what we have
+// and define types for the new tables ourselves
+export type SaleRow = {
+  id: string;
+  date: string;
+  total_amount: number;
+  user_id: string;
+  user_name: string;
+  payment_method?: string;
+  notes?: string;
+  created_at: string;
+}
+export type SaleInsert = {
+  id?: string;
+  date?: string;
+  total_amount?: number;
+  user_id: string;
+  user_name: string;
+  payment_method?: string;
+  notes?: string;
+  created_at?: string;
+}
+export type SaleUpdate = {
+  id?: string;
+  date?: string;
+  total_amount?: number;
+  user_id?: string;
+  user_name?: string;
+  payment_method?: string;
+  notes?: string;
+  created_at?: string;
+}
+
+// Update TransactionInsert to include sale_id
+export type ExtendedTransactionInsert = TransactionInsert & {
+  sale_id?: string;
+};
 
 // Add imageUrl mapping helper to standardize with our model
 export const mapProductRowToProduct = (row: ProductRow) => ({
@@ -77,7 +111,7 @@ export const mapTransactionRowToTransaction = (row: TransactionRow) => ({
   date: new Date(row.date),
   userId: row.user_id,
   userName: row.user_name,
-  saleId: row.sale_id || undefined
+  saleId: (row as any).sale_id || undefined
 });
 
 export const mapSaleRowToSale = (row: SaleRow) => ({

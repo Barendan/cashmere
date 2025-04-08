@@ -16,7 +16,7 @@ const ProductCard = ({ product, onAddToCart, isInCart }: ProductCardProps) => {
   const isLowStock = product.stockQuantity <= product.lowStockThreshold;
   
   return (
-    <div className="border border-spa-sand rounded-md p-2 bg-spa-cream/10">
+    <div className="border border-spa-sand rounded-md p-2 bg-spa-cream/20">
       <div className="flex justify-between items-start mb-1">
         <h4 className="font-medium text-sm">{product.name}</h4>
         {isLowStock && (
