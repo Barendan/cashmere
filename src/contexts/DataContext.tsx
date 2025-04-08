@@ -556,7 +556,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           };
           
           if (restoredProduct.lastRestocked) {
-            productInsert.last_restocked = restoredProduct.lastRestocked.toISOString();
+            productInsert['last_restocked'] = restoredProduct.lastRestocked.toISOString();
           }
           
           const { data: insertedProduct, error: insertError } = await supabase
