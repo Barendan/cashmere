@@ -43,7 +43,7 @@ export type ExtendedTransactionInsert = {
   created_at?: string;
 };
 
-// RPC function result types - properly defined as records
+// RPC function result types - properly defined as arrays of records
 export type RpcSaleResult = {
   id: string;
   date: string;
