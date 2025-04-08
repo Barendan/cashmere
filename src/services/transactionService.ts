@@ -1,4 +1,3 @@
-
 import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
 import { Product, Sale, Transaction } from "../models/types";
 
@@ -16,8 +15,8 @@ export const fetchTransactions = async () => {
 };
 
 export const fetchSales = async () => {
-  // Using the generic rpc function call to avoid type errors
-  const { data, error } = await supabase.rpc('get_sales') as { data: RpcSaleResult[] | null, error: any };
+  // Using a proper type cast to fix the "string not assignable to never" error
+  const { data, error } = await supabase.rpc('get_sales', {}) as { data: RpcSaleResult[] | null, error: any };
   
   if (error) {
     throw error;
@@ -31,7 +30,7 @@ export const fetchSales = async () => {
 };
 
 export const recordSaleInDb = async (saleData: any) => {
-  // Using the generic rpc function call with proper type casting
+  // Using a proper type cast to fix the "string not assignable to never" error
   const { data, error } = await supabase.rpc('insert_sale', { p_sale: saleData }) as { data: RpcSaleResult[] | null, error: any };
   
   if (error) {
@@ -46,7 +45,7 @@ export const recordSaleInDb = async (saleData: any) => {
 };
 
 export const recordTransactionInDb = async (transactionData: any) => {
-  // Using the generic rpc function call with proper type casting
+  // Using a proper type cast to fix the "string not assignable to never" error
   const { data, error } = await supabase.rpc('insert_transaction_with_sale', { p_transaction: transactionData }) as { data: RpcTransactionResult[] | null, error: any };
   
   if (error) {
@@ -61,7 +60,7 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  // Using the generic rpc function call with proper type casting
+  // Using a proper type cast to fix the "string not assignable to never" error
   const { data, error } = await supabase.rpc('insert_bulk_transactions', { transactions }) as { data: RpcTransactionResult[] | null, error: any };
   
   if (error) {

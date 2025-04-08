@@ -18,7 +18,7 @@ import {
   updateProductRestockDate,
   getLastRestockDate
 } from "../services/transactionService";
-import { mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
+import { supabase, mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
 
 interface DataContextType {
   products: Product[];
@@ -56,18 +56,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       
       try {
-        // Fetch products
         const transformedProducts = await fetchProducts();
         setProducts(transformedProducts);
         
-        // Fetch sales using the RPC function
         try {
           const transformedSales = await fetchSales();
           
-          // Fetch transactions
           const transformedTransactions = await fetchTransactions();
           
-          // Associate transactions with sales
           const salesWithItems: Sale[] = transformedSales.map(sale => {
             const saleItems = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
             return { ...sale, items: saleItems };
@@ -77,11 +73,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setTransactions(transformedTransactions);
         } catch (error) {
           console.error('Error fetching sales:', error);
-          // Fallback to avoid blocking the app
           setSales([]);
         }
 
-        // Get restock dates from transactions
         const restockDate = await getLastRestockDate();
         if (restockDate) {
           setLastRestockDate(restockDate);
@@ -187,7 +181,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const now = new Date();
       
-      // Create a new sale using the RPC function
       const saleData = {
         date: now.toISOString(),
         total_amount: product.sellPrice * quantity,
@@ -197,10 +190,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
       
-      // Update product stock
       await updateProductStock(productId, product.stockQuantity - quantity);
       
-      // Create transaction record using the RPC function
       const newTransactionData = {
         product_id: productId,
         product_name: product.name,
@@ -215,14 +206,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const newTransaction = await recordTransactionInDb(newTransactionData);
 
-      // Update local state
       setProducts(products.map(p =>
         p.id === productId
           ? { ...p, stockQuantity: p.stockQuantity - quantity }
           : p
       ));
       
-      // Add the new sale to local state
       const saleWithItems: Sale = {
         ...newSale,
         items: [newTransaction]
@@ -245,7 +234,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const recordBulkSale = async (items: {product: Product, quantity: number}[]) => {
     if (items.length === 0) return;
     
-    // Check stock availability for all items
     for (const item of items) {
       if (item.product.stockQuantity < item.quantity) {
         toast({ 
@@ -264,7 +252,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         0
       );
       
-      // Create a new sale record
       const saleData = {
         date: now.toISOString(),
         total_amount: totalAmount,
@@ -274,12 +261,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
       
-      // Create transactions and update product stock for each item
       const newTransactions: any[] = [];
       const productUpdatesPromises: Promise<any>[] = [];
       
       for (const item of items) {
-        // Create transaction record
         newTransactions.push({
           product_id: item.product.id,
           product_name: item.product.name,
@@ -292,18 +277,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           sale_id: saleId
         });
         
-        // Update product stock - convert to a proper Promise
         const promise = updateProductStock(item.product.id, item.product.stockQuantity - item.quantity);
         productUpdatesPromises.push(promise);
       }
       
-      // Insert all transactions at once using the RPC function
       const newLocalTransactions = await recordBulkTransactionsInDb(newTransactions);
       
-      // Wait for all product updates
       await Promise.all(productUpdatesPromises);
       
-      // Update local state
       setProducts(products.map(p => {
         const soldItem = items.find(item => item.product.id === p.id);
         if (soldItem) {
@@ -312,7 +293,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return p;
       }));
       
-      // Add the new sale and transactions to local state
       const saleWithItems: Sale = {
         ...newSale,
         items: newLocalTransactions
@@ -351,11 +331,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const now = new Date();
       
-      // Update product stock and restock date
       await updateProductStock(productId, product.stockQuantity + quantity);
       await updateProductRestockDate(productId, now);
 
-      // Create transaction record
       const newTransactionData = {
         product_id: productId,
         product_name: product.name,
@@ -437,7 +415,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         product_id: productId,
         product_name: product.name,
         quantity: Math.abs(difference),
-        price: 0, // No price impact for adjustment
+        price: 0,
         type: 'adjustment',
         date: now.toISOString(),
         user_id: user?.id || 'unknown',
@@ -540,7 +518,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         case "updateProduct":
           const supabaseUpdates: any = {};
           Object.keys(data.oldData).forEach(key => {
-            if (key === 'imageUrl') return; // Skip imageUrl as it's not in database schema
+            if (key === 'imageUrl') return;
             if (key === 'lastRestocked' && data.oldData[key]) {
               supabaseUpdates.last_restocked = data.oldData[key].toISOString();
               return;
