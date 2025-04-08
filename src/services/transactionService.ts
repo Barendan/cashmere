@@ -16,8 +16,9 @@ export const fetchTransactions = async () => {
 };
 
 export const fetchSales = async () => {
-  // Using correct type parameters for the RPC call without parameters
-  const { data, error } = await supabase.rpc<RpcSaleResult[], Record<string, never>>('get_sales');
+  // Using proper RPC call pattern
+  const { data, error } = await supabase
+    .rpc('get_sales');
   
   if (error) {
     throw error;
@@ -31,10 +32,11 @@ export const fetchSales = async () => {
 };
 
 export const recordSaleInDb = async (saleData: any) => {
-  // Using correct type parameters for the RPC call with parameters
-  const { data, error } = await supabase.rpc<RpcSaleResult[], { p_sale: any }>('insert_sale', { 
-    p_sale: saleData 
-  });
+  // Using proper RPC call pattern
+  const { data, error } = await supabase
+    .rpc('insert_sale', { 
+      p_sale: saleData 
+    });
   
   if (error) {
     throw error;
@@ -48,10 +50,11 @@ export const recordSaleInDb = async (saleData: any) => {
 };
 
 export const recordTransactionInDb = async (transactionData: any) => {
-  // Using correct type parameters for the RPC call with parameters
-  const { data, error } = await supabase.rpc<RpcTransactionResult[], { p_transaction: any }>('insert_transaction_with_sale', { 
-    p_transaction: transactionData 
-  });
+  // Using proper RPC call pattern
+  const { data, error } = await supabase
+    .rpc('insert_transaction_with_sale', { 
+      p_transaction: transactionData 
+    });
   
   if (error) {
     throw error;
@@ -65,10 +68,11 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  // Using correct type parameters for the RPC call with parameters
-  const { data, error } = await supabase.rpc<RpcTransactionResult[], { transactions: any[] }>('insert_bulk_transactions', { 
-    transactions 
-  });
+  // Using proper RPC call pattern
+  const { data, error } = await supabase
+    .rpc('insert_bulk_transactions', { 
+      transactions 
+    });
   
   if (error) {
     throw error;
