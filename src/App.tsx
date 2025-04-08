@@ -13,6 +13,7 @@ import Inventory from "./pages/Inventory";
 import Metrics from "./pages/Metrics";
 import Finance from "./pages/Finance";
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
