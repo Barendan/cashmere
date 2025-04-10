@@ -1,8 +1,6 @@
 
 import React from 'react';
 import { Product } from '@/models/types';
-import { HoverFillButton } from '@/components/ui/hover-fill-button';
-import { Plus, Check } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 
@@ -14,37 +12,63 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, onAddToCart, isInCart }: ProductCardProps) => {
   const isLowStock = product.stockQuantity <= product.lowStockThreshold;
+  const isOutOfStock = product.stockQuantity === 0;
+  
+  const handleClick = () => {
+    if (!isOutOfStock && !isInCart) {
+      onAddToCart(product);
+    }
+  };
   
   return (
-    <div className="border border-spa-sand rounded-md p-3 bg-white flex flex-col h-full">
-      <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-md text-spa-deep truncate mr-1">{product.name}</h4>
-        {isLowStock && (
-          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[0.7rem] py-0 px-1.5 shrink-0">
+    <div 
+      className={`border border-spa-sand rounded-md p-4 bg-white flex flex-col h-full relative transition-all duration-300 hover:shadow-md hover:bg-spa-sage/5 ${
+        isInCart 
+          ? 'border-green-200 bg-green-50' 
+          : isOutOfStock 
+            ? 'opacity-70' 
+            : 'cursor-pointer hover:border-spa-sage'
+      }`}
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      aria-label={`Add ${product.name} to cart${isInCart ? ' (already in cart)' : isOutOfStock ? ' (out of stock)' : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          handleClick();
+        }
+      }}
+    >
+      {/* Status indicators */}
+      <div className="absolute top-2 right-2 flex flex-col gap-1">
+        {isInCart && (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[0.7rem] py-0 px-1.5">
+            In Cart
+          </Badge>
+        )}
+        {isLowStock && !isOutOfStock && (
+          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[0.7rem] py-0 px-1.5">
             Low Stock
+          </Badge>
+        )}
+        {isOutOfStock && (
+          <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200 text-[0.7rem] py-0 px-1.5">
+            Out of Stock
           </Badge>
         )}
       </div>
       
-      <div className="text-sm mb-2 text-muted-foreground">
+      {/* Product name */}
+      <h4 className="font-medium text-md text-spa-deep text-center mb-3 mt-1">{product.name}</h4>
+      
+      {/* Stock information */}
+      <div className="text-sm text-right text-muted-foreground mb-auto">
         {product.stockQuantity} in stock
       </div>
       
-      <div className="flex justify-between items-center mt-auto">
-        <div className="font-medium text-sm">{formatCurrency(product.sellPrice)}</div>
-        <HoverFillButton 
-          size="sm"
-          variant={isInCart ? "accent" : "default"}
-          className={`${
-            isInCart 
-              ? "bg-green-50 border-green-200 text-green-700 h-9 w-9 p-0" 
-              : "h-9 w-9 p-0"
-          } min-h-9 min-w-9 rounded-md flex items-center justify-center`}
-          onClick={() => onAddToCart(product)}
-          disabled={product.stockQuantity === 0 || isInCart}
-        >
-          {isInCart ? <Check size={16} /> : <Plus size={16} />}
-        </HoverFillButton>
+      {/* Price */}
+      <div className="font-medium text-md mt-4 pt-2 border-t border-spa-sand/50">
+        {formatCurrency(product.sellPrice)}
       </div>
     </div>
   );

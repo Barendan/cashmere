@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,16 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Undo2, Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import ShoppingCart from "@/components/sales/ShoppingCart";
 import ProductCard from "@/components/sales/ProductCard";
 import { formatDate, formatCurrency } from "@/lib/format";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-// Define a type for grouped transactions
 interface GroupedTransaction {
   saleId: string | null;
   transactions: Transaction[];
@@ -39,18 +36,14 @@ const SalesLog = () => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [openSale, setOpenSale] = useState<string | null>(null);
   
-  // Filter products that have stock
   const availableProducts = products
     .filter((product) => product.stockQuantity > 0)
     .sort((a, b) => a.name.localeCompare(b.name));
   
-  // Handle adding item to cart
   const handleAddToCart = (product: Product) => {
-    // Check if product is already in cart
     const existingItem = cartItems.find(item => item.product.id === product.id);
     if (existingItem) return;
     
-    // Add to cart with quantity 1
     setCartItems([...cartItems, { product, quantity: 1 }]);
     toast({
       title: "Added to cart",
@@ -58,12 +51,10 @@ const SalesLog = () => {
     });
   };
   
-  // Handle updating item quantity
   const handleUpdateQuantity = (productId: string, quantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
-    // Make sure quantity doesn't exceed stock
     const safeQuantity = Math.min(quantity, product.stockQuantity);
     
     setCartItems(cartItems.map(item => 
@@ -73,29 +64,22 @@ const SalesLog = () => {
     ));
   };
   
-  // Handle removing item from cart
   const handleRemoveItem = (productId: string) => {
     setCartItems(cartItems.filter(item => item.product.id !== productId));
   };
   
-  // Clear the entire cart
   const handleClearCart = () => {
     setCartItems([]);
   };
   
-  // Complete the sale by processing all items in cart
   const handleCompleteSale = async () => {
     if (cartItems.length === 0) return;
     
     setIsProcessing(true);
     
     try {
-      // Process all items in a single transaction
       await recordBulkSale(cartItems);
-      
-      // Clear cart after successful sale
       setCartItems([]);
-      
     } catch (error) {
       console.error("Error processing sale:", error);
       toast({
@@ -108,12 +92,10 @@ const SalesLog = () => {
     }
   };
 
-  // Group transactions by saleId
   const groupTransactions = (): GroupedTransaction[] => {
     const filteredTransactions = transactions.filter((transaction) => {
       if (filterType !== "all" && transaction.type !== filterType) return false;
       
-      // Apply search filter if search term exists
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         return transaction.productName.toLowerCase().includes(searchLower) ||
@@ -122,10 +104,8 @@ const SalesLog = () => {
       return true;
     });
 
-    // Create a map to group transactions by saleId
     const groupMap = new Map<string, Transaction[]>();
     
-    // Group all transactions
     filteredTransactions.forEach(transaction => {
       const key = transaction.saleId || 'no-sale-id';
       if (!groupMap.has(key)) {
@@ -134,11 +114,9 @@ const SalesLog = () => {
       groupMap.get(key)?.push(transaction);
     });
     
-    // Convert map to array of grouped transactions
     const groupedTransactions: GroupedTransaction[] = [];
     
     groupMap.forEach((transactions, saleId) => {
-      // Sort transactions by date
       const sortedTransactions = [...transactions].sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
@@ -156,7 +134,6 @@ const SalesLog = () => {
       });
     });
     
-    // Sort grouped transactions by date (most recent first)
     return groupedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
   };
 
@@ -168,12 +145,10 @@ const SalesLog = () => {
     }
   };
 
-  // Check if product is in cart
   const isProductInCart = (productId: string) => {
     return cartItems.some(item => item.product.id === productId);
   };
   
-  // Filter products based on search term
   const filteredProducts = availableProducts.filter(product => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
@@ -200,7 +175,6 @@ const SalesLog = () => {
 
   return (
     <div className="w-full md:min-w-[90vw] xl:min-w-[initial] flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Product and Cart Section - With stable fixed layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[75vh]">
         <Card className="lg:col-span-3 flex flex-col overflow-hidden h-full bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/50">
           <CardHeader className="pb-2 flex-shrink-0">
@@ -281,7 +255,6 @@ const SalesLog = () => {
         </Card>
       </div>
       
-      {/* Transaction Log Section - Takes remaining space */}
       <Card className="bg-white mb-6 flex-shrink-0 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/70">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -351,7 +324,6 @@ const SalesLog = () => {
                         </TableCell>
                       </TableRow>
                       
-                      {/* Collapsible item details */}
                       {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) && (
                         <>
                           {group.transactions.map(transaction => (

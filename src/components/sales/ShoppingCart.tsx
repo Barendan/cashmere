@@ -6,7 +6,7 @@ import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { formatCurrency } from '@/lib/format';
-import { ShoppingCart as CartIcon } from 'lucide-react';
+import { Undo2 } from 'lucide-react';
 
 interface CartItem {
   product: Product;
@@ -36,27 +36,17 @@ const ShoppingCart = ({
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-spa-sand/50">
-        <h3 className="font-medium flex items-center">
-          <CartIcon size={18} className="mr-2" />
-          Shopping Cart {totalItems > 0 && <span className="ml-2 text-sm text-muted-foreground">({totalItems} items)</span>}
+        <h3 className="font-medium">
+          Shopping Cart
         </h3>
-        {items.length > 0 && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="text-red-500 border-red-200 hover:bg-red-50"
-            onClick={clearCart}
-          >
-            Clear All
-          </Button>
-        )}
+        <span className="text-sm text-muted-foreground">{totalItems > 0 ? `${totalItems} items` : 'Empty'}</span>
       </div>
       
       {items.length === 0 ? (
         <div className="flex-grow flex items-center justify-center text-muted-foreground p-4">
           <div className="text-center">
             <p>Your cart is empty</p>
-            <p className="text-sm mt-1">Add products to get started</p>
+            <p className="text-sm mt-1">Click on products to add them</p>
           </div>
         </div>
       ) : (
@@ -90,6 +80,27 @@ const ShoppingCart = ({
             >
               {isProcessing ? "Processing..." : "Complete Sale"}
             </HoverFillButton>
+            
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-red-500 border-red-200 hover:bg-red-50"
+                onClick={clearCart}
+              >
+                Clear All
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-spa-sand"
+                onClick={() => {}} // This will be connected to undoLastTransaction in the parent component
+              >
+                <Undo2 size={16} className="mr-2" />
+                Undo
+              </Button>
+            </div>
           </div>
         </>
       )}
