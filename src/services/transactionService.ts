@@ -68,12 +68,13 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  console.log("Processing transactions:", JSON.stringify(transactions));
+  console.log("Processing transactions for RPC call:", JSON.stringify(transactions));
   
   try {
-    // Format transactions for direct insert - no need for manual UUID conversions
+    // Format transactions - no need to call toString() on UUIDs
+    // The RPC function will handle proper UUID casting on the PostgreSQL side
     const formattedTransactions = transactions.map(tx => ({
-      product_id: tx.product_id, // Use the UUID directly, no toString()
+      product_id: tx.product_id, // Pass UUID directly
       product_name: tx.product_name,
       quantity: tx.quantity,
       price: tx.price,
@@ -81,28 +82,28 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
       date: tx.date,
       user_id: tx.user_id,
       user_name: tx.user_name,
-      sale_id: tx.sale_id // Use the UUID directly, no toString()
+      sale_id: tx.sale_id // Pass UUID directly
     }));
     
-    console.log("Formatted for direct insert:", JSON.stringify(formattedTransactions));
-
-    // Use Supabase's native insert capability instead of RPC
+    console.log("Formatted transactions for RPC:", JSON.stringify(formattedTransactions));
+    
+    // Use the RPC function designed to bypass RLS
     const { data, error } = await supabase
-      .from('transactions')
-      .insert(formattedTransactions)
-      .select();
+      .rpc('insert_bulk_transactions', {
+        transactions: formattedTransactions
+      });
     
     if (error) {
-      console.error("Transaction insert error:", error);
+      console.error("RPC transaction insert error:", error);
       throw error;
     }
     
     if (!data || !Array.isArray(data) || data.length === 0) {
-      console.error("No data returned from transaction insert");
+      console.error("No data returned from RPC transaction insert");
       throw new Error('Failed to create transaction records');
     }
     
-    console.log("Transaction insert success, records:", data.length);
+    console.log("RPC transaction insert success, records:", data.length);
     return data.map(t => mapTransactionRowToTransaction(t));
   } catch (err) {
     console.error("Exception in recordBulkTransactionsInDb:", err);

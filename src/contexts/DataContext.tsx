@@ -314,7 +314,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
       } catch (error) {
         console.error('Error in transaction recording:', error);
-        // Even if transactions fail, we still created the sale, so we need to handle this gracefully
         toast({ 
           title: "Partial Error", 
           description: "Sale was created but transaction records may be incomplete. Please check inventory.", 
