@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/lib/format";
+import { HoverFillButton } from "@/components/ui/hover-fill-button";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
@@ -221,10 +223,10 @@ const InventoryPage = () => {
             <CardDescription>Add a new product to inventory</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-center h-[100px]">
-            <Button onClick={openAddModal} className="w-full">
+            <HoverFillButton variant="primary" onClick={openAddModal} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
               Add New Product
-            </Button>
+            </HoverFillButton>
           </CardContent>
         </Card>
         
@@ -252,9 +254,9 @@ const InventoryPage = () => {
                   onChange={e => setThresholdValue(parseInt(e.target.value) || 0)}
                   className="flex-1"
                 />
-                <Button variant="outline" onClick={handleApplyThreshold}>
+                <HoverFillButton variant="accent" onClick={handleApplyThreshold}>
                   Apply
-                </Button>
+                </HoverFillButton>
               </div>
             </div>
           </CardContent>

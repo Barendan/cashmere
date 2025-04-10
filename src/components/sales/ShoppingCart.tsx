@@ -34,7 +34,7 @@ const ShoppingCart = ({
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
   
   return (
-    <div className="h-full flex flex-col bg-spa-cream/30 border border-spa-sand rounded-md">
+    <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-spa-sand/50">
         <h3 className="font-medium flex items-center">
           <CartIcon size={18} className="mr-2" />

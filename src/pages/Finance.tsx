@@ -64,11 +64,12 @@ const Finance = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="col-span-3 md:col-span-1 border-0 shadow-md bg-gradient-to-br from-white to-spa-cream/50">
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Left Column - Financial Summary */}
+        <Card className="lg:col-span-4 border-0 shadow-md bg-gradient-to-br from-[#f8f9fc] to-[#edf2fa]">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl text-spa-deep flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-spa-deep" />
+            <CardTitle className="text-xl text-[#374151] flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-[#6366f1]" />
               Financial Summary
             </CardTitle>
             <CardDescription>Overview of income and expenses</CardDescription>
@@ -78,10 +79,11 @@ const Finance = () => {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 md:col-span-2 border-0 shadow-md bg-gradient-to-br from-white to-spa-cream/50">
+        {/* Right Column - Finance Tabs */}
+        <Card className="lg:col-span-8 border-0 shadow-md bg-gradient-to-br from-[#f8f9fc] to-[#edf2fa]">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl text-spa-deep flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-spa-deep" />
+            <CardTitle className="text-xl text-[#374151] flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-[#6366f1]" />
               Track Finances
             </CardTitle>
             <CardDescription>Record service income and business expenses</CardDescription>
@@ -93,7 +95,7 @@ const Finance = () => {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} mb-6 bg-spa-sand/30`}>
+              <TabsList className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} mb-6 bg-[#e5e7eb]`}>
                 <TabsTrigger value="income" className="data-[state=active]:bg-white">
                   <Receipt className="h-4 w-4 mr-2" />
                   Service Income
@@ -106,9 +108,9 @@ const Finance = () => {
                 )}
               </TabsList>
               <TabsContent value="income" className="space-y-6">
-                <div className="bg-gradient-to-br from-white to-spa-cream/20 p-5 rounded-lg border border-spa-sand/20 shadow-sm">
-                  <h3 className="font-medium text-spa-deep mb-4 flex items-center">
-                    <DollarSign className="h-5 w-5 mr-2 text-spa-water" />
+                <div className="bg-white p-5 rounded-lg border border-[#e5e7eb] shadow-sm">
+                  <h3 className="font-medium text-[#374151] mb-4 flex items-center">
+                    <DollarSign className="h-5 w-5 mr-2 text-[#6366f1]" />
                     Record New Income
                   </h3>
                   <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
@@ -117,9 +119,9 @@ const Finance = () => {
               </TabsContent>
               {isAdmin && (
                 <TabsContent value="expense" className="space-y-6">
-                  <div className="bg-gradient-to-br from-white to-spa-cream/20 p-5 rounded-lg border border-spa-sand/20 shadow-sm">
-                    <h3 className="font-medium text-spa-deep mb-4 flex items-center">
-                      <CreditCard className="h-5 w-5 mr-2 text-spa-water" />
+                  <div className="bg-white p-5 rounded-lg border border-[#e5e7eb] shadow-sm">
+                    <h3 className="font-medium text-[#374151] mb-4 flex items-center">
+                      <CreditCard className="h-5 w-5 mr-2 text-[#6366f1]" />
                       Record New Expense
                     </h3>
                     <ExpenseForm onExpenseAdded={handleExpenseAdded} />
