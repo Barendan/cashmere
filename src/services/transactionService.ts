@@ -68,14 +68,12 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  console.log("Original transactions:", JSON.stringify(transactions));
+  console.log("Processing transactions:", JSON.stringify(transactions));
   
-  // Format transactions to ensure proper UUID handling
-  const formattedTransactions = transactions.map(tx => {
-    // Make sure we send the product_id as a plain string
-    // The PostgreSQL function will handle the UUID conversion with explicit casting
-    return {
-      product_id: tx.product_id.toString(), // Ensure it's a string
+  try {
+    // Format transactions for direct insert - no need for manual UUID conversions
+    const formattedTransactions = transactions.map(tx => ({
+      product_id: tx.product_id, // Use the UUID directly, no toString()
       product_name: tx.product_name,
       quantity: tx.quantity,
       price: tx.price,
@@ -83,30 +81,28 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
       date: tx.date,
       user_id: tx.user_id,
       user_name: tx.user_name,
-      sale_id: tx.sale_id ? tx.sale_id.toString() : null // Also ensure sale_id is a string if present
-    };
-  });
-  
-  console.log("Formatted transactions:", JSON.stringify(formattedTransactions));
+      sale_id: tx.sale_id // Use the UUID directly, no toString()
+    }));
+    
+    console.log("Formatted for direct insert:", JSON.stringify(formattedTransactions));
 
-  try {
-    // Using proper RPC call pattern with the formatted transactions
+    // Use Supabase's native insert capability instead of RPC
     const { data, error } = await supabase
-      .rpc('insert_bulk_transactions', { 
-        transactions: formattedTransactions 
-      });
+      .from('transactions')
+      .insert(formattedTransactions)
+      .select();
     
     if (error) {
-      console.error("Transaction error:", error);
+      console.error("Transaction insert error:", error);
       throw error;
     }
     
-    if (!data || !Array.isArray(data)) {
-      console.error("No data returned from insert_bulk_transactions");
-      return [];
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.error("No data returned from transaction insert");
+      throw new Error('Failed to create transaction records');
     }
     
-    console.log("Transaction success, records:", data.length);
+    console.log("Transaction insert success, records:", data.length);
     return data.map(t => mapTransactionRowToTransaction(t));
   } catch (err) {
     console.error("Exception in recordBulkTransactionsInDb:", err);
