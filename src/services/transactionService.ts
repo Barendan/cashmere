@@ -68,12 +68,17 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
-  // Make sure product_id is properly formatted as UUID for Supabase
-  const formattedTransactions = transactions.map(tx => ({
-    ...tx,
-    // Ensure product_id is treated as UUID by Supabase
-    product_id: tx.product_id
-  }));
+  // Properly format transactions to ensure product_id is treated as UUID by Supabase
+  const formattedTransactions = transactions.map(tx => {
+    // Create a new object to avoid mutating the original
+    const formattedTx = { ...tx };
+    
+    // The product_id needs to be explicitly passed as a string
+    // The PostgreSQL function will handle the UUID conversion
+    // No special formatting needed here as the RPC function handles the conversion
+    
+    return formattedTx;
+  });
 
   // Using proper RPC call pattern
   const { data, error } = await supabase
