@@ -137,15 +137,15 @@ const SalesLog = () => {
   };
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <Card className="lg:col-span-2 bg-white">
-          <CardHeader className="pb-2">
+    <div className="w-full flex flex-col h-[calc(100vh-4rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 flex-shrink-0 min-h-[600px] h-[calc(60vh)]">
+        <Card className="lg:col-span-2 bg-white h-full flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
             <CardDescription>Select products to add to cart</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="mb-2">
+          <CardContent className="flex-grow flex flex-col pb-6">
+            <div className="mb-2 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -158,7 +158,7 @@ const SalesLog = () => {
               </div>
             </div>
             
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="flex-grow pr-4">
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {filteredProducts.map((product) => (
@@ -171,35 +171,39 @@ const SalesLog = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>No products found</p>
-                  <p className="text-sm mt-1">
-                    {searchTerm ? 
-                      "Try a different search term" : 
-                      "There are no products with available stock"}
-                  </p>
+                <div className="text-center py-8 text-muted-foreground h-full flex items-center justify-center">
+                  <div>
+                    <p>No products found</p>
+                    <p className="text-sm mt-1">
+                      {searchTerm ? 
+                        "Try a different search term" : 
+                        "There are no products with available stock"}
+                    </p>
+                  </div>
                 </div>
               )}
             </ScrollArea>
           </CardContent>
         </Card>
         
-        <Card className="bg-white">
-          <CardHeader>
+        <Card className="bg-white h-full flex flex-col">
+          <CardHeader className="flex-shrink-0">
             <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
             <CardDescription>Review and complete sale</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ShoppingCart 
-              items={cartItems}
-              updateQuantity={handleUpdateQuantity}
-              removeItem={handleRemoveItem}
-              clearCart={handleClearCart}
-              recordSale={handleCompleteSale}
-              isProcessing={isProcessing}
-            />
+          <CardContent className="flex-grow flex flex-col pb-6">
+            <div className="flex-grow flex flex-col h-full">
+              <ShoppingCart 
+                items={cartItems}
+                updateQuantity={handleUpdateQuantity}
+                removeItem={handleRemoveItem}
+                clearCart={handleClearCart}
+                recordSale={handleCompleteSale}
+                isProcessing={isProcessing}
+              />
+            </div>
             
-            <div className="mt-6">
+            <div className="mt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -214,7 +218,7 @@ const SalesLog = () => {
         </Card>
       </div>
       
-      <Card className="bg-white">
+      <Card className="bg-white mt-4 flex-shrink-0">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>

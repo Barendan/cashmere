@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableCaption, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, Edit, Plus, DollarSign, Archive } from "lucide-react";
+import { Package, Edit, Plus, DollarSign, Archive, Boxes } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -80,7 +79,7 @@ const InventoryPage = () => {
     const { name, value } = e.target;
     setNewProduct(prev => ({
       ...prev,
-      [name]: parseFloat(value) || 0, // Parse to float, default to 0 if NaN
+      [name]: parseFloat(value) || 0,
     }));
   };
 
@@ -160,7 +159,7 @@ const InventoryPage = () => {
       });
     }
   };
-  
+
   const handleApplyThreshold = () => {
     products.forEach(product => {
       updateProduct(product.id, { lowStockThreshold: thresholdValue });
@@ -178,6 +177,8 @@ const InventoryPage = () => {
   
   const totalInventoryValue = getTotalInventoryValue();
   const lowStockCount = products.filter(p => p.stockQuantity <= p.lowStockThreshold).length;
+  const totalProductCount = products.length;
+  const outOfStockCount = products.filter(p => p.stockQuantity === 0).length;
 
   return (
     <div className="container mx-auto p-6">
@@ -198,6 +199,16 @@ const InventoryPage = () => {
           <CardContent>
             <div className="text-3xl font-bold">{formatCurrency(totalInventoryValue)}</div>
             <p className="text-muted-foreground text-sm mt-1">Based on cost price</p>
+            <div className="flex gap-2 mt-2">
+              <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                {totalProductCount} Products
+              </Badge>
+              {outOfStockCount > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
+                  {outOfStockCount} Out of Stock
+                </Badge>
+              )}
+            </div>
           </CardContent>
         </Card>
         
@@ -209,7 +220,7 @@ const InventoryPage = () => {
             </CardTitle>
             <CardDescription>Add a new product to inventory</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex items-center justify-center h-[100px]">
             <Button onClick={openAddModal} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
               Add New Product
@@ -283,17 +294,31 @@ const InventoryPage = () => {
                     filteredProducts.map((product, index) => (
                       <TableRow 
                         key={product.id}
-                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        className={
+                          product.stockQuantity === 0 
+                            ? "bg-red-50" 
+                            : index % 2 === 0 
+                              ? "bg-white" 
+                              : "bg-gray-50"
+                        }
                       >
                         <TableCell className="font-medium">
                           <div>
                             {product.name}
-                            {product.stockQuantity <= product.lowStockThreshold && (
+                            {product.stockQuantity <= product.lowStockThreshold && product.stockQuantity > 0 && (
                               <Badge 
                                 variant="outline" 
                                 className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
                               >
                                 Low Stock
+                              </Badge>
+                            )}
+                            {product.stockQuantity === 0 && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-red-50 text-red-800 border-red-200 ml-2"
+                              >
+                                Out of Stock
                               </Badge>
                             )}
                           </div>
@@ -349,7 +374,6 @@ const InventoryPage = () => {
         </CardContent>
       </Card>
       
-      {/* Add Product Dialog */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -415,7 +439,6 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Edit Product Dialog */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -556,7 +579,6 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Restock Dialog */}
       <Dialog open={isRestockModalOpen} onOpenChange={setIsRestockModalOpen}>
         <DialogContent>
           <DialogHeader>

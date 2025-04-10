@@ -33,7 +33,7 @@ const ShoppingCart = ({
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
   
   return (
-    <div className="p-4 border border-spa-sand rounded-md bg-spa-cream/30">
+    <div className="h-full p-4 border border-spa-sand rounded-md bg-spa-cream/30 flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium flex items-center">
           <CartIcon size={18} className="mr-2" />
@@ -52,13 +52,15 @@ const ShoppingCart = ({
       </div>
       
       {items.length === 0 ? (
-        <div className="py-8 text-center text-muted-foreground">
-          <p>Your cart is empty</p>
-          <p className="text-sm mt-1">Add products to get started</p>
+        <div className="flex-grow flex items-center justify-center text-muted-foreground">
+          <div className="text-center">
+            <p>Your cart is empty</p>
+            <p className="text-sm mt-1">Add products to get started</p>
+          </div>
         </div>
       ) : (
         <>
-          <ScrollArea className="h-[250px] pr-4">
+          <ScrollArea className="flex-grow pr-4 mb-4">
             <div className="space-y-2">
               {items.map((item) => (
                 <CartItem 
@@ -74,7 +76,7 @@ const ShoppingCart = ({
             </div>
           </ScrollArea>
           
-          <div className="mt-4 space-y-2">
+          <div className="mt-auto space-y-3 pt-2 border-t border-spa-sand/50">
             <div className="flex justify-between font-medium">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>

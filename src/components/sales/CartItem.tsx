@@ -23,51 +23,58 @@ const CartItem = ({
   maxQuantity 
 }: CartItemProps) => {
   return (
-    <div className="py-2 px-3 border border-spa-sand rounded-md flex items-center gap-4 bg-white">
-      <div className="flex-1">
-        <div className="font-medium">{product.name}</div>
-        <div className="text-sm text-muted-foreground">{formatCurrency(product.sellPrice)} each</div>
-      </div>
-      
-      <div className="flex items-center gap-2">
-        <Button 
-          type="button" 
-          size="icon" 
-          variant="ghost" 
-          className="h-7 w-7" 
-          onClick={onDecrement} 
-          disabled={quantity <= 1}
-        >
-          <MinusCircle size={16} />
-        </Button>
+    <div className="py-3 px-3 border border-spa-sand rounded-md flex flex-col bg-white">
+      <div className="flex justify-between items-start mb-2">
+        <div className="font-medium text-spa-deep truncate mr-2">{product.name}</div>
         
-        <span className="w-7 text-center font-medium">{quantity}</span>
+        <div className="flex items-center gap-1">
+          <Button 
+            type="button" 
+            size="icon" 
+            variant="ghost" 
+            className="h-6 w-6" 
+            onClick={onDecrement} 
+            disabled={quantity <= 1}
+          >
+            <MinusCircle size={14} />
+          </Button>
+          
+          <span className="w-5 text-center font-medium text-sm">{quantity}</span>
+          
+          <Button 
+            type="button" 
+            size="icon" 
+            variant="ghost" 
+            className="h-6 w-6" 
+            onClick={onIncrement} 
+            disabled={quantity >= maxQuantity}
+          >
+            <PlusCircle size={14} />
+          </Button>
+        </div>
+      </div>
+      
+      <div className="flex justify-between items-center mt-1">
+        <div className="text-xs text-muted-foreground">
+          {formatCurrency(product.sellPrice)} each
+        </div>
         
-        <Button 
-          type="button" 
-          size="icon" 
-          variant="ghost" 
-          className="h-7 w-7" 
-          onClick={onIncrement} 
-          disabled={quantity >= maxQuantity}
-        >
-          <PlusCircle size={16} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="text-sm font-medium">
+            {formatCurrency(product.sellPrice * quantity)}
+          </div>
+          
+          <Button 
+            type="button" 
+            size="icon" 
+            variant="ghost" 
+            className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50" 
+            onClick={onRemove}
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
       </div>
-      
-      <div className="w-20 text-right font-medium">
-        {formatCurrency(product.sellPrice * quantity)}
-      </div>
-      
-      <Button 
-        type="button" 
-        size="icon" 
-        variant="ghost" 
-        className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50" 
-        onClick={onRemove}
-      >
-        <Trash2 size={16} />
-      </Button>
     </div>
   );
 };
