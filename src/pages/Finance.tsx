@@ -11,7 +11,7 @@ import ExpenseList from "@/components/finance/ExpenseList";
 import FinanceSummary from "@/components/finance/FinanceSummary";
 import usePageTitle from "@/hooks/usePageTitle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, DollarSign, Wallet, TrendingUp, Receipt, CreditCard } from "lucide-react";
 import { HoverFillButton } from "@/components/ui/hover-fill-button";
 
 const Finance = () => {
@@ -58,16 +58,19 @@ const Finance = () => {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Finance Management</h2>
+        <h2 className="text-3xl font-bold tracking-tight text-spa-deep">Finance Management</h2>
         <p className="text-muted-foreground">
           Track service income and business expenses
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="col-span-3 md:col-span-1">
-          <CardHeader>
-            <CardTitle>Financial Summary</CardTitle>
+      <div className="grid gap-6 md:grid-cols-3">
+        <Card className="col-span-3 md:col-span-1 border-0 shadow-md bg-gradient-to-br from-white to-spa-cream/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl text-spa-deep flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-spa-deep" />
+              Financial Summary
+            </CardTitle>
             <CardDescription>Overview of income and expenses</CardDescription>
           </CardHeader>
           <CardContent>
@@ -75,9 +78,12 @@ const Finance = () => {
           </CardContent>
         </Card>
 
-        <Card className="col-span-3 md:col-span-2">
+        <Card className="col-span-3 md:col-span-2 border-0 shadow-md bg-gradient-to-br from-white to-spa-cream/50">
           <CardHeader className="pb-4">
-            <CardTitle>Track Finances</CardTitle>
+            <CardTitle className="text-xl text-spa-deep flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-spa-deep" />
+              Track Finances
+            </CardTitle>
             <CardDescription>Record service income and business expenses</CardDescription>
           </CardHeader>
           <CardContent>
@@ -87,17 +93,37 @@ const Finance = () => {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} mb-6`}>
-                <TabsTrigger value="income">Service Income</TabsTrigger>
-                {isAdmin && <TabsTrigger value="expense">Expenses</TabsTrigger>}
+              <TabsList className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'} mb-6 bg-spa-sand/30`}>
+                <TabsTrigger value="income" className="data-[state=active]:bg-white">
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Service Income
+                </TabsTrigger>
+                {isAdmin && (
+                  <TabsTrigger value="expense" className="data-[state=active]:bg-white">
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Expenses
+                  </TabsTrigger>
+                )}
               </TabsList>
               <TabsContent value="income" className="space-y-6">
-                <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
+                <div className="bg-gradient-to-br from-white to-spa-cream/20 p-5 rounded-lg border border-spa-sand/20 shadow-sm">
+                  <h3 className="font-medium text-spa-deep mb-4 flex items-center">
+                    <DollarSign className="h-5 w-5 mr-2 text-spa-water" />
+                    Record New Income
+                  </h3>
+                  <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
+                </div>
                 <IncomeList newIncome={newIncome} />
               </TabsContent>
               {isAdmin && (
                 <TabsContent value="expense" className="space-y-6">
-                  <ExpenseForm onExpenseAdded={handleExpenseAdded} />
+                  <div className="bg-gradient-to-br from-white to-spa-cream/20 p-5 rounded-lg border border-spa-sand/20 shadow-sm">
+                    <h3 className="font-medium text-spa-deep mb-4 flex items-center">
+                      <CreditCard className="h-5 w-5 mr-2 text-spa-water" />
+                      Record New Expense
+                    </h3>
+                    <ExpenseForm onExpenseAdded={handleExpenseAdded} />
+                  </div>
                   <ExpenseList newExpense={newExpense} />
                 </TabsContent>
               )}

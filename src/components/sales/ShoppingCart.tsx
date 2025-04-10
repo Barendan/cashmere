@@ -34,8 +34,8 @@ const ShoppingCart = ({
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
   
   return (
-    <div className="h-full flex flex-col p-4 border border-spa-sand rounded-md bg-spa-cream/30">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full flex flex-col bg-spa-cream/30 border border-spa-sand rounded-md">
+      <div className="flex items-center justify-between p-4 border-b border-spa-sand/50">
         <h3 className="font-medium flex items-center">
           <CartIcon size={18} className="mr-2" />
           Shopping Cart {totalItems > 0 && <span className="ml-2 text-sm text-muted-foreground">({totalItems} items)</span>}
@@ -53,7 +53,7 @@ const ShoppingCart = ({
       </div>
       
       {items.length === 0 ? (
-        <div className="flex-grow flex items-center justify-center text-muted-foreground">
+        <div className="flex-grow flex items-center justify-center text-muted-foreground p-4">
           <div className="text-center">
             <p>Your cart is empty</p>
             <p className="text-sm mt-1">Add products to get started</p>
@@ -61,7 +61,7 @@ const ShoppingCart = ({
         </div>
       ) : (
         <>
-          <ScrollArea className="flex-grow mb-4 pr-4">
+          <ScrollArea className="flex-grow px-4 pt-4 pr-4">
             <div className="space-y-3">
               {items.map((item) => (
                 <CartItem 
@@ -77,7 +77,7 @@ const ShoppingCart = ({
             </div>
           </ScrollArea>
           
-          <div className="mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
+          <div className="p-4 mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
             <div className="flex justify-between font-medium">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>

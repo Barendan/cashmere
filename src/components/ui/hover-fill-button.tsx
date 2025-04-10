@@ -5,7 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const hoverFillButtonVariants = cva(
-  "group relative inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 overflow-hidden",
+  "group relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 overflow-hidden",
   {
     variants: {
       variant: {
@@ -13,6 +13,7 @@ const hoverFillButtonVariants = cva(
         accent: "bg-white text-spa-water border border-spa-water hover:text-white",
         destructive: "bg-white text-destructive border border-destructive hover:text-white",
         primary: "bg-white text-primary border border-primary hover:text-white",
+        success: "bg-white text-green-600 border border-green-500 hover:text-white",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -50,6 +51,7 @@ const HoverFillButton = React.forwardRef<HTMLButtonElement, HoverFillButtonProps
             "bg-destructive": variant === "destructive",
             "bg-spa-water": variant === "accent",
             "bg-primary": variant === "primary",
+            "bg-green-500": variant === "success",
             "bg-spa-sage": variant === "default" || !variant,
           },
           "group-hover:scale-x-100"
