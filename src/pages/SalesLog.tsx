@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -138,8 +137,8 @@ const SalesLog = () => {
 
   return (
     <div className="w-full flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Product and Cart Section - Tall enough to fill most of the screen */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[calc(75vh)]">
+      {/* Product and Cart Section - With fixed heights to prevent resizing */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8" style={{ height: "75vh" }}>
         <Card className="lg:col-span-3 bg-white h-full flex flex-col overflow-hidden">
           <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
@@ -159,9 +158,9 @@ const SalesLog = () => {
               </div>
             </div>
             
-            <ScrollArea className="flex-grow pr-4 h-full">
+            <ScrollArea className="flex-grow pr-4" style={{ height: "calc(100% - 45px)" }}>
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 min-h-full">
                   {filteredProducts.map((product) => (
                     <ProductCard 
                       key={product.id}
@@ -172,7 +171,7 @@ const SalesLog = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground h-full flex items-center justify-center">
+                <div className="text-center py-8 text-muted-foreground flex items-center justify-center h-full">
                   <div>
                     <p>No products found</p>
                     <p className="text-sm mt-1">
@@ -192,7 +191,7 @@ const SalesLog = () => {
             <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
             <CardDescription>Review and complete sale</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col pb-6 overflow-hidden">
+          <CardContent className="flex-grow flex flex-col pb-6 overflow-hidden" style={{ height: "calc(100% - 85px)" }}>
             <div className="flex-grow flex flex-col h-full">
               <ShoppingCart 
                 items={cartItems}

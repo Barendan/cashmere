@@ -4,6 +4,7 @@ import { Product } from '@/models/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
+import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { formatCurrency } from '@/lib/format';
 import { ShoppingCart as CartIcon } from 'lucide-react';
 
@@ -60,7 +61,7 @@ const ShoppingCart = ({
         </div>
       ) : (
         <>
-          <ScrollArea className="flex-grow mb-4 pr-4 max-h-full">
+          <ScrollArea className="flex-grow mb-4 pr-4">
             <div className="space-y-3">
               {items.map((item) => (
                 <CartItem 
@@ -82,13 +83,13 @@ const ShoppingCart = ({
               <span>{formatCurrency(subtotal)}</span>
             </div>
             
-            <Button 
-              className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
+            <HoverFillButton 
+              className="w-full group"
               onClick={recordSale}
               disabled={isProcessing || items.length === 0}
             >
               {isProcessing ? "Processing..." : "Complete Sale"}
-            </Button>
+            </HoverFillButton>
           </div>
         </>
       )}

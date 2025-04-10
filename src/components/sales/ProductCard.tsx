@@ -2,7 +2,7 @@
 import React from 'react';
 import { Product } from '@/models/types';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Check } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
 
@@ -33,14 +33,17 @@ const ProductCard = ({ product, onAddToCart, isInCart }: ProductCardProps) => {
       <div className="flex justify-between items-center mt-auto">
         <div className="font-medium text-sm">{formatCurrency(product.sellPrice)}</div>
         <Button 
-          size="sm"
+          size="icon"
           variant={isInCart ? "outline" : "default"}
-          className={`${isInCart ? "bg-green-50 text-green-700 border-green-200" : ""} text-[0.75rem] py-1 px-2 h-auto`}
+          className={`${
+            isInCart 
+              ? "bg-green-50 border-green-200 text-green-700 h-8 w-8" 
+              : "bg-spa-sage text-spa-deep h-8 w-8"
+          }`}
           onClick={() => onAddToCart(product)}
           disabled={product.stockQuantity === 0 || isInCart}
         >
-          <ShoppingCart size={14} className="mr-1" />
-          {isInCart ? "In Cart" : "Add"}
+          {isInCart ? <Check size={16} /> : <Plus size={16} />}
         </Button>
       </div>
     </div>
