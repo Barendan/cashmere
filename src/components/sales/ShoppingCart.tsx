@@ -33,7 +33,7 @@ const ShoppingCart = ({
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
   
   return (
-    <div className="h-full p-4 border border-spa-sand rounded-md bg-spa-cream/30 flex flex-col">
+    <div className="h-full flex flex-col p-4 border border-spa-sand rounded-md bg-spa-cream/30">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium flex items-center">
           <CartIcon size={18} className="mr-2" />
@@ -60,8 +60,8 @@ const ShoppingCart = ({
         </div>
       ) : (
         <>
-          <ScrollArea className="flex-grow pr-4 mb-4">
-            <div className="space-y-2">
+          <ScrollArea className="flex-grow mb-4 pr-4 max-h-full">
+            <div className="space-y-3">
               {items.map((item) => (
                 <CartItem 
                   key={item.product.id}
@@ -76,7 +76,7 @@ const ShoppingCart = ({
             </div>
           </ScrollArea>
           
-          <div className="mt-auto space-y-3 pt-2 border-t border-spa-sand/50">
+          <div className="mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
             <div className="flex justify-between font-medium">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>

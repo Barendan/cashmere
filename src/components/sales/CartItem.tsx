@@ -23,11 +23,13 @@ const CartItem = ({
   maxQuantity 
 }: CartItemProps) => {
   return (
-    <div className="py-3 px-3 border border-spa-sand rounded-md flex flex-col bg-white">
+    <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white">
       <div className="flex justify-between items-start mb-2">
-        <div className="font-medium text-spa-deep truncate mr-2">{product.name}</div>
+        <div className="font-medium text-spa-deep text-sm truncate mr-2 flex-grow">
+          {product.name}
+        </div>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           <Button 
             type="button" 
             size="icon" 
@@ -60,7 +62,7 @@ const CartItem = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="text-sm font-medium">
+          <div className="text-sm font-semibold text-spa-deep">
             {formatCurrency(product.sellPrice * quantity)}
           </div>
           

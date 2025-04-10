@@ -137,15 +137,16 @@ const SalesLog = () => {
   };
 
   return (
-    <div className="w-full flex flex-col h-[calc(100vh-4rem)]">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 flex-shrink-0 min-h-[600px] h-[calc(60vh)]">
-        <Card className="lg:col-span-2 bg-white h-full flex flex-col">
+    <div className="w-full flex flex-col min-h-[calc(100vh-4rem)]">
+      {/* Product and Cart Section - Tall enough to fill most of the screen */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 h-[calc(75vh)]">
+        <Card className="lg:col-span-2 bg-white h-full flex flex-col overflow-hidden">
           <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
             <CardDescription>Select products to add to cart</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col pb-6">
-            <div className="mb-2 flex-shrink-0">
+          <CardContent className="flex-grow flex flex-col pb-6 overflow-hidden">
+            <div className="mb-3 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -158,9 +159,9 @@ const SalesLog = () => {
               </div>
             </div>
             
-            <ScrollArea className="flex-grow pr-4">
+            <ScrollArea className="flex-grow pr-4 h-full">
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                   {filteredProducts.map((product) => (
                     <ProductCard 
                       key={product.id}
@@ -186,12 +187,12 @@ const SalesLog = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-white h-full flex flex-col">
+        <Card className="bg-white h-full flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
             <CardDescription>Review and complete sale</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col pb-6">
+          <CardContent className="flex-grow flex flex-col pb-6 overflow-hidden">
             <div className="flex-grow flex flex-col h-full">
               <ShoppingCart 
                 items={cartItems}
@@ -218,7 +219,8 @@ const SalesLog = () => {
         </Card>
       </div>
       
-      <Card className="bg-white mt-4 flex-shrink-0">
+      {/* Transaction Log Section - Takes remaining space */}
+      <Card className="bg-white mb-6 flex-shrink-0">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
