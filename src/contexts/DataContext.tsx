@@ -246,6 +246,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     try {
+      console.log("Starting bulk sale process with items:", items.length);
       const now = new Date();
       const totalAmount = items.reduce(
         (sum, item) => sum + (item.product.sellPrice * item.quantity), 
@@ -259,7 +260,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User'
       };
       
+      console.log("Creating sale record with total:", totalAmount);
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
+      console.log("Sale record created with ID:", saleId);
       
       const newTransactions: any[] = [];
       const productUpdatesPromises: Promise<any>[] = [];
@@ -281,30 +284,44 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         productUpdatesPromises.push(promise);
       }
       
-      const newLocalTransactions = await recordBulkTransactionsInDb(newTransactions);
-      
-      await Promise.all(productUpdatesPromises);
-      
-      setProducts(products.map(p => {
-        const soldItem = items.find(item => item.product.id === p.id);
-        if (soldItem) {
-          return { ...p, stockQuantity: p.stockQuantity - soldItem.quantity };
-        }
-        return p;
-      }));
-      
-      const saleWithItems: Sale = {
-        ...newSale,
-        items: newLocalTransactions
-      };
-      
-      setSales([saleWithItems, ...sales]);
-      setTransactions([...newLocalTransactions, ...transactions]);
-      
-      toast({ 
-        title: "Sale Completed", 
-        description: `Sold ${items.length} different products.` 
-      });
+      console.log("Recording transactions for products:", newTransactions.length);
+      try {
+        const newLocalTransactions = await recordBulkTransactionsInDb(newTransactions);
+        console.log("Transactions recorded successfully:", newLocalTransactions.length);
+        
+        await Promise.all(productUpdatesPromises);
+        console.log("Product stocks updated successfully");
+        
+        setProducts(products.map(p => {
+          const soldItem = items.find(item => item.product.id === p.id);
+          if (soldItem) {
+            return { ...p, stockQuantity: p.stockQuantity - soldItem.quantity };
+          }
+          return p;
+        }));
+        
+        const saleWithItems: Sale = {
+          ...newSale,
+          items: newLocalTransactions
+        };
+        
+        setSales([saleWithItems, ...sales]);
+        setTransactions([...newLocalTransactions, ...transactions]);
+        
+        toast({ 
+          title: "Sale Completed", 
+          description: `Sold ${items.length} different products.` 
+        });
+      } catch (error) {
+        console.error('Error in transaction recording:', error);
+        // Even if transactions fail, we still created the sale, so we need to handle this gracefully
+        toast({ 
+          title: "Partial Error", 
+          description: "Sale was created but transaction records may be incomplete. Please check inventory.", 
+          variant: "destructive" 
+        });
+        throw error;
+      }
     } catch (error) {
       console.error('Error recording bulk sale:', error);
       toast({ 
