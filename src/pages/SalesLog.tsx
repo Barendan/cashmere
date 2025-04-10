@@ -139,8 +139,8 @@ const SalesLog = () => {
   return (
     <div className="w-full flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Product and Cart Section - Tall enough to fill most of the screen */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 h-[calc(75vh)]">
-        <Card className="lg:col-span-2 bg-white h-full flex flex-col overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[calc(75vh)]">
+        <Card className="lg:col-span-3 bg-white h-full flex flex-col overflow-hidden">
           <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
             <CardDescription>Select products to add to cart</CardDescription>
@@ -161,7 +161,7 @@ const SalesLog = () => {
             
             <ScrollArea className="flex-grow pr-4 h-full">
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredProducts.map((product) => (
                     <ProductCard 
                       key={product.id}
@@ -187,7 +187,7 @@ const SalesLog = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-white h-full flex flex-col overflow-hidden">
+        <Card className="lg:col-span-2 bg-white h-full flex flex-col overflow-hidden">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
             <CardDescription>Review and complete sale</CardDescription>

@@ -197,9 +197,9 @@ const InventoryPage = () => {
             <CardDescription>Total value of current inventory</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatCurrency(totalInventoryValue)}</div>
-            <p className="text-muted-foreground text-sm mt-1">Based on cost price</p>
-            <div className="flex gap-2 mt-2">
+            <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <p className="text-muted-foreground text-sm">Based on cost price</p>
               <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
                 {totalProductCount} Products
               </Badge>

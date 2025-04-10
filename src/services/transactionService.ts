@@ -68,13 +68,21 @@ export const recordTransactionInDb = async (transactionData: any) => {
 };
 
 export const recordBulkTransactionsInDb = async (transactions: any[]) => {
+  // Make sure product_id is properly formatted as UUID for Supabase
+  const formattedTransactions = transactions.map(tx => ({
+    ...tx,
+    // Ensure product_id is treated as UUID by Supabase
+    product_id: tx.product_id
+  }));
+
   // Using proper RPC call pattern
   const { data, error } = await supabase
     .rpc('insert_bulk_transactions', { 
-      transactions 
+      transactions: formattedTransactions 
     });
   
   if (error) {
+    console.error("Transaction error:", error);
     throw error;
   }
   
