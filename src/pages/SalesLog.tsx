@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -137,14 +138,14 @@ const SalesLog = () => {
 
   return (
     <div className="w-full flex flex-col min-h-[calc(100vh-4rem)]">
-      {/* Product and Cart Section - With fixed heights to prevent resizing */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8" style={{ height: "75vh" }}>
-        <Card className="lg:col-span-3 bg-white h-full flex flex-col overflow-hidden">
+      {/* Product and Cart Section - With stable fixed layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[75vh]">
+        <Card className="lg:col-span-3 flex flex-col overflow-hidden h-full">
           <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
             <CardDescription>Select products to add to cart</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col pb-6 overflow-hidden">
+          <CardContent className="flex-grow flex flex-col p-6 pt-0 overflow-hidden h-[calc(100%-85px)]">
             <div className="mb-3 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -158,9 +159,9 @@ const SalesLog = () => {
               </div>
             </div>
             
-            <ScrollArea className="flex-grow pr-4" style={{ height: "calc(100% - 45px)" }}>
+            <ScrollArea className="flex-grow pr-4 h-full">
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 min-h-full">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredProducts.map((product) => (
                     <ProductCard 
                       key={product.id}
@@ -186,12 +187,12 @@ const SalesLog = () => {
           </CardContent>
         </Card>
         
-        <Card className="lg:col-span-2 bg-white h-full flex flex-col overflow-hidden">
+        <Card className="lg:col-span-2 flex flex-col overflow-hidden h-full">
           <CardHeader className="flex-shrink-0">
             <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
             <CardDescription>Review and complete sale</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col pb-6 overflow-hidden" style={{ height: "calc(100% - 85px)" }}>
+          <CardContent className="flex-grow flex flex-col p-6 pt-0 overflow-hidden h-[calc(100%-85px)]">
             <div className="flex-grow flex flex-col h-full">
               <ShoppingCart 
                 items={cartItems}
@@ -203,7 +204,7 @@ const SalesLog = () => {
               />
             </div>
             
-            <div className="mt-4">
+            <div className="mt-4 flex-shrink-0">
               <Button
                 type="button"
                 variant="outline"

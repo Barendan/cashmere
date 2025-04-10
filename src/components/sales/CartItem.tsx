@@ -23,7 +23,7 @@ const CartItem = ({
   maxQuantity 
 }: CartItemProps) => {
   return (
-    <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white">
+    <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white h-[88px]">
       <div className="flex justify-between items-start mb-2">
         <div className="font-medium text-spa-deep text-sm truncate mr-2 flex-grow">
           {product.name}
@@ -56,7 +56,7 @@ const CartItem = ({
         </div>
       </div>
       
-      <div className="flex justify-between items-center mt-1">
+      <div className="flex justify-between items-center mt-auto">
         <div className="text-xs text-muted-foreground">
           {formatCurrency(product.sellPrice)} each
         </div>

@@ -84,7 +84,7 @@ const ShoppingCart = ({
             </div>
             
             <HoverFillButton 
-              className="w-full group"
+              className="w-full" 
               onClick={recordSale}
               disabled={isProcessing || items.length === 0}
             >
