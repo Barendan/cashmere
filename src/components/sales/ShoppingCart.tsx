@@ -98,7 +98,7 @@ const ShoppingCart = ({
                 onClick={() => {}} // This will be connected to undoLastTransaction in the parent component
               >
                 <Undo2 size={16} className="mr-2" />
-                Undo
+                Undo Action
               </Button>
             </div>
           </div>

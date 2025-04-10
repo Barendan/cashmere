@@ -198,12 +198,13 @@ const SalesLog = () => {
             <ScrollArea className="flex-grow pr-4 pt-2 h-full">
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product, index) => (
                     <ProductCard 
                       key={product.id}
                       product={product}
                       onAddToCart={handleAddToCart}
                       isInCart={isProductInCart(product.id)}
+                      cardStyle={index < 3 ? `design-${index + 1}` : ""}
                     />
                   ))}
                 </div>
@@ -238,18 +239,6 @@ const SalesLog = () => {
                 recordSale={handleCompleteSale}
                 isProcessing={isProcessing}
               />
-            </div>
-            
-            <div className="mt-4 flex-shrink-0">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-spa-sand w-full"
-                onClick={() => undoLastTransaction()}
-              >
-                <Undo2 size={16} className="mr-2" />
-                Undo Last Action
-              </Button>
             </div>
           </CardContent>
         </Card>
