@@ -9,13 +9,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Undo2, Search } from "lucide-react";
+import { Undo2, Search, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import ShoppingCart from "@/components/sales/ShoppingCart";
 import ProductCard from "@/components/sales/ProductCard";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatCurrency } from "@/lib/format";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+// Define a type for grouped transactions
+interface GroupedTransaction {
+  sale_id: string | null;
+  transactions: Transaction[];
+  date: Date;
+  userName: string;
+  totalAmount: number;
+  itemCount: number;
+}
 
 const SalesLog = () => {
   usePageTitle("Sales Log");
@@ -26,6 +37,7 @@ const SalesLog = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [cartItems, setCartItems] = useState<{product: Product, quantity: number}[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [openSale, setOpenSale] = useState<string | null>(null);
   
   // Filter products that have stock
   const availableProducts = products
@@ -96,17 +108,65 @@ const SalesLog = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    if (filterType !== "all" && transaction.type !== filterType) return false;
+  // Group transactions by sale_id
+  const groupTransactions = (): GroupedTransaction[] => {
+    const filteredTransactions = transactions.filter((transaction) => {
+      if (filterType !== "all" && transaction.type !== filterType) return false;
+      
+      // Apply search filter if search term exists
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        return transaction.productName.toLowerCase().includes(searchLower) ||
+              transaction.userName.toLowerCase().includes(searchLower);
+      }
+      return true;
+    });
+
+    // Create a map to group transactions by sale_id
+    const groupMap = new Map<string, Transaction[]>();
     
-    // Apply search filter if search term exists
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      return transaction.productName.toLowerCase().includes(searchLower) ||
-             transaction.userName.toLowerCase().includes(searchLower);
+    // Group all transactions
+    filteredTransactions.forEach(transaction => {
+      const key = transaction.sale_id || 'no-sale-id';
+      if (!groupMap.has(key)) {
+        groupMap.set(key, []);
+      }
+      groupMap.get(key)?.push(transaction);
+    });
+    
+    // Convert map to array of grouped transactions
+    const groupedTransactions: GroupedTransaction[] = [];
+    
+    groupMap.forEach((transactions, sale_id) => {
+      // Sort transactions by date
+      const sortedTransactions = [...transactions].sort((a, b) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      
+      const firstTransaction = sortedTransactions[0];
+      const totalAmount = sortedTransactions.reduce((sum, t) => sum + t.price, 0);
+      
+      groupedTransactions.push({
+        sale_id: sale_id === 'no-sale-id' ? null : sale_id,
+        transactions: sortedTransactions,
+        date: new Date(firstTransaction.date),
+        userName: firstTransaction.userName,
+        totalAmount,
+        itemCount: sortedTransactions.length
+      });
+    });
+    
+    // Sort grouped transactions by date (most recent first)
+    return groupedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+  };
+
+  const toggleSale = (saleId: string | null) => {
+    if (openSale === saleId) {
+      setOpenSale(null);
+    } else {
+      setOpenSale(saleId);
     }
-    return true;
-  });
+  };
 
   // Check if product is in cart
   const isProductInCart = (productId: string) => {
@@ -135,6 +195,8 @@ const SalesLog = () => {
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  const groupedTransactions = groupTransactions();
 
   return (
     <div className="w-full flex flex-col min-h-[calc(100vh-4rem)]">
@@ -243,34 +305,75 @@ const SalesLog = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[180px]">Date & Time</TableHead>
-                  <TableHead>Product</TableHead>
+                  <TableHead>Details</TableHead>
                   <TableHead>User</TableHead>
-                  <TableHead>Quantity</TableHead>
+                  <TableHead>Total</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((transaction, index) => (
-                    <TableRow key={transaction.id} className={index % 2 === 0 ? "" : "bg-gray-50"}>
-                      <TableCell className="text-sm">
-                        {formatDate(transaction.date)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {transaction.productName}
-                      </TableCell>
-                      <TableCell>{transaction.userName}</TableCell>
-                      <TableCell>{transaction.quantity}</TableCell>
-                      <TableCell>
-                        <Badge className={getTransactionTypeColor(transaction.type)}>
-                          {transaction.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${transaction.price.toFixed(2)}
-                      </TableCell>
-                    </TableRow>
+                {groupedTransactions.length > 0 ? (
+                  groupedTransactions.map((group) => (
+                    <React.Fragment key={group.sale_id || `no-sale-${group.date.getTime()}`}>
+                      <TableRow className="bg-gray-50 font-medium">
+                        <TableCell className="text-sm">
+                          {formatDate(group.date)}
+                        </TableCell>
+                        <TableCell>
+                          {group.sale_id ? (
+                            <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                          ) : (
+                            <span className="font-medium">{group.transactions[0].productName}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{group.userName}</TableCell>
+                        <TableCell>{formatCurrency(group.totalAmount)}</TableCell>
+                        <TableCell>
+                          <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
+                            {group.transactions[0].type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {group.transactions.length > 1 && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0"
+                              onClick={() => toggleSale(group.sale_id || `no-sale-${group.date.getTime()}`)}
+                            >
+                              {openSale === (group.sale_id || `no-sale-${group.date.getTime()}`) ? 
+                                <ChevronDown className="h-4 w-4" /> : 
+                                <ChevronRight className="h-4 w-4" />
+                              }
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      
+                      {/* Collapsible item details */}
+                      {group.transactions.length > 1 && openSale === (group.sale_id || `no-sale-${group.date.getTime()}`) && (
+                        <>
+                          {group.transactions.map(transaction => (
+                            <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
+                              <TableCell></TableCell>
+                              <TableCell className="py-2 pl-8">
+                                <div className="flex items-center">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
+                                  {transaction.productName}
+                                </div>
+                              </TableCell>
+                              <TableCell></TableCell>
+                              <TableCell>{transaction.quantity} item(s)</TableCell>
+                              <TableCell></TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(transaction.price)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      )}
+                    </React.Fragment>
                   ))
                 ) : (
                   <TableRow>

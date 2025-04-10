@@ -32,15 +32,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       adminOnly: true,
     },
     {
-      name: "Metrics",
-      path: "/metrics",
-      icon: <BarChart3 size={20} />,
-      adminOnly: false,
-    },
-    {
       name: "Finance",
       path: "/finance",
       icon: <DollarSign size={20} />,
+      adminOnly: false,
+    },
+    {
+      name: "Metrics",
+      path: "/metrics",
+      icon: <BarChart3 size={20} />,
       adminOnly: false,
     },
   ];

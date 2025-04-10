@@ -12,6 +12,7 @@ import FinanceSummary from "@/components/finance/FinanceSummary";
 import usePageTitle from "@/hooks/usePageTitle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { HoverFillButton } from "@/components/ui/hover-fill-button";
 
 const Finance = () => {
   usePageTitle("Finance");

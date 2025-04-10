@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Product } from '@/models/types';
-import { Button } from '@/components/ui/button';
+import { HoverFillButton } from '@/components/ui/hover-fill-button';
 import { Plus, Check } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
@@ -32,19 +32,19 @@ const ProductCard = ({ product, onAddToCart, isInCart }: ProductCardProps) => {
       
       <div className="flex justify-between items-center mt-auto">
         <div className="font-medium text-sm">{formatCurrency(product.sellPrice)}</div>
-        <Button 
+        <HoverFillButton 
           size="sm"
-          variant={isInCart ? "outline" : "default"}
+          variant={isInCart ? "accent" : "default"}
           className={`${
             isInCart 
               ? "bg-green-50 border-green-200 text-green-700 h-9 w-9 p-0" 
-              : "bg-spa-sage text-spa-deep h-9 w-9 p-0"
+              : "h-9 w-9 p-0"
           } min-h-9 min-w-9 rounded-md flex items-center justify-center`}
           onClick={() => onAddToCart(product)}
           disabled={product.stockQuantity === 0 || isInCart}
         >
           {isInCart ? <Check size={16} /> : <Plus size={16} />}
-        </Button>
+        </HoverFillButton>
       </div>
     </div>
   );
