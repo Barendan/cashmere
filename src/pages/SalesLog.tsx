@@ -20,7 +20,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 
 // Define a type for grouped transactions
 interface GroupedTransaction {
-  sale_id: string | null;
+  saleId: string | null;
   transactions: Transaction[];
   date: Date;
   userName: string;
@@ -108,7 +108,7 @@ const SalesLog = () => {
     }
   };
 
-  // Group transactions by sale_id
+  // Group transactions by saleId
   const groupTransactions = (): GroupedTransaction[] => {
     const filteredTransactions = transactions.filter((transaction) => {
       if (filterType !== "all" && transaction.type !== filterType) return false;
@@ -122,12 +122,12 @@ const SalesLog = () => {
       return true;
     });
 
-    // Create a map to group transactions by sale_id
+    // Create a map to group transactions by saleId
     const groupMap = new Map<string, Transaction[]>();
     
     // Group all transactions
     filteredTransactions.forEach(transaction => {
-      const key = transaction.sale_id || 'no-sale-id';
+      const key = transaction.saleId || 'no-sale-id';
       if (!groupMap.has(key)) {
         groupMap.set(key, []);
       }
@@ -137,7 +137,7 @@ const SalesLog = () => {
     // Convert map to array of grouped transactions
     const groupedTransactions: GroupedTransaction[] = [];
     
-    groupMap.forEach((transactions, sale_id) => {
+    groupMap.forEach((transactions, saleId) => {
       // Sort transactions by date
       const sortedTransactions = [...transactions].sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -147,7 +147,7 @@ const SalesLog = () => {
       const totalAmount = sortedTransactions.reduce((sum, t) => sum + t.price, 0);
       
       groupedTransactions.push({
-        sale_id: sale_id === 'no-sale-id' ? null : sale_id,
+        saleId: saleId === 'no-sale-id' ? null : saleId,
         transactions: sortedTransactions,
         date: new Date(firstTransaction.date),
         userName: firstTransaction.userName,
@@ -315,13 +315,13 @@ const SalesLog = () => {
               <TableBody>
                 {groupedTransactions.length > 0 ? (
                   groupedTransactions.map((group) => (
-                    <React.Fragment key={group.sale_id || `no-sale-${group.date.getTime()}`}>
+                    <React.Fragment key={group.saleId || `no-sale-${group.date.getTime()}`}>
                       <TableRow className="bg-gray-50 font-medium">
                         <TableCell className="text-sm">
                           {formatDate(group.date)}
                         </TableCell>
                         <TableCell>
-                          {group.sale_id ? (
+                          {group.saleId ? (
                             <span className="font-medium">Sale with {group.itemCount} item(s)</span>
                           ) : (
                             <span className="font-medium">{group.transactions[0].productName}</span>
@@ -340,9 +340,9 @@ const SalesLog = () => {
                               variant="ghost" 
                               size="sm" 
                               className="h-8 w-8 p-0"
-                              onClick={() => toggleSale(group.sale_id || `no-sale-${group.date.getTime()}`)}
+                              onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
                             >
-                              {openSale === (group.sale_id || `no-sale-${group.date.getTime()}`) ? 
+                              {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
                                 <ChevronDown className="h-4 w-4" /> : 
                                 <ChevronRight className="h-4 w-4" />
                               }
@@ -352,7 +352,7 @@ const SalesLog = () => {
                       </TableRow>
                       
                       {/* Collapsible item details */}
-                      {group.transactions.length > 1 && openSale === (group.sale_id || `no-sale-${group.date.getTime()}`) && (
+                      {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) && (
                         <>
                           {group.transactions.map(transaction => (
                             <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
