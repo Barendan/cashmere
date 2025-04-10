@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Undo2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import ShoppingCart from "@/components/sales/ShoppingCart";
