@@ -16,9 +16,9 @@ const ProductCard = ({ product, onAddToCart, isInCart }: ProductCardProps) => {
   const isLowStock = product.stockQuantity <= product.lowStockThreshold;
   
   return (
-    <div className="border border-spa-sand rounded-md p-3 bg-spa-cream/20 flex flex-col h-full">
+    <div className="border border-spa-sand rounded-md p-3 bg-white flex flex-col h-full">
       <div className="flex justify-between items-start mb-2">
-        <h4 className="font-medium text-sm text-spa-deep truncate mr-1">{product.name}</h4>
+        <h4 className="font-medium text-md text-spa-deep truncate mr-1">{product.name}</h4>
         {isLowStock && (
           <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[0.7rem] py-0 px-1.5 shrink-0">
             Low Stock

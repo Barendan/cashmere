@@ -199,15 +199,15 @@ const SalesLog = () => {
   const groupedTransactions = groupTransactions();
 
   return (
-    <div className="w-full flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="w-full md:min-w-[90vw] xl:min-w-[initial] flex flex-col min-h-[calc(100vh-4rem)]">
       {/* Product and Cart Section - With stable fixed layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[75vh]">
-        <Card className="lg:col-span-3 flex flex-col overflow-hidden h-full">
+        <Card className="lg:col-span-3 flex flex-col overflow-hidden h-full bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/50">
           <CardHeader className="pb-2 flex-shrink-0">
             <CardTitle className="text-spa-deep">Available Products</CardTitle>
             <CardDescription>Select products to add to cart</CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow flex flex-col p-6 pt-0 overflow-hidden h-[calc(100%-85px)]">
+          <CardContent className="flex-grow flex flex-col p-6 pt-2 overflow-hidden h-[calc(100%-85px)]">
             <div className="mb-3 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -221,7 +221,7 @@ const SalesLog = () => {
               </div>
             </div>
             
-            <ScrollArea className="flex-grow pr-4 h-full">
+            <ScrollArea className="flex-grow pr-4 pt-2 h-full">
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredProducts.map((product) => (
@@ -282,7 +282,7 @@ const SalesLog = () => {
       </div>
       
       {/* Transaction Log Section - Takes remaining space */}
-      <Card className="bg-white mb-6 flex-shrink-0">
+      <Card className="bg-white mb-6 flex-shrink-0 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/70">
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>

@@ -261,7 +261,7 @@ const InventoryPage = () => {
         </Card>
       </div>
       
-      <Card className="w-full mb-8">
+      <Card className="w-full mb-8 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/60">
         <CardHeader>
           <CardTitle>Inventory Management</CardTitle>
           <CardDescription>View and modify your product inventory</CardDescription>
