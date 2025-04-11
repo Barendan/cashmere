@@ -61,10 +61,7 @@ const serviceFormSchema = z.object({
     .min(1, "At least one service is required"),
   paymentMethod: z.string().min(1, "Payment method is required"),
   description: z.string().optional(),
-  discount: z.string().transform((val) => {
-    const number = parseFloat(val);
-    return isNaN(number) ? 0 : number;
-  }).optional(),
+  discount: z.coerce.number().default(0),
 });
 
 const PAYMENT_METHODS = [
@@ -90,7 +87,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
       services: [],
       paymentMethod: "",
       description: "",
-      discount: "0",
+      discount: 0,
     },
   });
 
@@ -160,12 +157,12 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
       .getValues()
       .services.reduce((total, service) => total + service.price, 0);
     
-    const discount = parseFloat(form.getValues().discount || "0");
+    const discount = form.getValues().discount || 0;
     return Math.max(0, serviceTotal - discount);
   };
 
   const calculateDiscount = () => {
-    return parseFloat(form.getValues().discount || "0");
+    return form.getValues().discount || 0;
   };
 
   const onSubmit = async (data: z.infer<typeof serviceFormSchema>) => {
@@ -177,7 +174,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         (sum, service) => sum + service.price,
         0
       );
-      const discountAmount = parseFloat(data.discount || "0");
+      const discountAmount = data.discount || 0;
       const totalAmount = Math.max(0, servicesTotal - discountAmount);
 
       // Prepare service details for storing in the category field
@@ -222,7 +219,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         services: [],
         paymentMethod: "",
         description: "",
-        discount: "0",
+        discount: 0,
       });
 
       // Pass the new income to the parent component along with the service details
@@ -254,7 +251,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Record Service Income</CardTitle>
+        <CardTitle>Record Income</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -368,6 +365,11 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                         placeholder="0.00"
                         className="pl-10 h-10"
                         {...field}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? '0' : e.target.value;
+                          field.onChange(parseFloat(value));
+                        }}
+                        value={field.value.toString()}
                       />
                     </div>
                   </FormControl>
