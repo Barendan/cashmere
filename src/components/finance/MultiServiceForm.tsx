@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X, ChevronsUpDown } from "lucide-react";
+import { CalendarIcon, Plus, X, ChevronsUpDown, BadgePercent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -61,6 +61,10 @@ const serviceFormSchema = z.object({
     .min(1, "At least one service is required"),
   paymentMethod: z.string().min(1, "Payment method is required"),
   description: z.string().optional(),
+  discount: z.string().transform((val) => {
+    const number = parseFloat(val);
+    return isNaN(number) ? 0 : number;
+  }).optional(),
 });
 
 const PAYMENT_METHODS = [
@@ -86,6 +90,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
       services: [],
       paymentMethod: "",
       description: "",
+      discount: "0",
     },
   });
 
@@ -151,26 +156,37 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
   };
 
   const calculateTotal = () => {
-    return form
+    const serviceTotal = form
       .getValues()
       .services.reduce((total, service) => total + service.price, 0);
+    
+    const discount = parseFloat(form.getValues().discount || "0");
+    return Math.max(0, serviceTotal - discount);
+  };
+
+  const calculateDiscount = () => {
+    return parseFloat(form.getValues().discount || "0");
   };
 
   const onSubmit = async (data: z.infer<typeof serviceFormSchema>) => {
     setIsSubmitting(true);
 
     try {
-      // Calculate the total amount
-      const totalAmount = data.services.reduce(
+      // Calculate the total amount after discount
+      const servicesTotal = data.services.reduce(
         (sum, service) => sum + service.price,
         0
       );
+      const discountAmount = parseFloat(data.discount || "0");
+      const totalAmount = Math.max(0, servicesTotal - discountAmount);
 
       // Prepare service details for storing in the category field
       const serviceDetails = {
         serviceIds: data.services.map((service) => service.id),
         serviceNames: data.services.map((service) => service.name),
         servicePrices: data.services.map((service) => service.price),
+        discount: discountAmount,
+        originalTotal: servicesTotal
       };
 
       // Format the data for insertion
@@ -206,6 +222,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         services: [],
         paymentMethod: "",
         description: "",
+        discount: "0",
       });
 
       // Pass the new income to the parent component along with the service details
@@ -216,7 +233,9 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
             id: service.id,
             name: service.name,
             price: service.price
-          }))
+          })),
+          discount: discountAmount,
+          originalTotal: servicesTotal
         };
         onIncomeAdded(incomeWithServices);
       }
@@ -256,7 +275,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                         <Button
                           variant="outline"
                           className={cn(
-                            "w-full pl-3 text-left font-normal",
+                            "w-full h-10 pl-3 text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}
                         >
@@ -295,6 +314,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                       placeholder="Enter customer name"
                       {...field}
                       autoComplete="name"
+                      className="h-10"
                     />
                   </FormControl>
                   <FormMessage />
@@ -307,14 +327,14 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
               control={form.control}
               name="paymentMethod"
               render={({ field }) => (
-                <FormItem className="md:col-span-2">
+                <FormItem>
                   <FormLabel>Payment Method</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10">
                         <SelectValue placeholder="Select payment method" />
                       </SelectTrigger>
                     </FormControl>
@@ -326,6 +346,31 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Discount Field */}
+            <FormField
+              control={form.control}
+              name="discount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discount ($)</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className="pl-10 h-10"
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -364,11 +409,25 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                             </Button>
                           </div>
                         ))}
-                        <div className="flex justify-between pt-2 border-t mt-2">
-                          <span className="font-medium">Total:</span>
-                          <span className="font-bold">
-                            ${calculateTotal().toFixed(2)}
-                          </span>
+                        <div className="flex flex-col pt-2 border-t mt-2 space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Subtotal:</span>
+                            <span className="text-sm">
+                              ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
+                            </span>
+                          </div>
+                          {calculateDiscount() > 0 && (
+                            <div className="flex justify-between text-rose-600">
+                              <span className="text-sm">Discount:</span>
+                              <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between pt-1 border-t mt-1">
+                            <span className="font-medium">Total:</span>
+                            <span className="font-bold">
+                              ${calculateTotal().toFixed(2)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -449,6 +508,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                     <Input
                       placeholder="Add any additional notes"
                       {...field}
+                      className="h-10"
                     />
                   </FormControl>
                   <FormMessage />

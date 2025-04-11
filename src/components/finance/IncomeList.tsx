@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { FinanceRecord, Service } from "@/models/types";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, BadgePercent } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog,
@@ -36,6 +36,8 @@ import {
 interface ServiceIncome extends FinanceRecord {
   serviceName: string;
   servicesList?: Array<{ id: string, name: string, price: number }>;
+  discount?: number;
+  originalTotal?: number;
 }
 
 interface IncomeListProps {
@@ -76,6 +78,9 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
             
             // Check if this record has multiple services stored in the category field
             let servicesList = undefined;
+            let discount = 0;
+            let originalTotal = 0;
+            
             if (record.category) {
               try {
                 const parsedCategory = JSON.parse(record.category);
@@ -86,6 +91,16 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                     price: parsedCategory.servicePrices[index]
                   }));
                 }
+                
+                // Extract discount information if available
+                if (parsedCategory.discount !== undefined) {
+                  discount = parsedCategory.discount;
+                }
+                
+                // Extract original total if available
+                if (parsedCategory.originalTotal !== undefined) {
+                  originalTotal = parsedCategory.originalTotal;
+                }
               } catch (e) {
                 console.error("Error parsing service details:", e);
               }
@@ -94,7 +109,9 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
             return {
               ...financeRecord,
               serviceName: record.services?.name || "Multiple Services",
-              servicesList
+              servicesList,
+              discount,
+              originalTotal
             };
           });
 
@@ -122,6 +139,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
       
       // Check if the new income has multiple services
       let servicesList = newIncome.servicesList;
+      let discount = newIncome.discount || 0;
+      let originalTotal = newIncome.originalTotal || 0;
       
       // If no servicesList is provided directly but category has the data
       if (!servicesList && newIncome.category) {
@@ -134,6 +153,15 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
               price: parsedCategory.servicePrices[index]
             }));
           }
+          
+          // Extract discount and original total if available
+          if (parsedCategory.discount !== undefined) {
+            discount = parsedCategory.discount;
+          }
+          
+          if (parsedCategory.originalTotal !== undefined) {
+            originalTotal = parsedCategory.originalTotal;
+          }
         } catch (e) {
           console.error("Error parsing service details for new income:", e);
         }
@@ -144,7 +172,9 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
         serviceName: servicesList && servicesList.length > 1 
           ? "Multiple Services" 
           : newIncome.services?.name || "Unknown Service",
-        servicesList
+        servicesList,
+        discount,
+        originalTotal
       };
       
       setIncomeRecords(prev => [newIncomeRecord, ...prev].slice(0, limit));
@@ -211,6 +241,12 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                   <span className="font-medium">${service.price.toFixed(2)}</span>
                 </div>
               ))}
+              {record.discount > 0 && (
+                <div className="flex justify-between gap-2 text-rose-600 pt-1 border-t">
+                  <span>Discount:</span>
+                  <span className="font-medium">-${record.discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t pt-1 mt-1 flex justify-between font-medium">
                 <span>Total:</span>
                 <span>${record.amount.toFixed(2)}</span>
@@ -219,6 +255,26 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+    );
+  };
+
+  const getAmountDisplay = (record: ServiceIncome) => {
+    if (!record.discount || record.discount <= 0) {
+      return (
+        <div className="font-semibold text-emerald-600">${record.amount.toFixed(2)}</div>
+      );
+    }
+    
+    return (
+      <div className="flex flex-col items-end">
+        <div className="flex items-center text-sm text-gray-500 line-through">
+          ${record.originalTotal?.toFixed(2) || "N/A"}
+        </div>
+        <div className="flex items-center font-semibold text-emerald-600">
+          <BadgePercent className="h-3 w-3 mr-1" />
+          ${record.amount.toFixed(2)}
+        </div>
+      </div>
     );
   };
 
@@ -255,9 +311,18 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                 <span>{format(record.date, "PP")}</span>
                 <span>•</span>
                 <span>{record.customerName || "Unknown customer"}</span>
+                {record.discount > 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="text-rose-600 flex items-center">
+                      <BadgePercent className="h-3 w-3 mr-1" />
+                      ${record.discount.toFixed(2)} off
+                    </span>
+                  </>
+                )}
               </div>
             </div>
-            <div className="font-semibold text-emerald-600">${record.amount.toFixed(2)}</div>
+            {getAmountDisplay(record)}
           </div>
         ))}
       </div>
@@ -285,7 +350,20 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                 <TableCell>{record.customerName || "Unknown"}</TableCell>
                 <TableCell>{formatServiceNames(record)}</TableCell>
                 <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
-                <TableCell className="text-right font-medium text-emerald-600">${record.amount.toFixed(2)}</TableCell>
+                <TableCell className="text-right">
+                  {record.discount > 0 ? (
+                    <div className="flex flex-col items-end">
+                      <div className="text-xs text-gray-500 line-through">${record.originalTotal?.toFixed(2)}</div>
+                      <div className="font-medium text-emerald-600 flex items-center">
+                        <BadgePercent className="h-3 w-3 mr-1" />
+                        ${record.amount.toFixed(2)}
+                      </div>
+                      <div className="text-xs text-rose-600">-${record.discount.toFixed(2)}</div>
+                    </div>
+                  ) : (
+                    <span className="font-medium text-emerald-600">${record.amount.toFixed(2)}</span>
+                  )}
+                </TableCell>
                 {isAdmin && (
                   <TableCell>
                     <Button 

@@ -48,7 +48,7 @@ const Finance = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-6 min-w-[90vw]">
         <Skeleton className="h-12 w-64 mb-6" />
         <div className="grid gap-6 md:grid-cols-3">
           <Skeleton className="h-40" />
@@ -85,7 +85,7 @@ const Finance = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
+    <div className="container mx-auto p-4 md:p-6 space-y-6 min-w-[90vw]">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -300,7 +300,7 @@ const Finance = () => {
                     <div className="border-b border-emerald-100 p-5">
                       <h3 className="font-medium text-gray-900 flex items-center">
                         <DollarSign className="h-5 w-5 mr-2 text-emerald-500" />
-                        Record New Income
+                        Record Income
                       </h3>
                     </div>
                     <div className="p-5">
