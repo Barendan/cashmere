@@ -3,6 +3,7 @@ import React from 'react';
 import { Product } from '@/models/types';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
+import { Check, XCircle } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -21,43 +22,51 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
     }
   };
   
-  // Apply card style based on the prop
-  let cardClassName = `border border-spa-sand rounded-md p-4 bg-white flex flex-col h-full relative transition-all duration-300 hover:shadow-md hover:bg-spa-sage/5 ${
-    isInCart 
-      ? 'border-green-200 bg-green-50' 
+  // Base receipt-style card class for the first three designs
+  let cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
+    transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
+    before:h-1 before:bg-[repeating-linear-gradient(90deg,var(--spa-sand),var(--spa-sand)_5px,transparent_5px,transparent_12px)]
+    ${isInCart 
+      ? 'bg-white border-green-200' 
       : isOutOfStock 
-        ? 'opacity-70' 
-        : 'cursor-pointer hover:border-spa-sage'
-  }`;
+        ? 'opacity-80' 
+        : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
+    }`;
   
-  // Add design-specific styling
+  // Apply card style based on the prop (for the first three cards only)
   if (cardStyle === "design-1") {
-    // Bold, modern design with strong colors and sharp edges
-    cardClassName = `border-0 rounded-lg p-4 bg-gradient-to-br from-[#9b87f5] to-[#8B5CF6] text-white flex flex-col h-full relative transition-all duration-300 shadow-md hover:shadow-xl ${
-      isInCart 
-        ? 'ring-2 ring-white ring-opacity-50' 
+    // First receipt-style design with different dotted pattern
+    cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
+      transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
+      before:h-1 before:bg-[repeating-linear-gradient(90deg,var(--spa-sand),var(--spa-sand)_8px,transparent_8px,transparent_16px)]
+      ${isInCart 
+        ? 'bg-white border-green-200' 
         : isOutOfStock 
-          ? 'opacity-70' 
-          : 'cursor-pointer'
-    }`;
+          ? 'opacity-80' 
+          : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
+      }`;
   } else if (cardStyle === "design-2") {
-    // Elegant, minimalist design with subtle gradients
-    cardClassName = `border border-[#E5E7EB] rounded-xl p-5 bg-gradient-to-b from-[#F9FAFB] to-[#F3F4F6] flex flex-col h-full relative transition-all duration-300 hover:shadow-md ${
-      isInCart 
-        ? 'border-green-200 bg-gradient-to-b from-[#ECFDF5] to-[#D1FAE5]' 
+    // Second receipt-style design with dotted separator
+    cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
+      transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
+      before:h-1 before:bg-[repeating-linear-gradient(45deg,var(--spa-sand),var(--spa-sand)_3px,transparent_3px,transparent_10px)]
+      ${isInCart 
+        ? 'bg-white border-green-200' 
         : isOutOfStock 
-          ? 'opacity-70' 
-          : 'cursor-pointer hover:border-[#D1D5DB]'
-    }`;
+          ? 'opacity-80' 
+          : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
+      }`;
   } else if (cardStyle === "design-3") {
-    // Fun, playful design with rounded corners and bright colors
-    cardClassName = `border-2 border-[#F97316] rounded-3xl p-4 bg-gradient-to-r from-[#FEF7CD] to-[#FFDEE2] flex flex-col h-full relative transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 ${
-      isInCart 
-        ? 'border-green-400 bg-gradient-to-r from-[#F2FCE2] to-[#ECFCCB]' 
+    // Third receipt-style design with dashed separator
+    cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
+      transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
+      before:h-1 before:bg-[repeating-linear-gradient(to_right,var(--spa-sand)_0px,var(--spa-sand)_4px,transparent_4px,transparent_12px)]
+      ${isInCart 
+        ? 'bg-white border-green-200' 
         : isOutOfStock 
-          ? 'opacity-70 border-gray-300' 
-          : 'cursor-pointer'
-    }`;
+          ? 'opacity-80' 
+          : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
+      }`;
   }
   
   return (
@@ -74,38 +83,54 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
       }}
     >
       {/* Status indicators */}
-      <div className="absolute top-2 right-2 flex flex-col gap-1">
+      <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
         {isInCart && (
-          <Badge variant="outline" className={`${cardStyle === "design-1" ? 'bg-white/20 text-white border-white/30' : cardStyle === "design-3" ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-green-50 text-green-700 border-green-200'} text-[0.7rem] py-0 px-1.5`}>
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[0.7rem] py-0 px-1.5 font-mono">
             In Cart
           </Badge>
         )}
         {isLowStock && !isOutOfStock && (
-          <Badge variant="outline" className={`${cardStyle === "design-1" ? 'bg-white/20 text-white border-white/30' : cardStyle === "design-3" ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-amber-50 text-amber-800 border-amber-200'} text-[0.7rem] py-0 px-1.5`}>
+          <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[0.7rem] py-0 px-1.5 font-mono">
             Low Stock
           </Badge>
         )}
         {isOutOfStock && (
-          <Badge variant="outline" className={`${cardStyle === "design-1" ? 'bg-white/20 text-white border-white/30' : cardStyle === "design-3" ? 'bg-red-100 text-red-700 border-red-200' : 'bg-red-50 text-red-800 border-red-200'} text-[0.7rem] py-0 px-1.5`}>
+          <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200 text-[0.7rem] py-0 px-1.5 font-mono">
             Out of Stock
           </Badge>
         )}
       </div>
       
-      {/* Product name */}
-      <h4 className={`font-medium text-md ${cardStyle === "design-1" ? 'text-white' : cardStyle === "design-2" ? 'text-gray-800 font-semibold text-lg' : cardStyle === "design-3" ? 'text-orange-800 font-bold text-center' : 'text-spa-deep'} text-center mb-3 mt-1`}>
+      {/* Product name - with receipt-style header */}
+      <h4 className="font-mono text-md text-spa-deep text-center mb-2 uppercase tracking-wider pb-2 border-b border-dotted border-spa-sand">
         {product.name}
       </h4>
       
-      {/* Stock information */}
-      <div className={`text-sm text-right ${cardStyle === "design-1" ? 'text-white/70' : cardStyle === "design-3" ? 'text-orange-600 font-medium' : 'text-muted-foreground'} mb-auto`}>
-        {product.stockQuantity} in stock
+      {/* Stock information with receipt styling */}
+      <div className="text-sm text-right text-muted-foreground mb-auto font-mono tracking-wide">
+        QTY: {product.stockQuantity}
       </div>
       
-      {/* Price */}
-      <div className={`font-medium ${cardStyle === "design-1" ? 'text-white text-xl mt-4 pt-2 border-t border-white/20' : cardStyle === "design-2" ? 'text-lg text-gray-900 mt-4 pt-3 border-t border-gray-200' : cardStyle === "design-3" ? 'text-orange-900 text-xl font-bold mt-4 pt-2 border-t-2 border-orange-200 text-center' : 'text-md mt-4 pt-2 border-t border-spa-sand/50'}`}>
-        {formatCurrency(product.sellPrice)}
+      {/* Price with receipt-style footer */}
+      <div className="font-mono text-md mt-4 pt-2 border-t border-dotted border-spa-sand flex justify-between items-center">
+        <span className="text-xs uppercase text-muted-foreground">Price</span>
+        <span className="text-lg">{formatCurrency(product.sellPrice)}</span>
       </div>
+      
+      {/* Conditional elements for product status */}
+      {isInCart && (
+        <div className="absolute bottom-3 right-3 bg-green-600 text-white h-8 w-8 rounded-full flex items-center justify-center opacity-80 transform rotate-12 shadow-md">
+          <Check className="h-5 w-5" />
+        </div>
+      )}
+      
+      {isOutOfStock && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="bg-red-700 text-white py-1 px-4 transform -rotate-12 font-mono text-lg uppercase tracking-wider shadow-md opacity-90">
+            Sold Out
+          </div>
+        </div>
+      )}
     </div>
   );
 };

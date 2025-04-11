@@ -40,7 +40,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 
@@ -249,287 +248,280 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Record Income</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          >
-            {/* Date Field */}
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full h-10 pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP")
-                          ) : (
-                            <span>Pick a date</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Customer Name Field */}
-            <FormField
-              control={form.control}
-              name="customerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Customer</FormLabel>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      >
+        {/* Date Field */}
+        <FormField
+          control={form.control}
+          name="date"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Date</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
                   <FormControl>
-                    <Input
-                      placeholder="Enter customer name"
-                      {...field}
-                      autoComplete="name"
-                      className="h-10"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Payment Method Field */}
-            <FormField
-              control={form.control}
-              name="paymentMethod"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="h-10">
-                        <SelectValue placeholder="Select payment method" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map((method) => (
-                        <SelectItem key={method.value} value={method.value}>
-                          {method.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Discount Field */}
-            <FormField
-              control={form.control}
-              name="discount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discount ($)</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        className="pl-10 h-10"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value === '' ? '0' : e.target.value;
-                          field.onChange(parseFloat(value));
-                        }}
-                        value={field.value.toString()}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Services Section */}
-            <div className="md:col-span-2 space-y-4">
-              <FormLabel>Services</FormLabel>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Selected Services */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Selected Services</div>
-                  <div className="border rounded-md p-4 min-h-[100px]">
-                    {fields.length > 0 ? (
-                      <div className="space-y-2">
-                        {fields.map((field, index) => (
-                          <div
-                            key={field.id}
-                            className="flex items-center justify-between bg-accent/50 rounded-md p-2"
-                          >
-                            <div>
-                              <span className="font-medium">
-                                {field.name}
-                              </span>
-                              <span className="ml-2 text-sm text-muted-foreground">
-                                ${field.price.toFixed(2)}
-                              </span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => remove(index)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                        <div className="flex flex-col pt-2 border-t mt-2 space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Subtotal:</span>
-                            <span className="text-sm">
-                              ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
-                            </span>
-                          </div>
-                          {calculateDiscount() > 0 && (
-                            <div className="flex justify-between text-rose-600">
-                              <span className="text-sm">Discount:</span>
-                              <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between pt-1 border-t mt-1">
-                            <span className="font-medium">Total:</span>
-                            <span className="font-bold">
-                              ${calculateTotal().toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                        No services selected
-                      </div>
-                    )}
-                  </div>
-                  {form.formState.errors.services && (
-                    <div className="text-sm font-medium text-destructive">
-                      {form.formState.errors.services.message}
-                    </div>
-                  )}
-                </div>
-
-                {/* Available Services */}
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Available Services</div>
-                  <div className="border rounded-md">
-                    <ScrollArea className="h-[200px]">
-                      {isLoading ? (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          Loading services...
-                        </div>
-                      ) : availableServices.length > 0 ? (
-                        <div className="p-2 grid grid-cols-1 gap-2">
-                          {availableServices.map((service) => (
-                            <div
-                              key={service.id}
-                              className="flex items-center justify-between border rounded-md p-2 hover:bg-accent/50 cursor-pointer"
-                              onClick={() => addService(service)}
-                            >
-                              <div>
-                                <span className="font-medium">
-                                  {service.name}
-                                </span>
-                                {service.description && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {service.description}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm">
-                                  ${service.price.toFixed(2)}
-                                </span>
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-10 pl-3 text-left font-normal",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value ? (
+                        format(field.value, "PPP")
                       ) : (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          No services available
+                        <span>Pick a date</span>
+                      )}
+                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={field.value}
+                    onSelect={field.onChange}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Customer Name Field */}
+        <FormField
+          control={form.control}
+          name="customerName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Customer</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Enter customer name"
+                  {...field}
+                  autoComplete="name"
+                  className="h-10"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Payment Method Field */}
+        <FormField
+          control={form.control}
+          name="paymentMethod"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Payment Method</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {PAYMENT_METHODS.map((method) => (
+                    <SelectItem key={method.value} value={method.value}>
+                      {method.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Discount Field */}
+        <FormField
+          control={form.control}
+          name="discount"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Discount ($)</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="pl-10 h-10"
+                    {...field}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? '0' : e.target.value;
+                      field.onChange(parseFloat(value));
+                    }}
+                    value={field.value.toString()}
+                  />
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Services Section */}
+        <div className="md:col-span-2 space-y-4">
+          <FormLabel>Services</FormLabel>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Selected Services */}
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Selected Services</div>
+              <div className="border rounded-md p-4 min-h-[100px]">
+                {fields.length > 0 ? (
+                  <div className="space-y-2">
+                    {fields.map((field, index) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center justify-between bg-accent/50 rounded-md p-2"
+                      >
+                        <div>
+                          <span className="font-medium">
+                            {field.name}
+                          </span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            ${field.price.toFixed(2)}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => remove(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex flex-col pt-2 border-t mt-2 space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-muted-foreground">Subtotal:</span>
+                        <span className="text-sm">
+                          ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
+                        </span>
+                      </div>
+                      {calculateDiscount() > 0 && (
+                        <div className="flex justify-between text-rose-600">
+                          <span className="text-sm">Discount:</span>
+                          <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
                         </div>
                       )}
-                    </ScrollArea>
+                      <div className="flex justify-between pt-1 border-t mt-1">
+                        <span className="font-medium">Total:</span>
+                        <span className="font-bold">
+                          ${calculateTotal().toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                    No services selected
+                  </div>
+                )}
               </div>
+              {form.formState.errors.services && (
+                <div className="text-sm font-medium text-destructive">
+                  {form.formState.errors.services.message}
+                </div>
+              )}
             </div>
 
-            {/* Description Field */}
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Notes (Optional)</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Add any additional notes"
-                      {...field}
-                      className="h-10"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Available Services */}
+            <div className="space-y-2">
+              <div className="text-sm font-medium">Available Services</div>
+              <div className="border rounded-md">
+                <ScrollArea className="h-[200px]">
+                  {isLoading ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Loading services...
+                    </div>
+                  ) : availableServices.length > 0 ? (
+                    <div className="p-2 grid grid-cols-1 gap-2">
+                      {availableServices.map((service) => (
+                        <div
+                          key={service.id}
+                          className="flex items-center justify-between border rounded-md p-2 hover:bg-accent/50 cursor-pointer"
+                          onClick={() => addService(service)}
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {service.name}
+                            </span>
+                            {service.description && (
+                              <p className="text-xs text-muted-foreground">
+                                {service.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm">
+                              ${service.price.toFixed(2)}
+                            </span>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      No services available
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            </div>
+          </div>
+        </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full md:col-span-2 mt-2"
-            >
-              {isSubmitting ? "Recording..." : "Record Income"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+        {/* Description Field */}
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormLabel>Notes (Optional)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Add any additional notes"
+                  {...field}
+                  className="h-10"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full md:col-span-2 mt-2"
+        >
+          {isSubmitting ? "Recording..." : "Record Income"}
+        </Button>
+      </form>
+    </Form>
   );
 };
 
