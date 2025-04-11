@@ -38,7 +38,13 @@ interface ServiceIncome extends FinanceRecord {
   servicesList?: Array<{ id: string, name: string, price: number }>;
 }
 
-const IncomeList = ({ newIncome }) => {
+interface IncomeListProps {
+  newIncome: any;
+  limit?: number;
+  compact?: boolean;
+}
+
+const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps) => {
   const [incomeRecords, setIncomeRecords] = useState<ServiceIncome[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [incomeToDelete, setIncomeToDelete] = useState<string | null>(null);
@@ -60,7 +66,7 @@ const IncomeList = ({ newIncome }) => {
           `)
           .eq("type", "income")
           .order("date", { ascending: false })
-          .limit(20);
+          .limit(limit);
 
         if (error) throw error;
 
@@ -107,7 +113,7 @@ const IncomeList = ({ newIncome }) => {
     };
 
     fetchIncomeRecords();
-  }, [toast]);
+  }, [toast, limit]);
 
   // When a new income record is added, update the list
   useEffect(() => {
@@ -141,9 +147,9 @@ const IncomeList = ({ newIncome }) => {
         servicesList
       };
       
-      setIncomeRecords(prev => [newIncomeRecord, ...prev]);
+      setIncomeRecords(prev => [newIncomeRecord, ...prev].slice(0, limit));
     }
-  }, [newIncome]);
+  }, [newIncome, limit]);
 
   const handleDeleteIncome = async () => {
     if (!incomeToDelete) return;
@@ -229,19 +235,41 @@ const IncomeList = ({ newIncome }) => {
 
   if (incomeRecords.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No income records found</p>
+      <div className="text-center py-6 border rounded-md bg-gray-50">
+        <p className="text-gray-500">No income records found</p>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-3">
+        {incomeRecords.map((record) => (
+          <div 
+            key={record.id} 
+            className="flex items-center justify-between p-3 bg-white rounded-md border border-slate-200 hover:border-emerald-200 transition-colors"
+          >
+            <div className="flex flex-col">
+              <div className="font-medium text-gray-900">{formatServiceNames(record)}</div>
+              <div className="flex gap-2 text-xs text-gray-500">
+                <span>{format(record.date, "PP")}</span>
+                <span>•</span>
+                <span>{record.customerName || "Unknown customer"}</span>
+              </div>
+            </div>
+            <div className="font-semibold text-emerald-600">${record.amount.toFixed(2)}</div>
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="border rounded-md">
-      <h3 className="px-4 py-3 border-b font-medium">Recent Service Income</h3>
+    <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
+          <TableHeader className="bg-emerald-50">
+            <TableRow className="hover:bg-emerald-50/80">
               <TableHead>Date</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Service</TableHead>
@@ -252,20 +280,21 @@ const IncomeList = ({ newIncome }) => {
           </TableHeader>
           <TableBody>
             {incomeRecords.map((record) => (
-              <TableRow key={record.id}>
+              <TableRow key={record.id} className="hover:bg-emerald-50/20">
                 <TableCell>{format(record.date, "PP")}</TableCell>
                 <TableCell>{record.customerName || "Unknown"}</TableCell>
                 <TableCell>{formatServiceNames(record)}</TableCell>
                 <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
-                <TableCell className="text-right">${record.amount.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-medium text-emerald-600">${record.amount.toFixed(2)}</TableCell>
                 {isAdmin && (
                   <TableCell>
                     <Button 
                       variant="ghost" 
                       size="icon" 
                       onClick={() => openDeleteDialog(record.id)}
+                      className="hover:bg-rose-100 hover:text-rose-600"
                     >
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                      <Trash2 className="h-4 w-4 text-rose-500" />
                     </Button>
                   </TableCell>
                 )}
@@ -285,7 +314,7 @@ const IncomeList = ({ newIncome }) => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteIncome} className="bg-destructive text-destructive-foreground">
+            <AlertDialogAction onClick={handleDeleteIncome} className="bg-rose-600 text-white hover:bg-rose-700">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -16,19 +16,25 @@ import {
 import { FinanceRecord } from "@/models/types";
 
 const categoryColors: Record<string, string> = {
-  supplies: "bg-blue-100 text-blue-800",
-  equipment: "bg-purple-100 text-purple-800",
-  marketing: "bg-green-100 text-green-800",
-  rent: "bg-yellow-100 text-yellow-800",
-  utilities: "bg-indigo-100 text-indigo-800",
-  insurance: "bg-pink-100 text-pink-800",
-  salaries: "bg-cyan-100 text-cyan-800",
-  training: "bg-teal-100 text-teal-800",
-  maintenance: "bg-orange-100 text-orange-800",
-  other: "bg-gray-100 text-gray-800",
+  supplies: "bg-blue-100 text-blue-800 border-blue-200",
+  equipment: "bg-purple-100 text-purple-800 border-purple-200",
+  marketing: "bg-green-100 text-green-800 border-green-200",
+  rent: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  utilities: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  insurance: "bg-pink-100 text-pink-800 border-pink-200",
+  salaries: "bg-cyan-100 text-cyan-800 border-cyan-200",
+  training: "bg-teal-100 text-teal-800 border-teal-200",
+  maintenance: "bg-orange-100 text-orange-800 border-orange-200",
+  other: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
-const ExpenseList = ({ newExpense }) => {
+interface ExpenseListProps {
+  newExpense: any;
+  limit?: number;
+  compact?: boolean;
+}
+
+const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListProps) => {
   const [expenses, setExpenses] = useState<FinanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -41,7 +47,7 @@ const ExpenseList = ({ newExpense }) => {
           .select("*")
           .eq("type", "expense")
           .order("date", { ascending: false })
-          .limit(20);
+          .limit(limit);
 
         if (error) throw error;
 
@@ -65,15 +71,15 @@ const ExpenseList = ({ newExpense }) => {
     };
 
     fetchExpenses();
-  }, [toast]);
+  }, [toast, limit]);
 
   // When a new expense is added, update the list
   useEffect(() => {
     if (newExpense) {
       const formattedExpense = mapFinanceRowToFinanceRecord(newExpense);
-      setExpenses(prev => [formattedExpense, ...prev]);
+      setExpenses(prev => [formattedExpense, ...prev].slice(0, limit));
     }
-  }, [newExpense]);
+  }, [newExpense, limit]);
 
   if (isLoading) {
     return (
@@ -88,19 +94,46 @@ const ExpenseList = ({ newExpense }) => {
 
   if (expenses.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No expense records found</p>
+      <div className="text-center py-6 border rounded-md bg-gray-50">
+        <p className="text-gray-500">No expense records found</p>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-3">
+        {expenses.map((expense) => (
+          <div 
+            key={expense.id} 
+            className="flex items-center justify-between p-3 bg-white rounded-md border border-slate-200 hover:border-rose-200 transition-colors"
+          >
+            <div className="flex flex-col">
+              <div className="font-medium text-gray-900">{expense.vendor || "Unknown vendor"}</div>
+              <div className="flex gap-2 text-xs text-gray-500">
+                <span>{format(expense.date, "PP")}</span>
+                <span>•</span>
+                <Badge 
+                  variant="outline"
+                  className={`capitalize text-xs py-0 px-1.5 ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
+                >
+                  {expense.category || "Other"}
+                </Badge>
+              </div>
+            </div>
+            <div className="font-semibold text-rose-600">${expense.amount.toFixed(2)}</div>
+          </div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="border rounded-md">
-      <h3 className="px-4 py-3 border-b font-medium">Recent Expenses</h3>
+    <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
+          <TableHeader className="bg-rose-50">
+            <TableRow className="hover:bg-rose-50/80">
               <TableHead>Date</TableHead>
               <TableHead>Vendor</TableHead>
               <TableHead>Category</TableHead>
@@ -109,7 +142,7 @@ const ExpenseList = ({ newExpense }) => {
           </TableHeader>
           <TableBody>
             {expenses.map((expense) => (
-              <TableRow key={expense.id}>
+              <TableRow key={expense.id} className="hover:bg-rose-50/20">
                 <TableCell>{format(expense.date, "PP")}</TableCell>
                 <TableCell>{expense.vendor || "Unknown"}</TableCell>
                 <TableCell>
@@ -120,7 +153,7 @@ const ExpenseList = ({ newExpense }) => {
                     {expense.category || "Other"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">${expense.amount.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
