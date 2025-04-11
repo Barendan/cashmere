@@ -1,12 +1,14 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Product } from '@/models/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { formatCurrency } from '@/lib/format';
-import { Undo2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Undo2, Percent } from 'lucide-react';
 
 interface CartItem {
   product: Product;
@@ -21,6 +23,8 @@ interface ShoppingCartProps {
   recordSale: () => void;
   isProcessing: boolean;
   undoLastTransaction?: () => void;
+  discount: number;
+  setDiscount: (discount: number) => void;
 }
 
 const ShoppingCart = ({
@@ -30,10 +34,22 @@ const ShoppingCart = ({
   clearCart,
   recordSale,
   isProcessing,
-  undoLastTransaction
+  undoLastTransaction,
+  discount,
+  setDiscount
 }: ShoppingCartProps) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
+  const finalTotal = Math.max(0, subtotal - discount);
+  
+  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+    if (isNaN(value) || value < 0) {
+      setDiscount(0);
+    } else {
+      setDiscount(Math.min(value, subtotal)); // Ensure discount doesn't exceed subtotal
+    }
+  };
   
   return (
     <div className="h-full flex flex-col">
@@ -70,9 +86,40 @@ const ShoppingCart = ({
           </ScrollArea>
           
           <div className="p-4 mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
-            <div className="flex justify-between font-medium">
-              <span>Subtotal</span>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="discount" className="text-sm">
+                Discount Amount ($)
+              </Label>
+              <Input 
+                id="discount"
+                type="number"
+                min="0"
+                step="1"
+                value={discount || ''}
+                onChange={handleDiscountChange}
+                className="h-8 text-sm" 
+                placeholder="Enter discount amount"
+              />
+            </div>
+            
+            {discount > 0 && (
+              <div className="flex justify-between text-sm text-red-600">
+                <span className="flex items-center">
+                  <Percent size={14} className="mr-1" />
+                  Discount
+                </span>
+                <span>-{formatCurrency(discount)}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between font-medium border-t border-spa-sand/50 pt-2 mt-2">
+              <span>Total</span>
+              <span>{formatCurrency(finalTotal)}</span>
             </div>
             
             <HoverFillButton 
