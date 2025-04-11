@@ -22,52 +22,15 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
     }
   };
   
-  // Base receipt-style card class for the first three designs
+  // Base receipt-style card class
   let cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
-    transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
-    before:h-1 before:bg-[repeating-linear-gradient(90deg,var(--spa-sand),var(--spa-sand)_5px,transparent_5px,transparent_12px)]
+    transition-all duration-300 shadow-md
     ${isInCart 
       ? 'bg-white border-green-200' 
       : isOutOfStock 
         ? 'opacity-80' 
         : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
     }`;
-  
-  // Apply card style based on the prop (for the first three cards only)
-  if (cardStyle === "design-1") {
-    // First receipt-style design with different dotted pattern
-    cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
-      transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
-      before:h-1 before:bg-[repeating-linear-gradient(90deg,var(--spa-sand),var(--spa-sand)_8px,transparent_8px,transparent_16px)]
-      ${isInCart 
-        ? 'bg-white border-green-200' 
-        : isOutOfStock 
-          ? 'opacity-80' 
-          : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
-      }`;
-  } else if (cardStyle === "design-2") {
-    // Second receipt-style design with dotted separator
-    cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
-      transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
-      before:h-1 before:bg-[repeating-linear-gradient(45deg,var(--spa-sand),var(--spa-sand)_3px,transparent_3px,transparent_10px)]
-      ${isInCart 
-        ? 'bg-white border-green-200' 
-        : isOutOfStock 
-          ? 'opacity-80' 
-          : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
-      }`;
-  } else if (cardStyle === "design-3") {
-    // Third receipt-style design with dashed separator
-    cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
-      transition-all duration-300 shadow-md before:content-[''] before:absolute before:top-0 before:left-0 before:right-0 
-      before:h-1 before:bg-[repeating-linear-gradient(to_right,var(--spa-sand)_0px,var(--spa-sand)_4px,transparent_4px,transparent_12px)]
-      ${isInCart 
-        ? 'bg-white border-green-200' 
-        : isOutOfStock 
-          ? 'opacity-80' 
-          : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
-      }`;
-  }
   
   return (
     <div 
@@ -102,24 +65,24 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
       </div>
       
       {/* Product name - with receipt-style header */}
-      <h4 className="font-mono text-md text-spa-deep text-center mb-2 uppercase tracking-wider pb-2 border-b border-dotted border-spa-sand">
+      <h4 className="font-mono text-md text-center mb-2 tracking-wider">
         {product.name}
       </h4>
       
       {/* Stock information with receipt styling */}
-      <div className="text-sm text-right text-muted-foreground mb-auto font-mono tracking-wide">
+      <div className="text-sm text-muted-foreground mb-2 font-mono tracking-wide">
         QTY: {product.stockQuantity}
       </div>
       
-      {/* Price with receipt-style footer */}
-      <div className="font-mono text-md mt-4 pt-2 border-t border-dotted border-spa-sand flex justify-between items-center">
-        <span className="text-xs uppercase text-muted-foreground">Price</span>
-        <span className="text-lg">{formatCurrency(product.sellPrice)}</span>
+      {/* Category and price with receipt-style footer */}
+      <div className="mt-auto pt-2 flex justify-between items-center">
+        <span className="text-xs uppercase text-blue-600">{product.category}</span>
+        <span className="text-lg font-semibold">{formatCurrency(product.sellPrice)}</span>
       </div>
       
       {/* Conditional elements for product status */}
       {isInCart && (
-        <div className="absolute bottom-3 right-3 bg-green-600 text-white h-8 w-8 rounded-full flex items-center justify-center opacity-80 transform rotate-12 shadow-md">
+        <div className="absolute bottom-3 right-3 bg-green-600 text-white h-8 w-8 rounded-full flex items-center justify-center opacity-80 shadow-md">
           <Check className="h-5 w-5" />
         </div>
       )}

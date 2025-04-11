@@ -174,7 +174,7 @@ const SalesLog = () => {
   const groupedTransactions = groupTransactions();
 
   return (
-    <div className="w-full md:min-w-[90vw] xl:min-w-[initial] flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="w-full md:min-w-[90vw] xl:min-w-[90vw] flex flex-col min-h-[calc(100vh-4rem)] px-6">
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[75vh]">
         <Card className="lg:col-span-3 flex flex-col overflow-hidden h-full bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/50">
           <CardHeader className="pb-2 flex-shrink-0">

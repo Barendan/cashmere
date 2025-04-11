@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "../contexts/AuthContext";
@@ -23,7 +22,6 @@ const Finance = () => {
   const [newIncome, setNewIncome] = useState(null);
   const [newExpense, setNewExpense] = useState(null);
 
-  // If user is not admin and tries to access expenses tab, redirect to income tab
   useEffect(() => {
     if (!isAdmin && activeTab === "expenses") {
       setActiveTab("summary");
@@ -39,7 +37,6 @@ const Finance = () => {
   };
 
   useEffect(() => {
-    // Simulate loading
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
@@ -60,7 +57,6 @@ const Finance = () => {
     );
   }
 
-  // Animation variants for framer-motion
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -98,14 +94,12 @@ const Finance = () => {
         </p>
       </motion.div>
 
-      {/* Key Metrics Section */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="grid grid-cols-1 md:grid-cols-3 gap-5"
       >
-        {/* Income Card */}
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden border-l-4 border-emerald-500 shadow-md hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
@@ -130,7 +124,6 @@ const Finance = () => {
           </Card>
         </motion.div>
 
-        {/* Expenses Card */}
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden border-l-4 border-rose-500 shadow-md hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
@@ -155,7 +148,6 @@ const Finance = () => {
           </Card>
         </motion.div>
 
-        {/* Net Profit Card */}
         <motion.div variants={itemVariants}>
           <Card className="overflow-hidden border-l-4 border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-300">
             <CardContent className="p-6">
@@ -181,7 +173,6 @@ const Finance = () => {
         </motion.div>
       </motion.div>
 
-      {/* Tabs Interface */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

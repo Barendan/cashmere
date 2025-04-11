@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -202,7 +201,7 @@ const Metrics = () => {
 
   if (isLoading) {
     return (
-      <div className="w-full h-[70vh] flex items-center justify-center">
+      <div className="w-full h-[70vh] flex items-center justify-center min-w-[90vw]">
         <div className="text-center">
           <Loader2 className="h-10 w-10 animate-spin text-spa-deep mx-auto mb-4" />
           <h3 className="text-xl font-medium text-spa-deep">Loading metrics data...</h3>
@@ -212,7 +211,7 @@ const Metrics = () => {
   }
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-6 min-w-[90vw] px-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card className="bg-white">
           <CardContent className="p-6">
