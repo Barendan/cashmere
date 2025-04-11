@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -37,6 +36,8 @@ export interface Sale {
   paymentMethod?: string;
   notes?: string;
   items?: Transaction[];
+  discount?: number;
+  originalTotal?: number;
 }
 
 export interface SalesData {

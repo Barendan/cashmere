@@ -35,6 +35,7 @@ const SalesLog = () => {
   const [cartItems, setCartItems] = useState<{product: Product, quantity: number}[]>([]);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [openSale, setOpenSale] = useState<string | null>(null);
+  const [discount, setDiscount] = useState<number>(0);
   
   const availableProducts = products
     .filter((product) => product.stockQuantity > 0)
@@ -86,8 +87,9 @@ const SalesLog = () => {
     setIsProcessing(true);
     
     try {
-      await recordBulkSale(cartItems);
+      await recordBulkSale(cartItems, discount);
       setCartItems([]);
+      setDiscount(0);
     } catch (error) {
       console.error("Error processing sale:", error);
       toast({
@@ -248,6 +250,8 @@ const SalesLog = () => {
                 recordSale={handleCompleteSale}
                 isProcessing={isProcessing}
                 undoLastTransaction={undoLastTransaction}
+                discount={discount}
+                setDiscount={setDiscount}
               />
             </div>
           </CardContent>

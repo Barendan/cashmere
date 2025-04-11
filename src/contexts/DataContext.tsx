@@ -29,7 +29,7 @@ interface DataContextType {
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
-  recordBulkSale: (items: {product: Product, quantity: number}[]) => Promise<void>;
+  recordBulkSale: (items: {product: Product, quantity: number}[], discount?: number) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   adjustInventory: (productId: string, newQuantity: number) => void;
   updateLastRestockDate: () => void;
@@ -231,7 +231,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  const recordBulkSale = async (items: {product: Product, quantity: number}[]) => {
+  const recordBulkSale = async (items: {product: Product, quantity: number}[], discount: number = 0) => {
     if (items.length === 0) return;
     
     for (const item of items) {
@@ -248,19 +248,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log("Starting bulk sale process with items:", items.length);
       const now = new Date();
-      const totalAmount = items.reduce(
+      const subtotal = items.reduce(
         (sum, item) => sum + (item.product.sellPrice * item.quantity), 
         0
       );
       
+      const finalTotal = Math.max(0, subtotal - discount);
+      
       const saleData = {
         date: now.toISOString(),
-        total_amount: totalAmount,
+        total_amount: finalTotal,
         user_id: user?.id || 'unknown',
-        user_name: user?.name || 'Unknown User'
+        user_name: user?.name || 'Unknown User',
+        discount: discount > 0 ? discount : null,
+        original_total: discount > 0 ? subtotal : null
       };
       
-      console.log("Creating sale record with total:", totalAmount);
+      console.log("Creating sale record with total:", finalTotal, "discount:", discount);
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
       console.log("Sale record created with ID:", saleId);
       
@@ -302,7 +306,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         const saleWithItems: Sale = {
           ...newSale,
-          items: newLocalTransactions
+          items: newLocalTransactions,
+          discount: discount > 0 ? discount : undefined,
+          originalTotal: discount > 0 ? subtotal : undefined
         };
         
         setSales([saleWithItems, ...sales]);
@@ -310,7 +316,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         toast({ 
           title: "Sale Completed", 
-          description: `Sold ${items.length} different products.` 
+          description: discount > 0 ? 
+            `Sold ${items.length} item(s) with a $${discount.toFixed(2)} discount.` : 
+            `Sold ${items.length} item(s).` 
         });
       } catch (error) {
         console.error('Error in transaction recording:', error);
