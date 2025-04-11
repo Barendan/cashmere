@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -298,10 +297,10 @@ const InventoryPage = () => {
                         key={product.id}
                         className={
                           product.stockQuantity === 0 
-                            ? "bg-red-50" 
+                            ? "bg-red-50 hover:bg-red-100" 
                             : index % 2 === 0 
-                              ? "bg-white" 
-                              : "bg-gray-50"
+                              ? "bg-white hover:bg-gray-100" 
+                              : "bg-gray-50 hover:bg-gray-100"
                         }
                       >
                         <TableCell className="font-medium">

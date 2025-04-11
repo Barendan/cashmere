@@ -3,33 +3,44 @@ import React from 'react';
 import { Product } from '@/models/types';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
-import { Check, XCircle } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
+  onRemoveFromCart?: (product: Product) => void;
   isInCart: boolean;
   cardStyle?: string;
 }
 
-const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: ProductCardProps) => {
+const ProductCard = ({ 
+  product, 
+  onAddToCart, 
+  onRemoveFromCart, 
+  isInCart, 
+  cardStyle = "" 
+}: ProductCardProps) => {
   const isLowStock = product.stockQuantity <= product.lowStockThreshold;
   const isOutOfStock = product.stockQuantity === 0;
   
   const handleClick = () => {
-    if (!isOutOfStock && !isInCart) {
+    if (isOutOfStock) return;
+    
+    if (isInCart) {
+      onRemoveFromCart && onRemoveFromCart(product);
+    } else {
       onAddToCart(product);
     }
   };
   
-  // Base receipt-style card class - removed the -translate-y-2 transformation from hover
+  // Base receipt-style card class - removed upward transform completely
   let cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
     transition-all duration-300 shadow-md
     ${isInCart 
-      ? 'bg-white border-green-200' 
+      ? 'bg-spa-cream border-spa-sage shadow-lg' 
       : isOutOfStock 
         ? 'opacity-80' 
-        : 'cursor-pointer hover:border-spa-sage hover:shadow-lg hover:bg-spa-cream transition-transform'
+        : 'cursor-pointer hover:border-spa-sage hover:shadow-lg hover:bg-spa-cream'
     }`;
   
   return (
@@ -38,20 +49,15 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
       onClick={handleClick}
       role="button"
       tabIndex={0}
-      aria-label={`Add ${product.name} to cart${isInCart ? ' (already in cart)' : isOutOfStock ? ' (out of stock)' : ''}`}
+      aria-label={`${isInCart ? 'Remove' : 'Add'} ${product.name} ${isInCart ? 'from' : 'to'} cart${isOutOfStock ? ' (out of stock)' : ''}`}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           handleClick();
         }
       }}
     >
-      {/* Status indicators */}
+      {/* Status indicators - removed "In Cart" badge */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-        {isInCart && (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[0.7rem] py-0 px-1.5 font-mono">
-            In Cart
-          </Badge>
-        )}
         {isLowStock && !isOutOfStock && (
           <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[0.7rem] py-0 px-1.5 font-mono">
             Low Stock
@@ -80,12 +86,7 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
         <span className="text-lg font-semibold">{formatCurrency(product.sellPrice)}</span>
       </div>
       
-      {/* Conditional elements for product status */}
-      {isInCart && (
-        <div className="absolute bottom-3 right-3 bg-green-600 text-white h-8 w-8 rounded-full flex items-center justify-center opacity-80 shadow-md">
-          <Check className="h-5 w-5" />
-        </div>
-      )}
+      {/* Removed the checkmark icon for cart items */}
       
       {isOutOfStock && (
         <div className="absolute inset-0 flex items-center justify-center">

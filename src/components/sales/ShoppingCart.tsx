@@ -20,6 +20,7 @@ interface ShoppingCartProps {
   clearCart: () => void;
   recordSale: () => void;
   isProcessing: boolean;
+  undoLastTransaction?: () => void;
 }
 
 const ShoppingCart = ({
@@ -28,7 +29,8 @@ const ShoppingCart = ({
   removeItem,
   clearCart,
   recordSale,
-  isProcessing
+  isProcessing,
+  undoLastTransaction
 }: ShoppingCartProps) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
@@ -95,7 +97,7 @@ const ShoppingCart = ({
                 variant="outline"
                 size="sm"
                 className="border-spa-sand"
-                onClick={() => {}} // This will be connected to undoLastTransaction in the parent component
+                onClick={undoLastTransaction}
               >
                 <Undo2 size={16} className="mr-2" />
                 Undo Action

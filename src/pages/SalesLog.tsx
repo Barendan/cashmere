@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronDown, ChevronRight, Undo2 } from "lucide-react";
+import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import ShoppingCart from "@/components/sales/ShoppingCart";
@@ -48,6 +48,14 @@ const SalesLog = () => {
     toast({
       title: "Added to cart",
       description: `${product.name} has been added to your cart`,
+    });
+  };
+  
+  const handleRemoveFromCart = (product: Product) => {
+    setCartItems(cartItems.filter(item => item.product.id !== product.id));
+    toast({
+      title: "Removed from cart",
+      description: `${product.name} has been removed from your cart`,
     });
   };
   
@@ -203,6 +211,7 @@ const SalesLog = () => {
                       key={product.id}
                       product={product}
                       onAddToCart={handleAddToCart}
+                      onRemoveFromCart={handleRemoveFromCart}
                       isInCart={isProductInCart(product.id)}
                       cardStyle={index < 3 ? `design-${index + 1}` : ""}
                     />
@@ -238,6 +247,7 @@ const SalesLog = () => {
                 clearCart={handleClearCart}
                 recordSale={handleCompleteSale}
                 isProcessing={isProcessing}
+                undoLastTransaction={undoLastTransaction}
               />
             </div>
           </CardContent>
