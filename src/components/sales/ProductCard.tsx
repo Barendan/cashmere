@@ -3,7 +3,7 @@ import React from 'react';
 import { Product } from '@/models/types';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
-import { XCircle } from 'lucide-react';
+import { XCircle, CheckCircle } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -33,14 +33,14 @@ const ProductCard = ({
     }
   };
   
-  // Base receipt-style card class - removed upward transform completely
-  let cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
+  // Updated card class with distinct styling for cart items
+  let cardClassName = `relative font-mono border rounded-md p-4 flex flex-col h-full
     transition-all duration-300 shadow-md
     ${isInCart 
-      ? 'bg-spa-cream border-spa-sage shadow-lg' 
+      ? 'bg-emerald-50 border-emerald-300 shadow-lg' 
       : isOutOfStock 
-        ? 'opacity-80' 
-        : 'cursor-pointer hover:border-spa-sage hover:shadow-lg hover:bg-spa-cream'
+        ? 'bg-white border-spa-sand opacity-80' 
+        : 'bg-white border-spa-sand cursor-pointer hover:border-spa-sage hover:shadow-lg hover:bg-spa-cream'
     }`;
   
   return (
@@ -56,8 +56,13 @@ const ProductCard = ({
         }
       }}
     >
-      {/* Status indicators - removed "In Cart" badge */}
+      {/* Status indicators */}
       <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+        {isInCart && (
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[0.7rem] py-0 px-1.5 font-mono">
+            In Cart
+          </Badge>
+        )}
         {isLowStock && !isOutOfStock && (
           <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200 text-[0.7rem] py-0 px-1.5 font-mono">
             Low Stock
@@ -86,7 +91,12 @@ const ProductCard = ({
         <span className="text-lg font-semibold">{formatCurrency(product.sellPrice)}</span>
       </div>
       
-      {/* Removed the checkmark icon for cart items */}
+      {/* Add checkmark icon for cart items */}
+      {isInCart && (
+        <div className="absolute bottom-2 left-2">
+          <CheckCircle className="h-5 w-5 text-emerald-500" />
+        </div>
+      )}
       
       {isOutOfStock && (
         <div className="absolute inset-0 flex items-center justify-center">

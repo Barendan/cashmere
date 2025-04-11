@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -241,9 +242,9 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full"
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 md:h-[600px]"
       >
-        <div className="space-y-4">
+        <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
           <FormField
             control={form.control}
             name="customerName"
@@ -359,58 +360,62 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
             )}
           />
 
-          <div className="space-y-2">
+          <div className="space-y-2 flex-grow overflow-hidden flex flex-col">
             <FormLabel>Selected Services</FormLabel>
-            <div className="border rounded-md p-3 min-h-[180px] max-h-[300px] overflow-y-auto">
-              {fields.length > 0 ? (
-                <div className="space-y-2">
-                  {fields.map((field, index) => (
-                    <div
-                      key={field.id}
-                      className="flex items-center justify-between bg-accent/50 rounded-md p-2"
-                    >
-                      <div>
-                        <span className="font-medium">
-                          {field.name}
-                        </span>
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          ${field.price.toFixed(2)}
-                        </span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(index)}
+            <div className="border rounded-md p-3 flex-grow overflow-hidden flex flex-col">
+              <ScrollArea className="flex-grow">
+                {fields.length > 0 ? (
+                  <div className="space-y-2">
+                    {fields.map((field, index) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center justify-between bg-accent/50 rounded-md p-2"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <div className="flex flex-col pt-2 border-t mt-2 space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-muted-foreground">Subtotal:</span>
-                      <span className="text-sm">
-                        ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
-                      </span>
-                    </div>
-                    {calculateDiscount() > 0 && (
-                      <div className="flex justify-between text-rose-600">
-                        <span className="text-sm">Discount:</span>
-                        <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
+                        <div>
+                          <span className="font-medium">
+                            {field.name}
+                          </span>
+                          <span className="ml-2 text-sm text-muted-foreground">
+                            ${field.price.toFixed(2)}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => remove(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
-                    <div className="flex justify-between pt-1 border-t mt-1">
-                      <span className="font-medium">Total:</span>
-                      <span className="font-bold">
-                        ${calculateTotal().toFixed(2)}
-                      </span>
-                    </div>
+                    ))}
                   </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                  No services selected
+                ) : (
+                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                    No services selected
+                  </div>
+                )}
+              </ScrollArea>
+              {fields.length > 0 && (
+                <div className="flex flex-col pt-2 border-t mt-2 space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Subtotal:</span>
+                    <span className="text-sm">
+                      ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
+                    </span>
+                  </div>
+                  {calculateDiscount() > 0 && (
+                    <div className="flex justify-between text-rose-600">
+                      <span className="text-sm">Discount:</span>
+                      <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-1 border-t mt-1">
+                    <span className="font-medium">Total:</span>
+                    <span className="font-bold">
+                      ${calculateTotal().toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -442,7 +447,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
 
         <div className="flex flex-col h-full">
           <FormLabel className="mb-2">Available Services</FormLabel>
-          <div className="border rounded-md flex-grow overflow-hidden h-full">
+          <div className="border rounded-md flex-grow overflow-hidden">
             <ScrollArea className="h-full">
               {isLoading ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
