@@ -22,14 +22,14 @@ const ProductCard = ({ product, onAddToCart, isInCart, cardStyle = "" }: Product
     }
   };
   
-  // Base receipt-style card class
+  // Base receipt-style card class - removed the -translate-y-2 transformation from hover
   let cardClassName = `relative font-mono bg-white border border-spa-sand rounded-md p-4 flex flex-col h-full
     transition-all duration-300 shadow-md
     ${isInCart 
       ? 'bg-white border-green-200' 
       : isOutOfStock 
         ? 'opacity-80' 
-        : 'cursor-pointer hover:border-spa-sage hover:-translate-y-2 hover:shadow-lg hover:bg-spa-cream transition-transform'
+        : 'cursor-pointer hover:border-spa-sage hover:shadow-lg hover:bg-spa-cream transition-transform'
     }`;
   
   return (
