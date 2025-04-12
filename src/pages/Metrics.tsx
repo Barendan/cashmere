@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -5,6 +6,17 @@ import { Loader2, Package2, Award } from "lucide-react";
 import usePageTitle from "@/hooks/usePageTitle";
 import ProductMetrics from "@/components/metrics/ProductMetrics";
 import ServiceMetrics from "@/components/metrics/ServiceMetrics";
+
+// Extended interface to match what's used in the component
+interface ServiceIncomeWithCategory {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  amount: number;
+  date: Date;
+  customerName: string | null;
+  category?: string; // Add this property to handle the case in the code
+}
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
@@ -114,11 +126,12 @@ const Metrics = () => {
         default:
           return false;
       }
-    });
+    }) as ServiceIncomeWithCategory[]; // Cast to include category property
     
     const serviceMap = new Map();
     
     filteredServiceIncomes.forEach(income => {
+      // Check if the income has a category property that contains multiple services
       if (income.category) {
         try {
           const parsedCategory = JSON.parse(income.category);
@@ -177,7 +190,7 @@ const Metrics = () => {
       }))
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
       
-    function processRegularService(income: any, serviceMap: Map<string, any>) {
+    function processRegularService(income: ServiceIncomeWithCategory, serviceMap: Map<string, any>) {
       const serviceId = income.serviceId;
       const serviceName = income.serviceName || "Unknown Service";
       
