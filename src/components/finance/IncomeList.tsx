@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { FinanceRecord, Service } from "@/models/types";
 import { Button } from "@/components/ui/button";
 import { Trash2, BadgePercent } from "lucide-react";
@@ -299,7 +300,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
 
   if (compact) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-[30vh] overflow-auto">
         {incomeRecords.map((record) => (
           <div 
             key={record.id} 
@@ -333,7 +334,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
     <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-emerald-50">
+          <TableHeader className="bg-emerald-50 sticky top-0 z-10">
             <TableRow className="hover:bg-emerald-50/80">
               <TableHead>Date</TableHead>
               <TableHead>Customer</TableHead>
@@ -343,43 +344,47 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
               {isAdmin && <TableHead className="w-20">Actions</TableHead>}
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {incomeRecords.map((record) => (
-              <TableRow key={record.id} className="hover:bg-emerald-50/20">
-                <TableCell>{format(record.date, "PP")}</TableCell>
-                <TableCell>{record.customerName || "Unknown"}</TableCell>
-                <TableCell>{formatServiceNames(record)}</TableCell>
-                <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
-                <TableCell className="text-right">
-                  {record.discount > 0 ? (
-                    <div className="flex flex-col items-end">
-                      <div className="text-xs text-gray-500 line-through">${record.originalTotal?.toFixed(2)}</div>
-                      <div className="font-medium text-emerald-600 flex items-center">
-                        <BadgePercent className="h-3 w-3 mr-1" />
-                        ${record.amount.toFixed(2)}
-                      </div>
-                      <div className="text-xs text-rose-600">-${record.discount.toFixed(2)}</div>
-                    </div>
-                  ) : (
-                    <span className="font-medium text-emerald-600">${record.amount.toFixed(2)}</span>
-                  )}
-                </TableCell>
-                {isAdmin && (
-                  <TableCell>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => openDeleteDialog(record.id)}
-                      className="hover:bg-rose-100 hover:text-rose-600"
-                    >
-                      <Trash2 className="h-4 w-4 text-rose-500" />
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
         </Table>
+        <ScrollArea className="max-h-[30vh]">
+          <Table>
+            <TableBody>
+              {incomeRecords.map((record) => (
+                <TableRow key={record.id} className="hover:bg-emerald-50/20">
+                  <TableCell>{format(record.date, "PP")}</TableCell>
+                  <TableCell>{record.customerName || "Unknown"}</TableCell>
+                  <TableCell>{formatServiceNames(record)}</TableCell>
+                  <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
+                  <TableCell className="text-right">
+                    {record.discount > 0 ? (
+                      <div className="flex flex-col items-end">
+                        <div className="text-xs text-gray-500 line-through">${record.originalTotal?.toFixed(2)}</div>
+                        <div className="font-medium text-emerald-600 flex items-center">
+                          <BadgePercent className="h-3 w-3 mr-1" />
+                          ${record.amount.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-rose-600">-${record.discount.toFixed(2)}</div>
+                      </div>
+                    ) : (
+                      <span className="font-medium text-emerald-600">${record.amount.toFixed(2)}</span>
+                    )}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => openDeleteDialog(record.id)}
+                        className="hover:bg-rose-100 hover:text-rose-600"
+                      >
+                        <Trash2 className="h-4 w-4 text-rose-500" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

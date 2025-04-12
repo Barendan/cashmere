@@ -15,7 +15,7 @@ const SalesLog = () => {
   return (
     <CartProvider>
       <div className="w-full md:min-w-[90vw] xl:min-w-[90vw] flex flex-col min-h-[calc(100vh-4rem)] px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8 h-[65vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mb-8">
           <ProductList products={products} />
           <SalesCart isProcessing={isProcessing} setIsProcessing={setIsProcessing} />
         </div>
