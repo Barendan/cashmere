@@ -27,6 +27,15 @@ const ProductList = ({ products }: ProductListProps) => {
            (product.description && product.description.toLowerCase().includes(searchLower));
   });
   
+  // Create handler functions to ensure correct types are passed
+  const handleAddToCart = (product: Product) => {
+    addItem(product);
+  };
+  
+  const handleRemoveFromCart = (product: Product) => {
+    removeItem(product.id);
+  };
+  
   return (
     <Card className="lg:col-span-3 flex flex-col overflow-hidden h-full bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/50">
       <CardHeader className="pb-2 flex-shrink-0">
@@ -54,8 +63,8 @@ const ProductList = ({ products }: ProductListProps) => {
                 <ProductCard 
                   key={product.id}
                   product={product}
-                  onAddToCart={addItem}
-                  onRemoveFromCart={removeItem}
+                  onAddToCart={handleAddToCart}
+                  onRemoveFromCart={handleRemoveFromCart}
                   isInCart={isProductInCart(product.id)}
                   cardStyle={index < 3 ? `design-${index + 1}` : ""}
                 />
