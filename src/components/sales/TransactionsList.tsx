@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, Percent } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatCurrency } from '@/lib/format';
 
 interface GroupedTransaction {
@@ -122,7 +123,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
   const groupedTransactions = groupTransactions();
   
   return (
-    <Card className="bg-white mb-6 flex-shrink-0 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/70">
+    <Card className="bg-white mb-6 flex-shrink-0 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/70 flex flex-col">
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
@@ -139,10 +140,10 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
           </Tabs>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-md border border-spa-sand">
+      <CardContent className="flex-grow flex flex-col p-0 overflow-hidden">
+        <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden min-h-[40vh]">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
                 <TableHead className="w-[180px]">Date & Time</TableHead>
                 <TableHead>Details</TableHead>
@@ -152,118 +153,122 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {groupedTransactions.length > 0 ? (
-                groupedTransactions.map((group) => (
-                  <React.Fragment key={group.saleId || `no-sale-${group.date.getTime()}`}>
-                    <TableRow className="bg-gray-50 font-medium">
-                      <TableCell className="text-sm">
-                        {formatDate(group.date)}
-                      </TableCell>
-                      <TableCell>
-                        {group.saleId ? (
-                          <span className="font-medium">Sale with {group.itemCount} item(s)</span>
-                        ) : (
-                          <span className="font-medium">{group.transactions[0].productName}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{group.userName}</TableCell>
-                      <TableCell>
-                        {group.discount && group.discount > 0 ? (
-                          <div className="flex flex-col">
-                            <span className="line-through text-sm text-muted-foreground">
-                              {formatCurrency(group.originalTotal || 0)}
-                            </span>
-                            <div className="flex items-center text-red-600">
-                              <Percent className="h-3 w-3 mr-0.5" />
-                              <span>{formatCurrency(group.totalAmount)}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          formatCurrency(group.totalAmount)
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                          {group.transactions[0].type}
-                        </Badge>
-                        {group.discount && group.discount > 0 && (
-                          <Badge className="ml-2 bg-red-100 text-red-800">
-                            Discount: {formatCurrency(group.discount)}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {group.transactions.length > 1 && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0"
-                            onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
-                          >
-                            {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
-                              <ChevronDown className="h-4 w-4" /> : 
-                              <ChevronRight className="h-4 w-4" />
-                            }
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    
-                    {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) && (
-                      <>
-                        {group.transactions.map(transaction => (
-                          <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
-                            <TableCell></TableCell>
-                            <TableCell className="py-2 pl-8">
-                              <div className="flex items-center">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
-                                {transaction.productName}
-                              </div>
-                            </TableCell>
-                            <TableCell></TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <span>{transaction.quantity} item(s)</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {transaction.discount && transaction.discount > 0 && (
-                                <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
-                                  <Percent className="h-2 w-2 mr-0.5" />
-                                  {formatCurrency(transaction.discount)}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
-                                <div className="flex flex-col items-end">
-                                  <span className="text-xs text-muted-foreground line-through">
-                                    {formatCurrency(transaction.originalPrice)}
-                                  </span>
-                                  <span className="text-red-600">
-                                    {formatCurrency(transaction.price)}
-                                  </span>
-                                </div>
-                              ) : (
-                                formatCurrency(transaction.price)
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </>
-                    )}
-                  </React.Fragment>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                    No transactions found for the selected filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
           </Table>
+          <ScrollArea className="flex-grow overflow-auto max-h-[calc(100vh-350px)]">
+            <Table>
+              <TableBody>
+                {groupedTransactions.length > 0 ? (
+                  groupedTransactions.map((group) => (
+                    <React.Fragment key={group.saleId || `no-sale-${group.date.getTime()}`}>
+                      <TableRow className="bg-gray-50 font-medium">
+                        <TableCell className="text-sm">
+                          {formatDate(group.date)}
+                        </TableCell>
+                        <TableCell>
+                          {group.saleId ? (
+                            <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                          ) : (
+                            <span className="font-medium">{group.transactions[0].productName}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{group.userName}</TableCell>
+                        <TableCell>
+                          {group.discount && group.discount > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="line-through text-sm text-muted-foreground">
+                                {formatCurrency(group.originalTotal || 0)}
+                              </span>
+                              <div className="flex items-center text-red-600">
+                                <Percent className="h-3 w-3 mr-0.5" />
+                                <span>{formatCurrency(group.totalAmount)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            formatCurrency(group.totalAmount)
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
+                            {group.transactions[0].type}
+                          </Badge>
+                          {group.discount && group.discount > 0 && (
+                            <Badge className="ml-2 bg-red-100 text-red-800">
+                              Discount: {formatCurrency(group.discount)}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {group.transactions.length > 1 && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0"
+                              onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
+                            >
+                              {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
+                                <ChevronDown className="h-4 w-4" /> : 
+                                <ChevronRight className="h-4 w-4" />
+                              }
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      
+                      {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) && (
+                        <>
+                          {group.transactions.map(transaction => (
+                            <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
+                              <TableCell></TableCell>
+                              <TableCell className="py-2 pl-8">
+                                <div className="flex items-center">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
+                                  {transaction.productName}
+                                </div>
+                              </TableCell>
+                              <TableCell></TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <span>{transaction.quantity} item(s)</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {transaction.discount && transaction.discount > 0 && (
+                                  <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
+                                    <Percent className="h-2 w-2 mr-0.5" />
+                                    {formatCurrency(transaction.discount)}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-xs text-muted-foreground line-through">
+                                      {formatCurrency(transaction.originalPrice)}
+                                    </span>
+                                    <span className="text-red-600">
+                                      {formatCurrency(transaction.price)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  formatCurrency(transaction.price)
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      )}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                      No transactions found for the selected filter.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </div>
       </CardContent>
     </Card>
