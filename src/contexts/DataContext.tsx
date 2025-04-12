@@ -261,7 +261,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User',
         discount: discount > 0 ? discount : null,
-        original_total: discount > 0 ? subtotal : null
+        original_total: discount > 0 ? subtotal : null,
+        notes: discount > 0 ? `Discount: $${discount.toFixed(2)}` : null
       };
       
       console.log("Creating sale record with total:", finalTotal, "discount:", discount);

@@ -3,7 +3,7 @@ import React from 'react';
 import { Product } from '@/models/types';
 import { formatCurrency } from '@/lib/format';
 import { Badge } from '@/components/ui/badge';
-import { XCircle, CheckCircle } from 'lucide-react';
+import { XCircle, CheckCircle, Percent } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -11,6 +11,7 @@ interface ProductCardProps {
   onRemoveFromCart?: (product: Product) => void;
   isInCart: boolean;
   cardStyle?: string;
+  discount?: number;
 }
 
 const ProductCard = ({ 
@@ -18,7 +19,8 @@ const ProductCard = ({
   onAddToCart, 
   onRemoveFromCart, 
   isInCart, 
-  cardStyle = "" 
+  cardStyle = "",
+  discount = 0
 }: ProductCardProps) => {
   const isLowStock = product.stockQuantity <= product.lowStockThreshold;
   const isOutOfStock = product.stockQuantity === 0;
@@ -88,7 +90,19 @@ const ProductCard = ({
       {/* Category and price with receipt-style footer */}
       <div className="mt-auto pt-2 flex justify-between items-center">
         <span className="text-xs uppercase text-blue-600">{product.category}</span>
-        <span className="text-lg font-semibold">{formatCurrency(product.sellPrice)}</span>
+        {discount > 0 && isInCart ? (
+          <div className="flex flex-col items-end">
+            <span className="text-sm line-through text-muted-foreground">{formatCurrency(product.sellPrice)}</span>
+            <div className="flex items-center">
+              <Percent className="h-3 w-3 text-red-500 mr-1" />
+              <span className="text-lg font-semibold text-red-500">
+                {formatCurrency(Math.max(0, product.sellPrice - discount))}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <span className="text-lg font-semibold">{formatCurrency(product.sellPrice)}</span>
+        )}
       </div>
       
       {/* Add checkmark icon for cart items */}

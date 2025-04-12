@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -6,7 +7,7 @@ import { supabase, mapServiceRowToService } from "@/integrations/supabase/client
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, BadgePercent } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ const formSchema = z.object({
   date: z.date({ required_error: "Date is required" }),
   paymentMethod: z.string().min(1, { message: "Payment method is required" }),
   description: z.string().optional(),
+  discount: z.number().min(0).default(0),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,6 +62,7 @@ const IncomeForm = ({ onIncomeAdded }) => {
       date: new Date(),
       paymentMethod: "cash",
       description: "",
+      discount: 0,
     },
   });
 
@@ -101,6 +104,17 @@ const IncomeForm = ({ onIncomeAdded }) => {
     setIsLoading(true);
 
     try {
+      const discountAmount = data.discount || 0;
+      const finalPrice = Math.max(0, selectedService.price - discountAmount);
+      
+      const serviceDetails = {
+        serviceIds: [data.serviceId],
+        serviceNames: [selectedService.name],
+        servicePrices: [selectedService.price],
+        discount: discountAmount,
+        originalTotal: selectedService.price
+      };
+
       const { data: newIncome, error } = await supabase
         .from("finances")
         .insert({
@@ -108,9 +122,10 @@ const IncomeForm = ({ onIncomeAdded }) => {
           customer_name: data.customerName,
           service_id: data.serviceId,
           date: data.date.toISOString(),
-          amount: selectedService.price,
+          amount: finalPrice,
           payment_method: data.paymentMethod,
           description: data.description || null,
+          category: discountAmount > 0 ? JSON.stringify(serviceDetails) : null,
         })
         .select('*, services:service_id(name, price)');
 
@@ -122,7 +137,12 @@ const IncomeForm = ({ onIncomeAdded }) => {
       });
 
       if (newIncome && newIncome.length > 0) {
-        onIncomeAdded(newIncome[0]);
+        const incomeWithDiscount = {
+          ...newIncome[0],
+          discount: discountAmount > 0 ? discountAmount : undefined,
+          originalTotal: discountAmount > 0 ? selectedService.price : undefined
+        };
+        onIncomeAdded(incomeWithDiscount);
       }
 
       form.reset({
@@ -131,6 +151,7 @@ const IncomeForm = ({ onIncomeAdded }) => {
         date: new Date(),
         paymentMethod: "cash",
         description: "",
+        discount: 0,
       });
       
       setSelectedService(null);
@@ -267,6 +288,67 @@ const IncomeForm = ({ onIncomeAdded }) => {
           />
         </div>
 
+        {selectedService && (
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="discount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discount ($)</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="number"
+                        min="0"
+                        max={selectedService.price}
+                        step="0.01"
+                        placeholder="0.00"
+                        className="pl-10"
+                        {...field}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? '0' : e.target.value;
+                          const numValue = parseFloat(value);
+                          // Ensure discount doesn't exceed service price
+                          const finalDiscount = Math.min(numValue, selectedService.price);
+                          field.onChange(finalDiscount);
+                        }}
+                        value={field.value.toString()}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Maximum discount: ${selectedService.price.toFixed(2)}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="py-2 px-4 bg-muted rounded-md space-y-2">
+              <div className="flex justify-between">
+                <p className="font-medium">Service price:</p>
+                <p>${selectedService.price.toFixed(2)}</p>
+              </div>
+              
+              {form.watch('discount') > 0 && (
+                <div className="flex justify-between text-rose-600">
+                  <p className="font-medium">Discount:</p>
+                  <p>-${form.watch('discount').toFixed(2)}</p>
+                </div>
+              )}
+              
+              {form.watch('discount') > 0 && (
+                <div className="flex justify-between border-t pt-2 font-semibold">
+                  <p>Final price:</p>
+                  <p>${Math.max(0, selectedService.price - form.watch('discount')).toFixed(2)}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="description"
@@ -287,12 +369,6 @@ const IncomeForm = ({ onIncomeAdded }) => {
             </FormItem>
           )}
         />
-
-        {selectedService && (
-          <div className="py-2 px-4 bg-muted rounded-md">
-            <p className="font-medium">Service price: ${selectedService.price.toFixed(2)}</p>
-          </div>
-        )}
 
         <Button type="submit" disabled={isLoading}>
           {isLoading ? "Recording..." : "Record Service Income"}

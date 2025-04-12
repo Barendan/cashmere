@@ -244,207 +244,213 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         onSubmit={form.handleSubmit(onSubmit)}
         className="grid grid-cols-1 md:grid-cols-2 gap-4 md:h-[600px]"
       >
-        <div className="space-y-4 flex flex-col h-full overflow-y-auto pr-2">
-          <FormField
-            control={form.control}
-            name="customerName"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Customer</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Enter customer name"
-                    {...field}
-                    autoComplete="name"
-                    className="h-10"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="date"
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
+        {/* Left column - form fields */}
+        <div className="flex flex-col h-full">
+          <div className="space-y-4 flex-grow overflow-hidden flex flex-col">
+            <div className="space-y-4 flex-shrink-0">
+              <FormField
+                control={form.control}
+                name="customerName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Customer</FormLabel>
                     <FormControl>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full h-10 pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
-                        )}
-                      >
-                        {field.value ? (
-                          format(field.value, "PPP")
-                        ) : (
-                          <span>Pick a date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
+                      <Input
+                        placeholder="Enter customer name"
+                        {...field}
+                        autoComplete="name"
+                        className="h-10"
+                      />
                     </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="paymentMethod"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Payment Method</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Select payment method" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((method) => (
-                      <SelectItem key={method.value} value={method.value}>
-                        {method.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="discount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Discount ($)</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="pl-10 h-10"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value === '' ? '0' : e.target.value;
-                        field.onChange(parseFloat(value));
-                      }}
-                      value={field.value.toString()}
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="space-y-2 flex-grow overflow-hidden flex flex-col">
-            <FormLabel>Selected Services</FormLabel>
-            <div className="border rounded-md p-3 flex-grow overflow-hidden flex flex-col">
-              <ScrollArea className="flex-grow">
-                {fields.length > 0 ? (
-                  <div className="space-y-2">
-                    {fields.map((field, index) => (
-                      <div
-                        key={field.id}
-                        className="flex items-center justify-between bg-accent/50 rounded-md p-2"
-                      >
-                        <div>
-                          <span className="font-medium">
-                            {field.name}
-                          </span>
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            ${field.price.toFixed(2)}
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => remove(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
-                    No services selected
-                  </div>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </ScrollArea>
-              {fields.length > 0 && (
-                <div className="flex flex-col pt-2 border-t mt-2 space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Subtotal:</span>
-                    <span className="text-sm">
-                      ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
-                    </span>
-                  </div>
-                  {calculateDiscount() > 0 && (
-                    <div className="flex justify-between text-rose-600">
-                      <span className="text-sm">Discount:</span>
-                      <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
+              />
+
+              <FormField
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full h-10 pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Payment Method</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-10">
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PAYMENT_METHODS.map((method) => (
+                          <SelectItem key={method.value} value={method.value}>
+                            {method.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="discount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Discount ($)</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          className="pl-10 h-10"
+                          {...field}
+                          onChange={(e) => {
+                            const value = e.target.value === '' ? '0' : e.target.value;
+                            field.onChange(parseFloat(value));
+                          }}
+                          value={field.value.toString()}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="mt-4 space-y-2 flex-grow overflow-hidden flex flex-col">
+              <FormLabel>Selected Services</FormLabel>
+              <div className="border rounded-md flex-grow overflow-hidden flex flex-col">
+                <ScrollArea className="flex-grow">
+                  {fields.length > 0 ? (
+                    <div className="space-y-2 p-3">
+                      {fields.map((field, index) => (
+                        <div
+                          key={field.id}
+                          className="flex items-center justify-between bg-accent/50 rounded-md p-2"
+                        >
+                          <div>
+                            <span className="font-medium">
+                              {field.name}
+                            </span>
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              ${field.price.toFixed(2)}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full p-6 text-sm text-muted-foreground">
+                      No services selected
                     </div>
                   )}
-                  <div className="flex justify-between pt-1 border-t mt-1">
-                    <span className="font-medium">Total:</span>
-                    <span className="font-bold">
-                      ${calculateTotal().toFixed(2)}
-                    </span>
+                </ScrollArea>
+                {fields.length > 0 && (
+                  <div className="flex flex-col pt-2 border-t mt-auto p-3 space-y-1 flex-shrink-0">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-muted-foreground">Subtotal:</span>
+                      <span className="text-sm">
+                        ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
+                      </span>
+                    </div>
+                    {calculateDiscount() > 0 && (
+                      <div className="flex justify-between text-rose-600">
+                        <span className="text-sm">Discount:</span>
+                        <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-1 border-t mt-1">
+                      <span className="font-medium">Total:</span>
+                      <span className="font-bold">
+                        ${calculateTotal().toFixed(2)}
+                      </span>
+                    </div>
                   </div>
+                )}
+              </div>
+              {form.formState.errors.services && (
+                <div className="text-sm font-medium text-destructive">
+                  {form.formState.errors.services.message}
                 </div>
               )}
             </div>
-            {form.formState.errors.services && (
-              <div className="text-sm font-medium text-destructive">
-                {form.formState.errors.services.message}
-              </div>
-            )}
-          </div>
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Add any additional notes"
-                    {...field}
-                    className="h-10"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem className="flex-shrink-0 mt-auto">
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Add any additional notes"
+                      {...field}
+                      className="h-10"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
         </div>
 
+        {/* Right column - available services */}
         <div className="flex flex-col h-full">
           <FormLabel className="mb-2">Available Services</FormLabel>
           <div className="border rounded-md flex-grow overflow-hidden">
