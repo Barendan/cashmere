@@ -6,7 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 type Column = {
   key: string;
   header: string;
-  formatter?: (value: any) => React.ReactNode;
+  formatter?: (value: any, item?: Record<string, any>) => React.ReactNode;
   className?: string;
 };
 
@@ -36,7 +36,7 @@ const DataTable = ({
           </TableRow>
         </TableHeader>
       </Table>
-      <ScrollArea className={`max-h-[${maxHeight}]`}>
+      <ScrollArea style={{ maxHeight }}>
         <Table>
           <TableBody>
             {data.length > 0 ? (
@@ -45,7 +45,7 @@ const DataTable = ({
                   {columns.map((column) => (
                     <TableCell key={`${index}-${column.key}`} className={column.className}>
                       {column.formatter 
-                        ? column.formatter(item[column.key]) 
+                        ? column.formatter(item[column.key], item) 
                         : item[column.key]}
                     </TableCell>
                   ))}

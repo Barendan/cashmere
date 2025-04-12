@@ -32,9 +32,24 @@ const ServiceMetrics = ({
 }: ServiceMetricsProps) => {
   const serviceColumns = [
     { key: "name", header: "Service Name", className: "font-medium" },
-    { key: "totalSold", header: "Times Provided", className: "text-right", formatter: (value) => value },
-    { key: "totalRevenue", header: "Revenue", className: "text-right", formatter: (value) => formatCurrency(value) },
-    { key: "uniqueCustomers", header: "Unique Customers", className: "text-right", formatter: (value) => value || 0 }
+    { 
+      key: "totalSold", 
+      header: "Times Provided", 
+      className: "text-right", 
+      formatter: (value: any) => value || 0 
+    },
+    { 
+      key: "totalRevenue", 
+      header: "Revenue", 
+      className: "text-right", 
+      formatter: (value: any) => formatCurrency(value || 0) 
+    },
+    { 
+      key: "uniqueCustomers", 
+      header: "Unique Customers", 
+      className: "text-right", 
+      formatter: (value: any) => value || 0 
+    }
   ];
 
   return (

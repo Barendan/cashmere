@@ -34,22 +34,43 @@ const ProductMetrics = ({
 }: ProductMetricsProps) => {
   const productColumns = [
     { key: "name", header: "Product Name", className: "font-medium" },
-    { key: "totalSold", header: "Quantity Sold", className: "text-right", formatter: (value) => value },
-    { key: "totalRevenue", header: "Revenue", className: "text-right", formatter: (value) => formatCurrency(value) },
+    { 
+      key: "totalSold", 
+      header: "Quantity Sold", 
+      className: "text-right", 
+      formatter: (value: any) => value || 0
+    },
+    { 
+      key: "totalRevenue", 
+      header: "Revenue", 
+      className: "text-right", 
+      formatter: (value: any) => formatCurrency(value || 0) 
+    },
     { 
       key: "costPrice", 
       header: "Cost", 
       className: "text-right", 
-      formatter: (value, item: any) => formatCurrency(value * item.totalSold)
+      formatter: (value: any, item: any) => {
+        if (!item || typeof value !== 'number') return formatCurrency(0);
+        return formatCurrency(value * (item.totalSold || 0));
+      }
     },
-    { key: "profit", header: "Profit", className: "text-right", formatter: (value) => formatCurrency(value) },
+    { 
+      key: "profit", 
+      header: "Profit", 
+      className: "text-right", 
+      formatter: (value: any) => formatCurrency(value || 0) 
+    },
     { 
       key: "profitMargin", 
       header: "Profit Margin", 
       className: "text-right", 
-      formatter: (_, item: any) => item.totalRevenue > 0 
-        ? formatPercent((item.profit / item.totalRevenue) * 100) 
-        : "0%"
+      formatter: (value: any, item: any) => {
+        if (!item || typeof item.totalRevenue !== 'number' || item.totalRevenue <= 0) {
+          return "0%";
+        }
+        return formatPercent((item.profit / item.totalRevenue) * 100);
+      }
     }
   ];
 
