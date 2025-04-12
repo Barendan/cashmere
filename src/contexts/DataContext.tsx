@@ -29,7 +29,7 @@ interface DataContextType {
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
-  recordBulkSale: (items: {product: Product, quantity: number}[], discount?: number) => Promise<void>;
+  recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   adjustInventory: (productId: string, newQuantity: number) => void;
   updateLastRestockDate: () => void;
@@ -231,7 +231,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
   
-  const recordBulkSale = async (items: {product: Product, quantity: number}[], discount: number = 0) => {
+  const recordBulkSale = async (items: {product: Product, quantity: number, discount: number}[], discount: number = 0) => {
     if (items.length === 0) return;
     
     for (const item of items) {
@@ -253,46 +253,42 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         0
       );
       
-      const finalTotal = Math.max(0, subtotal - discount);
+      const totalDiscount = items.reduce(
+        (sum, item) => sum + item.discount,
+        0
+      );
+      
+      const finalTotal = Math.max(0, subtotal - totalDiscount);
       
       const saleData = {
         date: now.toISOString(),
         total_amount: finalTotal,
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User',
-        discount: discount > 0 ? discount : null,
-        original_total: discount > 0 ? subtotal : null,
-        notes: discount > 0 ? `Discount: $${discount.toFixed(2)}` : null
+        discount: totalDiscount > 0 ? totalDiscount : null,
+        original_total: totalDiscount > 0 ? subtotal : null,
+        notes: totalDiscount > 0 ? `Discount: $${totalDiscount.toFixed(2)}` : null
       };
       
-      console.log("Creating sale record with total:", finalTotal, "discount:", discount);
+      console.log("Creating sale record with total:", finalTotal, "total discount:", totalDiscount);
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
       console.log("Sale record created with ID:", saleId);
       
       const newTransactions: any[] = [];
       const productUpdatesPromises: Promise<any>[] = [];
       
-      const getItemDiscount = (item: {product: Product, quantity: number}): number => {
-        if (discount === 0 || subtotal === 0) return 0;
-        
-        const itemProportion = (item.product.sellPrice * item.quantity) / subtotal;
-        const itemDiscount = discount * itemProportion;
-        
-        return Math.round(itemDiscount * 100) / 100;
-      };
-      
       for (const item of items) {
-        const itemDiscount = getItemDiscount(item);
-        const originalPrice = item.product.sellPrice * item.quantity;
-        const discountedPrice = Math.max(0, originalPrice - itemDiscount);
+        const itemTotal = item.product.sellPrice * item.quantity;
+        const originalPrice = item.discount > 0 ? itemTotal : undefined;
+        const finalPrice = Math.max(0, itemTotal - item.discount);
         
         newTransactions.push({
           product_id: item.product.id,
           product_name: item.product.name,
           quantity: item.quantity,
-          price: discountedPrice,
-          original_price: originalPrice,
-          discount: itemDiscount,
+          price: finalPrice,
+          original_price: item.discount > 0 ? itemTotal : null,
+          discount: item.discount > 0 ? item.discount : null,
           type: 'sale',
           date: now.toISOString(),
           user_id: user?.id || 'unknown',
@@ -323,8 +319,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const saleWithItems: Sale = {
           ...newSale,
           items: newLocalTransactions,
-          discount: discount > 0 ? discount : undefined,
-          originalTotal: discount > 0 ? subtotal : undefined
+          discount: totalDiscount > 0 ? totalDiscount : undefined,
+          originalTotal: totalDiscount > 0 ? subtotal : undefined
         };
         
         setSales([saleWithItems, ...sales]);
@@ -332,8 +328,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         toast({ 
           title: "Sale Completed", 
-          description: discount > 0 ? 
-            `Sold ${items.length} item(s) with a $${discount.toFixed(2)} discount.` : 
+          description: totalDiscount > 0 ? 
+            `Sold ${items.length} item(s) with a $${totalDiscount.toFixed(2)} discount.` : 
             `Sold ${items.length} item(s).` 
         });
       } catch (error) {

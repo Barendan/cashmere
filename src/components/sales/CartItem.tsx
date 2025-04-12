@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Product } from '@/models/types';
 import { Button } from '@/components/ui/button';
 import { MinusCircle, PlusCircle, Trash2, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface CartItemProps {
   product: Product;
@@ -12,7 +14,8 @@ interface CartItemProps {
   onDecrement: () => void;
   onRemove: () => void;
   maxQuantity: number;
-  discount?: number;
+  discount: number;
+  onDiscountChange: (discount: number) => void;
 }
 
 const CartItem = ({ 
@@ -22,11 +25,21 @@ const CartItem = ({
   onDecrement, 
   onRemove, 
   maxQuantity,
-  discount = 0
+  discount,
+  onDiscountChange
 }: CartItemProps) => {
   const itemTotal = product.sellPrice * quantity;
   const discountedTotal = Math.max(0, itemTotal - discount);
   const hasDiscount = discount > 0;
+  
+  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+    if (isNaN(value) || value < 0) {
+      onDiscountChange(0);
+    } else {
+      onDiscountChange(Math.min(value, itemTotal)); // Ensure discount doesn't exceed item total
+    }
+  };
   
   return (
     <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white h-auto min-h-[88px]">
@@ -62,39 +75,57 @@ const CartItem = ({
         </div>
       </div>
       
-      <div className="flex justify-between items-center mt-auto">
-        <div className="text-xs text-muted-foreground">
-          {formatCurrency(product.sellPrice)} each
+      <div className="flex flex-col gap-2 mt-1">
+        <div className="flex justify-between items-center">
+          <div className="text-xs text-muted-foreground">
+            {formatCurrency(product.sellPrice)} each
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {hasDiscount ? (
+              <div className="flex flex-col items-end">
+                <div className="text-sm line-through text-muted-foreground">
+                  {formatCurrency(itemTotal)}
+                </div>
+                <div className="flex items-center">
+                  <Percent className="h-3 w-3 text-red-500 mr-0.5" />
+                  <span className="text-sm font-semibold text-red-500">
+                    {formatCurrency(discountedTotal)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm font-semibold text-spa-deep">
+                {formatCurrency(itemTotal)}
+              </div>
+            )}
+            
+            <Button 
+              type="button" 
+              size="icon" 
+              variant="ghost" 
+              className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50" 
+              onClick={onRemove}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
-          {hasDiscount ? (
-            <div className="flex flex-col items-end">
-              <div className="text-sm line-through text-muted-foreground">
-                {formatCurrency(itemTotal)}
-              </div>
-              <div className="flex items-center">
-                <Percent className="h-3 w-3 text-red-500 mr-0.5" />
-                <span className="text-sm font-semibold text-red-500">
-                  {formatCurrency(discountedTotal)}
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm font-semibold text-spa-deep">
-              {formatCurrency(itemTotal)}
-            </div>
-          )}
-          
-          <Button 
-            type="button" 
-            size="icon" 
-            variant="ghost" 
-            className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50" 
-            onClick={onRemove}
-          >
-            <Trash2 size={14} />
-          </Button>
+          <Label htmlFor={`discount-${product.id}`} className="text-xs text-muted-foreground flex-shrink-0">
+            Discount:
+          </Label>
+          <Input
+            id={`discount-${product.id}`}
+            type="number"
+            min="0"
+            step="1"
+            value={discount || ''}
+            onChange={handleDiscountChange}
+            className="h-6 text-xs py-1 px-2"
+            placeholder="0.00"
+          />
         </div>
       </div>
     </div>

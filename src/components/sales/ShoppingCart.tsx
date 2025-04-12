@@ -1,66 +1,44 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Product } from '@/models/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { formatCurrency } from '@/lib/format';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Undo2, Percent } from 'lucide-react';
+import { Undo2 } from 'lucide-react';
 
 interface CartItem {
   product: Product;
   quantity: number;
+  discount: number;
 }
 
 interface ShoppingCartProps {
   items: CartItem[];
   updateQuantity: (productId: string, quantity: number) => void;
+  updateDiscount: (productId: string, discount: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
   recordSale: () => void;
   isProcessing: boolean;
   undoLastTransaction?: () => void;
-  discount: number;
-  setDiscount: (discount: number) => void;
 }
 
 const ShoppingCart = ({
   items,
   updateQuantity,
+  updateDiscount,
   removeItem,
   clearCart,
   recordSale,
   isProcessing,
-  undoLastTransaction,
-  discount,
-  setDiscount
+  undoLastTransaction
 }: ShoppingCartProps) => {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
-  const finalTotal = Math.max(0, subtotal - discount);
-  
-  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
-    if (isNaN(value) || value < 0) {
-      setDiscount(0);
-    } else {
-      setDiscount(Math.min(value, subtotal)); // Ensure discount doesn't exceed subtotal
-    }
-  };
-  
-  // Calculate per-product discount distribution
-  const getItemDiscount = (item: CartItem): number => {
-    if (discount === 0 || subtotal === 0) return 0;
-    
-    // Distribute discount proportionally based on item's contribution to total
-    const itemProportion = (item.product.sellPrice * item.quantity) / subtotal;
-    const itemDiscount = discount * itemProportion;
-    
-    return Math.round(itemDiscount * 100) / 100; // Round to 2 decimal places
-  };
+  const totalDiscount = items.reduce((sum, item) => sum + item.discount, 0);
+  const finalTotal = Math.max(0, subtotal - totalDiscount);
   
   return (
     <div className="h-full flex flex-col">
@@ -91,7 +69,8 @@ const ShoppingCart = ({
                   onIncrement={() => updateQuantity(item.product.id, item.quantity + 1)}
                   onDecrement={() => updateQuantity(item.product.id, item.quantity - 1)}
                   onRemove={() => removeItem(item.product.id)}
-                  discount={getItemDiscount(item)}
+                  discount={item.discount}
+                  onDiscountChange={(discount) => updateDiscount(item.product.id, discount)}
                 />
               ))}
             </div>
@@ -102,30 +81,13 @@ const ShoppingCart = ({
               <span className="text-muted-foreground">Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="discount" className="text-sm">
-                Discount Amount ($)
-              </Label>
-              <Input 
-                id="discount"
-                type="number"
-                min="0"
-                step="1"
-                value={discount || ''}
-                onChange={handleDiscountChange}
-                className="h-8 text-sm" 
-                placeholder="Enter discount amount"
-              />
-            </div>
             
-            {discount > 0 && (
+            {totalDiscount > 0 && (
               <div className="flex justify-between text-sm text-red-600">
                 <span className="flex items-center">
-                  <Percent size={14} className="mr-1" />
-                  Discount
+                  Total Discounts
                 </span>
-                <span>-{formatCurrency(discount)}</span>
+                <span>-{formatCurrency(totalDiscount)}</span>
               </div>
             )}
             
