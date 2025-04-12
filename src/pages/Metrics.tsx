@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,76 @@ const Metrics = () => {
   }, [salesTransactions, startOfMonth]);
 
   const currentMonth = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(today);
+
+  // Define productPerformance
+  const productPerformance = useMemo(() => {
+    const productMap = new Map();
+    
+    salesTransactions.forEach(transaction => {
+      const productId = transaction.productId;
+      const product = products.find(p => p.id === productId);
+      
+      if (product) {
+        if (!productMap.has(productId)) {
+          productMap.set(productId, {
+            id: productId,
+            name: product.name,
+            totalSold: 0,
+            totalRevenue: 0,
+            costPrice: product.costPrice,
+            profit: 0
+          });
+        }
+        
+        const productData = productMap.get(productId);
+        productData.totalSold += transaction.quantity;
+        productData.totalRevenue += transaction.price;
+        productData.profit += transaction.price - (product.costPrice * transaction.quantity);
+      }
+    });
+    
+    return Array.from(productMap.values())
+      .sort((a, b) => b.profit - a.profit);
+  }, [salesTransactions, products]);
+
+  // Define salesData
+  const salesData = useMemo(() => {
+    // Filter sales based on selected time range
+    const filteredSales = sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      
+      switch(timeRange) {
+        case "7days":
+          return saleDate >= sevenDaysAgo;
+        case "30days":
+          return saleDate >= thirtyDaysAgo;
+        case "monthly":
+          return true; // Show all for monthly view
+        default:
+          return false;
+      }
+    });
+    
+    // Group sales by date
+    const salesByDate = new Map();
+    
+    filteredSales.forEach(sale => {
+      const dateStr = new Date(sale.date).toISOString().split('T')[0];
+      
+      if (!salesByDate.has(dateStr)) {
+        salesByDate.set(dateStr, {
+          date: dateStr,
+          revenue: 0
+        });
+      }
+      
+      salesByDate.get(dateStr).revenue += sale.totalAmount;
+    });
+    
+    // Convert to array and sort by date
+    return Array.from(salesByDate.values())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [sales, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
   // Now using serviceIncomes from the finance data instead of filtered product transactions
   const servicesData = useMemo(() => {
