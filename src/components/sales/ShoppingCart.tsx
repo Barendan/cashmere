@@ -51,6 +51,17 @@ const ShoppingCart = ({
     }
   };
   
+  // Calculate per-product discount distribution
+  const getItemDiscount = (item: CartItem): number => {
+    if (discount === 0 || subtotal === 0) return 0;
+    
+    // Distribute discount proportionally based on item's contribution to total
+    const itemProportion = (item.product.sellPrice * item.quantity) / subtotal;
+    const itemDiscount = discount * itemProportion;
+    
+    return Math.round(itemDiscount * 100) / 100; // Round to 2 decimal places
+  };
+  
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between p-4 border-b border-spa-sand/50">
@@ -80,6 +91,7 @@ const ShoppingCart = ({
                   onIncrement={() => updateQuantity(item.product.id, item.quantity + 1)}
                   onDecrement={() => updateQuantity(item.product.id, item.quantity - 1)}
                   onRemove={() => removeItem(item.product.id)}
+                  discount={getItemDiscount(item)}
                 />
               ))}
             </div>

@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Search, ChevronDown, ChevronRight } from "lucide-react";
+import { Search, ChevronDown, ChevronRight, Percent } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import ShoppingCart from "@/components/sales/ShoppingCart";
@@ -22,6 +22,8 @@ interface GroupedTransaction {
   date: Date;
   userName: string;
   totalAmount: number;
+  originalTotal: number | undefined;
+  discount: number | undefined;
   itemCount: number;
 }
 
@@ -132,14 +134,36 @@ const SalesLog = () => {
       );
       
       const firstTransaction = sortedTransactions[0];
-      const totalAmount = sortedTransactions.reduce((sum, t) => sum + t.price, 0);
+      
+      let originalTotal = 0;
+      let finalTotal = 0;
+      let hasDiscount = false;
+      
+      sortedTransactions.forEach(t => {
+        if (t.discount && t.discount > 0) {
+          hasDiscount = true;
+          originalTotal += (t.price + t.discount);
+          finalTotal += t.price;
+        } else if (t.originalPrice && t.originalPrice > t.price) {
+          hasDiscount = true;
+          originalTotal += t.originalPrice;
+          finalTotal += t.price;
+        } else {
+          originalTotal += t.price;
+          finalTotal += t.price;
+        }
+      });
+      
+      const totalDiscount = originalTotal - finalTotal;
       
       groupedTransactions.push({
         saleId: saleId === 'no-sale-id' ? null : saleId,
         transactions: sortedTransactions,
         date: new Date(firstTransaction.date),
         userName: firstTransaction.userName,
-        totalAmount,
+        totalAmount: finalTotal,
+        originalTotal: hasDiscount ? originalTotal : undefined,
+        discount: hasDiscount ? totalDiscount : undefined,
         itemCount: sortedTransactions.length
       });
     });
@@ -304,11 +328,30 @@ const SalesLog = () => {
                           )}
                         </TableCell>
                         <TableCell>{group.userName}</TableCell>
-                        <TableCell>{formatCurrency(group.totalAmount)}</TableCell>
+                        <TableCell>
+                          {group.discount && group.discount > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="line-through text-sm text-muted-foreground">
+                                {formatCurrency(group.originalTotal || 0)}
+                              </span>
+                              <div className="flex items-center text-red-600">
+                                <Percent className="h-3 w-3 mr-0.5" />
+                                <span>{formatCurrency(group.totalAmount)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            formatCurrency(group.totalAmount)
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
                             {group.transactions[0].type}
                           </Badge>
+                          {group.discount && group.discount > 0 && (
+                            <Badge className="ml-2 bg-red-100 text-red-800">
+                              Discount: {formatCurrency(group.discount)}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           {group.transactions.length > 1 && (
@@ -339,10 +382,31 @@ const SalesLog = () => {
                                 </div>
                               </TableCell>
                               <TableCell></TableCell>
-                              <TableCell>{transaction.quantity} item(s)</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <span>{transaction.quantity} item(s)</span>
+                                  {transaction.discount && transaction.discount > 0 && (
+                                    <Badge className="ml-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
+                                      <Percent className="h-2 w-2 mr-0.5" />
+                                      {formatCurrency(transaction.discount)}
+                                    </Badge>
+                                  )}
+                                </div>  
+                              </TableCell>
                               <TableCell></TableCell>
                               <TableCell className="text-right">
-                                {formatCurrency(transaction.price)}
+                                {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-xs text-muted-foreground line-through">
+                                      {formatCurrency(transaction.originalPrice)}
+                                    </span>
+                                    <span className="text-red-600">
+                                      {formatCurrency(transaction.price)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  formatCurrency(transaction.price)
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}

@@ -272,12 +272,27 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const newTransactions: any[] = [];
       const productUpdatesPromises: Promise<any>[] = [];
       
+      const getItemDiscount = (item: {product: Product, quantity: number}): number => {
+        if (discount === 0 || subtotal === 0) return 0;
+        
+        const itemProportion = (item.product.sellPrice * item.quantity) / subtotal;
+        const itemDiscount = discount * itemProportion;
+        
+        return Math.round(itemDiscount * 100) / 100;
+      };
+      
       for (const item of items) {
+        const itemDiscount = getItemDiscount(item);
+        const originalPrice = item.product.sellPrice * item.quantity;
+        const discountedPrice = Math.max(0, originalPrice - itemDiscount);
+        
         newTransactions.push({
           product_id: item.product.id,
           product_name: item.product.name,
           quantity: item.quantity,
-          price: item.product.sellPrice * item.quantity,
+          price: discountedPrice,
+          original_price: originalPrice,
+          discount: itemDiscount,
           type: 'sale',
           date: now.toISOString(),
           user_id: user?.id || 'unknown',

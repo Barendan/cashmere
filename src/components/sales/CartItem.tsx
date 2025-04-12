@@ -2,7 +2,7 @@
 import React from 'react';
 import { Product } from '@/models/types';
 import { Button } from '@/components/ui/button';
-import { MinusCircle, PlusCircle, Trash2 } from 'lucide-react';
+import { MinusCircle, PlusCircle, Trash2, Percent } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 
 interface CartItemProps {
@@ -12,6 +12,7 @@ interface CartItemProps {
   onDecrement: () => void;
   onRemove: () => void;
   maxQuantity: number;
+  discount?: number;
 }
 
 const CartItem = ({ 
@@ -20,10 +21,15 @@ const CartItem = ({
   onIncrement, 
   onDecrement, 
   onRemove, 
-  maxQuantity 
+  maxQuantity,
+  discount = 0
 }: CartItemProps) => {
+  const itemTotal = product.sellPrice * quantity;
+  const discountedTotal = Math.max(0, itemTotal - discount);
+  const hasDiscount = discount > 0;
+  
   return (
-    <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white h-[88px]">
+    <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white h-auto min-h-[88px]">
       <div className="flex justify-between items-start mb-2">
         <div className="font-medium text-spa-deep text-sm truncate mr-2 flex-grow">
           {product.name}
@@ -62,9 +68,23 @@ const CartItem = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <div className="text-sm font-semibold text-spa-deep">
-            {formatCurrency(product.sellPrice * quantity)}
-          </div>
+          {hasDiscount ? (
+            <div className="flex flex-col items-end">
+              <div className="text-sm line-through text-muted-foreground">
+                {formatCurrency(itemTotal)}
+              </div>
+              <div className="flex items-center">
+                <Percent className="h-3 w-3 text-red-500 mr-0.5" />
+                <span className="text-sm font-semibold text-red-500">
+                  {formatCurrency(discountedTotal)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-sm font-semibold text-spa-deep">
+              {formatCurrency(itemTotal)}
+            </div>
+          )}
           
           <Button 
             type="button" 

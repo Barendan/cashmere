@@ -75,6 +75,12 @@ const ProductCard = ({
             Out of Stock
           </Badge>
         )}
+        {discount > 0 && isInCart && (
+          <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200 text-[0.7rem] py-0 px-1.5 font-mono flex items-center">
+            <Percent className="h-3 w-3 mr-0.5" />
+            Discount
+          </Badge>
+        )}
       </div>
       
       {/* Product name - with receipt-style header */}

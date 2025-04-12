@@ -82,7 +82,9 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
       date: tx.date,
       user_id: tx.user_id,
       user_name: tx.user_name,
-      sale_id: tx.sale_id // Pass UUID directly
+      sale_id: tx.sale_id, // Pass UUID directly
+      discount: tx.discount || null, // Add discount field
+      original_price: tx.original_price || null // Add original price field
     }));
     
     console.log("Formatted transactions for RPC:", JSON.stringify(formattedTransactions));
