@@ -141,7 +141,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col p-0 overflow-hidden">
-        <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden min-h-[40vh]">
+        <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden">
           <Table>
             <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow>
@@ -154,7 +154,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
               </TableRow>
             </TableHeader>
           </Table>
-          <ScrollArea className="flex-grow overflow-auto max-h-[calc(100vh-350px)]">
+          <ScrollArea className="flex-grow overflow-auto max-h-[30vh]">
             <Table>
               <TableBody>
                 {groupedTransactions.length > 0 ? (

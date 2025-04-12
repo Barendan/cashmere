@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { FinanceRecord } from "@/models/types";
 
 const categoryColors: Record<string, string> = {
@@ -73,7 +73,6 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     fetchExpenses();
   }, [toast, limit]);
 
-  // When a new expense is added, update the list
   useEffect(() => {
     if (newExpense) {
       const formattedExpense = mapFinanceRowToFinanceRecord(newExpense);
@@ -102,7 +101,7 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
 
   if (compact) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-[30vh] overflow-auto">
         {expenses.map((expense) => (
           <div 
             key={expense.id} 
@@ -132,7 +131,7 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-rose-50">
+          <TableHeader className="bg-rose-50 sticky top-0 z-10">
             <TableRow className="hover:bg-rose-50/80">
               <TableHead>Date</TableHead>
               <TableHead>Vendor</TableHead>
@@ -140,24 +139,28 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {expenses.map((expense) => (
-              <TableRow key={expense.id} className="hover:bg-rose-50/20">
-                <TableCell>{format(expense.date, "PP")}</TableCell>
-                <TableCell>{expense.vendor || "Unknown"}</TableCell>
-                <TableCell>
-                  <Badge 
-                    variant="outline"
-                    className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
-                  >
-                    {expense.category || "Other"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
         </Table>
+        <ScrollArea className="max-h-[30vh]">
+          <Table>
+            <TableBody>
+              {expenses.map((expense) => (
+                <TableRow key={expense.id} className="hover:bg-rose-50/20">
+                  <TableCell>{format(expense.date, "PP")}</TableCell>
+                  <TableCell>{expense.vendor || "Unknown"}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant="outline"
+                      className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
+                    >
+                      {expense.category || "Other"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
     </div>
   );

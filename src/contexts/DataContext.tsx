@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -71,11 +72,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           amount, 
           date, 
           customer_name,
+          category,
           service_id,
           services(name)
         `)
         .eq('type', 'income')
-        .not('service_id', 'is', null)
         .order('date', { ascending: false });
 
       if (error) {
@@ -83,14 +84,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (data) {
-        const transformedServiceIncomes: ServiceIncome[] = data.map(item => ({
-          id: item.id,
-          serviceId: item.service_id || "",
-          serviceName: item.services?.name || "Unknown Service",
-          amount: item.amount,
-          date: new Date(item.date),
-          customerName: item.customer_name
-        }));
+        const transformedServiceIncomes: ServiceIncome[] = data.map(item => {
+          // Use category as the service identifier, with fallback handling
+          const categoryId = item.category || "uncategorized";
+          const categoryName = item.category || "Uncategorized";
+          
+          // Allow for backward compatibility if service_id exists
+          const serviceId = item.service_id || categoryId;
+          const serviceName = item.services?.name || categoryName;
+          
+          return {
+            id: item.id,
+            serviceId: serviceId,
+            serviceName: serviceName,
+            amount: item.amount,
+            date: new Date(item.date),
+            customerName: item.customer_name
+          };
+        });
 
         setServiceIncomes(transformedServiceIncomes);
         return transformedServiceIncomes;

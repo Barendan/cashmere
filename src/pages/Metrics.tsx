@@ -1,10 +1,10 @@
-
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Download, Calendar, DollarSign, ArrowUp, ShoppingBag, Loader2, Package2, Award, Users } from "lucide-react";
 
@@ -492,7 +492,7 @@ const Metrics = () => {
             <CardContent>
               <div className="rounded-md border border-spa-sand">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 bg-white z-10">
                     <TableRow>
                       <TableHead>Product Name</TableHead>
                       <TableHead className="text-right">Quantity Sold</TableHead>
@@ -502,30 +502,34 @@ const Metrics = () => {
                       <TableHead className="text-right">Profit Margin</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {productPerformance.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell className="text-right">{product.totalSold}</TableCell>
-                        <TableCell className="text-right">${product.totalRevenue.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${(product.costPrice * product.totalSold).toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${product.profit.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          {product.totalRevenue > 0 
-                            ? `${((product.profit / product.totalRevenue) * 100).toFixed(1)}%` 
-                            : "0%"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {productPerformance.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                          No product sales data available.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
                 </Table>
+                <ScrollArea className="max-h-[30vh]">
+                  <Table>
+                    <TableBody>
+                      {productPerformance.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell className="font-medium">{product.name}</TableCell>
+                          <TableCell className="text-right">{product.totalSold}</TableCell>
+                          <TableCell className="text-right">${product.totalRevenue.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${(product.costPrice * product.totalSold).toFixed(2)}</TableCell>
+                          <TableCell className="text-right">${product.profit.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">
+                            {product.totalRevenue > 0 
+                              ? `${((product.profit / product.totalRevenue) * 100).toFixed(1)}%` 
+                              : "0%"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {productPerformance.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                            No product sales data available.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </div>
             </CardContent>
           </Card>
@@ -689,7 +693,7 @@ const Metrics = () => {
             <CardContent>
               <div className="rounded-md border border-spa-sand">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 bg-white z-10">
                     <TableRow>
                       <TableHead>Service Name</TableHead>
                       <TableHead className="text-right">Times Provided</TableHead>
@@ -697,24 +701,28 @@ const Metrics = () => {
                       <TableHead className="text-right">Unique Customers</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
-                    {servicesData.map((service) => (
-                      <TableRow key={service.id}>
-                        <TableCell className="font-medium">{service.name}</TableCell>
-                        <TableCell className="text-right">{service.totalSold}</TableCell>
-                        <TableCell className="text-right">${service.totalRevenue.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">{service.uniqueCustomers || 0}</TableCell>
-                      </TableRow>
-                    ))}
-                    {servicesData.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                          No service data available.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
                 </Table>
+                <ScrollArea className="max-h-[30vh]">
+                  <Table>
+                    <TableBody>
+                      {servicesData.map((service) => (
+                        <TableRow key={service.id}>
+                          <TableCell className="font-medium">{service.name}</TableCell>
+                          <TableCell className="text-right">{service.totalSold}</TableCell>
+                          <TableCell className="text-right">${service.totalRevenue.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{service.uniqueCustomers || 0}</TableCell>
+                        </TableRow>
+                      ))}
+                      {servicesData.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                            No service data available.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </div>
             </CardContent>
           </Card>
