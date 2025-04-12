@@ -20,10 +20,20 @@ import {
 } from "../services/transactionService";
 import { supabase, mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
 
+interface ServiceIncome {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  amount: number;
+  date: Date;
+  customerName: string | null;
+}
+
 interface DataContextType {
   products: Product[];
   transactions: Transaction[];
   sales: Sale[];
+  serviceIncomes: ServiceIncome[];
   lastRestockDate: Date | null;
   addProduct: (product: Omit<Product, "id">) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
@@ -45,11 +55,58 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [serviceIncomes, setServiceIncomes] = useState<ServiceIncome[]>([]);
   const [lastRestockDate, setLastRestockDate] = useState<Date | null>(null);
   const [lastAction, setLastAction] = useState<{ action: string; data: any } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const fetchServiceIncomes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('finances')
+        .select(`
+          id, 
+          amount, 
+          date, 
+          customer_name,
+          service_id,
+          services(name)
+        `)
+        .eq('type', 'income')
+        .not('service_id', 'is', null)
+        .order('date', { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const transformedServiceIncomes: ServiceIncome[] = data.map(item => ({
+          id: item.id,
+          serviceId: item.service_id || "",
+          serviceName: item.services?.name || "Unknown Service",
+          amount: item.amount,
+          date: new Date(item.date),
+          customerName: item.customer_name
+        }));
+
+        setServiceIncomes(transformedServiceIncomes);
+        return transformedServiceIncomes;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Error fetching service incomes:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to load service income data.", 
+        variant: "destructive" 
+      });
+      return [];
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -71,6 +128,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           setSales(salesWithItems);
           setTransactions(transformedTransactions);
+
+          await fetchServiceIncomes();
+
         } catch (error) {
           console.error('Error fetching sales:', error);
           setSales([]);
@@ -646,6 +706,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         products,
         transactions,
         sales,
+        serviceIncomes,
         lastRestockDate,
         addProduct,
         updateProduct,

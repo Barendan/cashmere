@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Download, Calendar, DollarSign, ArrowUp, ShoppingBag, Loader2, Package2, Award } from "lucide-react";
+import { Download, Calendar, DollarSign, ArrowUp, ShoppingBag, Loader2, Package2, Award, Users } from "lucide-react";
 
 const Metrics = () => {
-  const { products, transactions, sales, isLoading } = useData();
+  const { products, transactions, sales, serviceIncomes, isLoading } = useData();
   const [timeRange, setTimeRange] = useState<"7days" | "30days" | "monthly">("7days");
   const [metricView, setMetricView] = useState<"products" | "services">("products");
 
@@ -33,153 +33,76 @@ const Metrics = () => {
 
   const currentMonth = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(today);
 
+  // Now using serviceIncomes from the finance data instead of filtered product transactions
   const servicesData = useMemo(() => {
-    // This would ideally use service income data from the finance system
-    // For now, let's simulate service data from the regular transactions
-    // In a real implementation, this would come from the finance context
-    
-    const serviceTransactions = transactions.filter(t => 
-      // Fix the type comparison error by using a type guard
-      t.type === "sale" && products.find(p => p.id === t.productId)?.category === "Services"
-    );
-    
-    const serviceMap = new Map();
-    
-    serviceTransactions.forEach(t => {
-      const serviceId = t.productId; // In a real scenario, this would be serviceId
-      
-      if (!serviceMap.has(serviceId)) {
-        serviceMap.set(serviceId, {
-          id: serviceId,
-          name: t.productName,
-          totalSold: 0,
-          totalRevenue: 0,
-          costPrice: 0, // Services typically don't have cost price in the same way
-          profit: t.price // For services, revenue is often the same as profit
-        });
-      }
-      
-      const service = serviceMap.get(serviceId);
-      service.totalSold += 1;
-      service.totalRevenue += t.price;
-      service.profit += t.price;
-    });
-    
-    return Array.from(serviceMap.values())
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
-  }, [transactions, products]);
-
-  const salesData = useMemo(() => {
-    const salesByDay = new Map();
-    const salesByMonth = new Map();
-    
-    const filteredSales = salesTransactions.filter(sale => {
-      const saleDate = new Date(sale.date);
+    // Filter service incomes for the selected time range
+    const filteredServiceIncomes = serviceIncomes.filter(income => {
+      const incomeDate = new Date(income.date);
       
       switch(timeRange) {
         case "7days":
-          return saleDate >= sevenDaysAgo;
+          return incomeDate >= sevenDaysAgo;
         case "30days":
-          return saleDate >= thirtyDaysAgo;
+          return incomeDate >= thirtyDaysAgo;
         case "monthly":
-          return true;
+          return true; // Show all for monthly view
         default:
           return false;
       }
     });
     
-    if (timeRange === "7days" || timeRange === "30days") {
-      filteredSales.forEach(sale => {
-        const saleDate = new Date(sale.date);
-        const dateStr = saleDate.toISOString().split('T')[0];
-        
-        if (!salesByDay.has(dateStr)) {
-          salesByDay.set(dateStr, { date: dateStr, revenue: 0, items: 0 });
-        }
-        
-        const daySales = salesByDay.get(dateStr);
-        daySales.revenue += sale.price;
-        daySales.items += sale.quantity;
-      });
-      
-      const daysToShow = timeRange === "7days" ? 7 : 30;
-      for (let i = 0; i < daysToShow; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        if (!salesByDay.has(dateStr)) {
-          salesByDay.set(dateStr, { date: dateStr, revenue: 0, items: 0 });
-        }
-      }
-      
-      return Array.from(salesByDay.values())
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map(day => ({
-          ...day,
-          date: new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        }));
-    }
+    // Group service incomes by service ID and map to the required format
+    const serviceMap = new Map();
     
-    else if (timeRange === "monthly") {
-      filteredSales.forEach(sale => {
-        const saleDate = new Date(sale.date);
-        const monthStr = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(saleDate);
-        
-        if (!salesByMonth.has(monthStr)) {
-          salesByMonth.set(monthStr, { date: monthStr, revenue: 0, items: 0 });
-        }
-        
-        const monthSales = salesByMonth.get(monthStr);
-        monthSales.revenue += sale.price;
-        monthSales.items += sale.quantity;
-      });
+    filteredServiceIncomes.forEach(income => {
+      const serviceId = income.serviceId;
       
-      return Array.from(salesByMonth.values())
-        .sort((a, b) => {
-          const [aMonth, aYear] = a.date.split(' ');
-          const [bMonth, bYear] = b.date.split(' ');
-          
-          if (aYear !== bYear) return parseInt(aYear) - parseInt(bYear);
-          
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return months.indexOf(aMonth) - months.indexOf(bMonth);
+      if (!serviceMap.has(serviceId)) {
+        serviceMap.set(serviceId, {
+          id: serviceId,
+          name: income.serviceName,
+          totalSold: 0,
+          totalRevenue: 0,
+          customers: new Set()
         });
-    }
-    
-    return [];
-  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo, today]);
-
-  const productPerformance = useMemo(() => {
-    const productSales = new Map();
-    
-    salesTransactions.forEach(sale => {
-      if (!productSales.has(sale.productId)) {
-        const product = products.find(p => p.id === sale.productId);
-        
-        if (product) {
-          productSales.set(sale.productId, {
-            id: sale.productId,
-            name: product.name,
-            totalSold: 0,
-            totalRevenue: 0,
-            costPrice: product.costPrice,
-            profit: 0
-          });
-        }
       }
       
-      if (productSales.has(sale.productId)) {
-        const productData = productSales.get(sale.productId);
-        productData.totalSold += sale.quantity;
-        productData.totalRevenue += sale.price;
-        productData.profit += sale.price - (productData.costPrice * sale.quantity);
+      const service = serviceMap.get(serviceId);
+      service.totalSold += 1;
+      service.totalRevenue += income.amount;
+      if (income.customerName) {
+        service.customers.add(income.customerName);
       }
     });
     
-    return Array.from(productSales.values())
+    // Convert the map to an array and format for display
+    return Array.from(serviceMap.values())
+      .map(service => ({
+        ...service,
+        uniqueCustomers: service.customers.size,
+        customers: undefined // Remove the Set from the final object
+      }))
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
-  }, [salesTransactions, products]);
+  }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+
+  // Count unique customers per month
+  const uniqueCustomers = useMemo(() => {
+    const customers = new Set();
+    
+    // Filter service incomes from current month
+    const currentMonthServiceIncomes = serviceIncomes.filter(income => 
+      new Date(income.date) >= startOfMonth
+    );
+    
+    // Add each customer name to the Set (which automatically handles uniqueness)
+    currentMonthServiceIncomes.forEach(income => {
+      if (income.customerName) {
+        customers.add(income.customerName);
+      }
+    });
+    
+    return customers.size;
+  }, [serviceIncomes, startOfMonth]);
 
   const totalRevenue = useMemo(() => 
     currentMonthTransactions.reduce((sum, t) => sum + t.price, 0),
@@ -212,10 +135,33 @@ const Metrics = () => {
     [servicesData]
   );
   
-  const totalServiceProfit = useMemo(() => 
-    servicesData.reduce((sum, service) => sum + service.profit, 0),
-    [servicesData]
-  );
+  const totalUniqueCustomers = useMemo(() => {
+    const allCustomers = new Set();
+    
+    // The time range should match the filters applied to the servicesData
+    const filteredServiceIncomes = serviceIncomes.filter(income => {
+      const incomeDate = new Date(income.date);
+      
+      switch(timeRange) {
+        case "7days":
+          return incomeDate >= sevenDaysAgo;
+        case "30days":
+          return incomeDate >= thirtyDaysAgo;
+        case "monthly":
+          return true;
+        default:
+          return false;
+      }
+    });
+    
+    filteredServiceIncomes.forEach(income => {
+      if (income.customerName) {
+        allCustomers.add(income.customerName);
+      }
+    });
+    
+    return allCustomers.size;
+  }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
   
   const categoryData = useMemo(() => {
     const categories = new Map();
@@ -240,9 +186,7 @@ const Metrics = () => {
   }, [salesTransactions, products]);
 
   const serviceTypeData = useMemo(() => {
-    // In a real scenario, this would categorize services by type
-    // For now, we'll use the service names themselves as categories
-    
+    // Map services by name and their revenue
     return servicesData.map(service => ({
       name: service.name,
       value: service.totalRevenue
@@ -536,11 +480,11 @@ const Metrics = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Service Profit</p>
-                    <h3 className="text-2xl font-semibold mt-1">${totalServiceProfit.toFixed(2)}</h3>
+                    <p className="text-sm text-muted-foreground">Unique Customers</p>
+                    <h3 className="text-2xl font-semibold mt-1">{totalUniqueCustomers}</h3>
                   </div>
                   <div className="h-12 w-12 rounded-full bg-spa-water/20 flex items-center justify-center">
-                    <ArrowUp className="h-6 w-6 text-spa-deep" />
+                    <Users className="h-6 w-6 text-spa-deep" />
                   </div>
                 </div>
               </CardContent>
@@ -663,7 +607,7 @@ const Metrics = () => {
           <Card className="bg-white">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-spa-deep">Service Profitability</CardTitle>
+                <CardTitle className="text-spa-deep">Service Performance</CardTitle>
                 <CardDescription>Detailed service revenue analysis</CardDescription>
               </div>
               <Button className="bg-spa-deep text-white" onClick={exportCSV}>
@@ -679,7 +623,7 @@ const Metrics = () => {
                       <TableHead>Service Name</TableHead>
                       <TableHead className="text-right">Times Provided</TableHead>
                       <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Profit</TableHead>
+                      <TableHead className="text-right">Unique Customers</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -688,7 +632,7 @@ const Metrics = () => {
                         <TableCell className="font-medium">{service.name}</TableCell>
                         <TableCell className="text-right">{service.totalSold}</TableCell>
                         <TableCell className="text-right">${service.totalRevenue.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">${service.profit.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{service.uniqueCustomers || 0}</TableCell>
                       </TableRow>
                     ))}
                     {servicesData.length === 0 && (
