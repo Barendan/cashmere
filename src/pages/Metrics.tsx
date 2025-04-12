@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,7 +6,6 @@ import usePageTitle from "@/hooks/usePageTitle";
 import ProductMetrics from "@/components/metrics/ProductMetrics";
 import ServiceMetrics from "@/components/metrics/ServiceMetrics";
 
-// Extended interface to match what's used in the component
 interface ServiceIncomeWithCategory {
   id: string;
   serviceId: string;
@@ -15,7 +13,22 @@ interface ServiceIncomeWithCategory {
   amount: number;
   date: Date;
   customerName: string | null;
-  category?: string; // Add this property to handle the case in the code
+  category?: string;
+}
+
+interface ParsedServiceCategory {
+  serviceIds?: string[];
+  serviceNames?: string[];
+  servicePrices?: number[];
+  discount?: number;
+}
+
+interface ServiceMetric {
+  id: string;
+  name: string;
+  totalSold: number;
+  totalRevenue: number;
+  customers: Set<string>;
 }
 
 const Metrics = () => {
@@ -31,20 +44,16 @@ const Metrics = () => {
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
 
-  // Start of the current month
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  // Filter transactions
   const salesTransactions = useMemo(() => {
     return transactions.filter(t => t.type === "sale");
   }, [transactions]);
 
-  // Filter transactions for current month only
   const currentMonthTransactions = useMemo(() => {
     return salesTransactions.filter(t => new Date(t.date) >= startOfMonth);
   }, [salesTransactions, startOfMonth]);
 
-  // Define productPerformance
   const productPerformance = useMemo(() => {
     const productMap = new Map();
     
@@ -75,7 +84,6 @@ const Metrics = () => {
       .sort((a, b) => b.profit - a.profit);
   }, [salesTransactions, products]);
 
-  // Define salesData
   const salesData = useMemo(() => {
     const filteredSales = sales.filter(sale => {
       const saleDate = new Date(sale.date);
@@ -111,7 +119,6 @@ const Metrics = () => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [sales, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
-  // Process service incomes to handle multi-service transactions properly
   const servicesData = useMemo(() => {
     const filteredServiceIncomes = serviceIncomes.filter(income => {
       const incomeDate = new Date(income.date);
@@ -126,49 +133,39 @@ const Metrics = () => {
         default:
           return false;
       }
-    }) as ServiceIncomeWithCategory[]; // Cast to include category property
+    }) as ServiceIncomeWithCategory[];
     
-    const serviceMap = new Map();
+    const serviceMap = new Map<string, ServiceMetric>();
     
     filteredServiceIncomes.forEach(income => {
-      // Check if the income has a category property that contains multiple services
       if (income.category) {
         try {
-          const parsedCategory = JSON.parse(income.category);
+          const parsedCategory = JSON.parse(income.category) as ParsedServiceCategory;
           
-          if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds)) {
-            const services = parsedCategory.serviceIds.map((id: string, index: number) => ({
-              id,
-              name: parsedCategory.serviceNames[index],
-              price: parsedCategory.servicePrices[index]
-            }));
+          if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds) &&
+              parsedCategory.serviceNames && Array.isArray(parsedCategory.serviceNames) &&
+              parsedCategory.servicePrices && Array.isArray(parsedCategory.servicePrices)) {
             
-            const totalPriceBeforeDiscount = services.reduce((sum: number, service: any) => sum + service.price, 0);
+            const totalPriceBeforeDiscount = parsedCategory.servicePrices.reduce((sum, price) => sum + price, 0);
             const totalDiscount = parsedCategory.discount || 0;
             
-            services.forEach(service => {
+            parsedCategory.serviceIds.forEach((serviceId, index) => {
+              const serviceName = parsedCategory.serviceNames?.[index] || "Unknown Service";
+              const servicePrice = parsedCategory.servicePrices?.[index] || 0;
+              
               const serviceDiscount = totalPriceBeforeDiscount > 0 
-                ? (service.price / totalPriceBeforeDiscount) * totalDiscount 
+                ? (servicePrice / totalPriceBeforeDiscount) * totalDiscount 
                 : 0;
                 
-              const finalPrice = Math.max(0, service.price - serviceDiscount);
+              const finalPrice = Math.max(0, servicePrice - serviceDiscount);
               
-              if (!serviceMap.has(service.id)) {
-                serviceMap.set(service.id, {
-                  id: service.id,
-                  name: service.name,
-                  totalSold: 0,
-                  totalRevenue: 0,
-                  customers: new Set()
-                });
-              }
-              
-              const serviceData = serviceMap.get(service.id);
-              serviceData.totalSold += 1;
-              serviceData.totalRevenue += finalPrice;
-              if (income.customerName) {
-                serviceData.customers.add(income.customerName);
-              }
+              updateServiceMap(
+                serviceMap, 
+                serviceId, 
+                serviceName, 
+                finalPrice, 
+                income.customerName
+              );
             });
           } else {
             processRegularService(income, serviceMap);
@@ -189,31 +186,47 @@ const Metrics = () => {
         customers: undefined
       }))
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
-      
-    function processRegularService(income: ServiceIncomeWithCategory, serviceMap: Map<string, any>) {
-      const serviceId = income.serviceId;
-      const serviceName = income.serviceName || "Unknown Service";
-      
-      if (!serviceMap.has(serviceId)) {
-        serviceMap.set(serviceId, {
-          id: serviceId,
-          name: serviceName,
-          totalSold: 0,
-          totalRevenue: 0,
-          customers: new Set()
-        });
-      }
-      
-      const service = serviceMap.get(serviceId);
-      service.totalSold += 1;
-      service.totalRevenue += income.amount;
-      if (income.customerName) {
-        service.customers.add(income.customerName);
-      }
-    }
   }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
-  // Count unique customers
+  function processRegularService(income: ServiceIncomeWithCategory, serviceMap: Map<string, ServiceMetric>) {
+    const serviceId = income.serviceId || "unknown";
+    const serviceName = income.serviceName || "Unknown Service";
+    
+    updateServiceMap(
+      serviceMap,
+      serviceId,
+      serviceName,
+      income.amount,
+      income.customerName
+    );
+  }
+
+  function updateServiceMap(
+    serviceMap: Map<string, ServiceMetric>,
+    serviceId: string,
+    serviceName: string,
+    amount: number,
+    customerName: string | null
+  ) {
+    if (!serviceMap.has(serviceId)) {
+      serviceMap.set(serviceId, {
+        id: serviceId,
+        name: serviceName,
+        totalSold: 0,
+        totalRevenue: 0,
+        customers: new Set<string>()
+      });
+    }
+    
+    const service = serviceMap.get(serviceId)!;
+    service.totalSold += 1;
+    service.totalRevenue += amount;
+    
+    if (customerName) {
+      service.customers.add(customerName);
+    }
+  }
+
   const uniqueCustomers = useMemo(() => {
     const customers = new Set();
     
@@ -230,7 +243,6 @@ const Metrics = () => {
     return customers.size;
   }, [serviceIncomes, startOfMonth]);
 
-  // Calculate aggregated metrics
   const totalRevenue = useMemo(() => 
     currentMonthTransactions.reduce((sum, t) => sum + t.price, 0),
     [currentMonthTransactions]
@@ -263,7 +275,7 @@ const Metrics = () => {
   );
   
   const totalUniqueCustomers = useMemo(() => {
-    const allCustomers = new Set();
+    const allCustomers = new Set<string>();
     
     const filteredServiceIncomes = serviceIncomes.filter(income => {
       const incomeDate = new Date(income.date);
@@ -289,7 +301,6 @@ const Metrics = () => {
     return allCustomers.size;
   }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
   
-  // Prepare category data for pie chart
   const categoryData = useMemo(() => {
     const categories = new Map();
     
@@ -312,7 +323,6 @@ const Metrics = () => {
     return Array.from(categories.values());
   }, [salesTransactions, products]);
 
-  // Prepare service type data for pie chart with proper handling of multi-service data
   const serviceTypeData = useMemo(() => {
     return servicesData.map(service => ({
       name: service.name,
@@ -320,7 +330,6 @@ const Metrics = () => {
     }));
   }, [servicesData]);
 
-  // Export data to CSV
   const exportCSV = () => {
     const dataToExport = metricView === "products" ? productPerformance : servicesData;
     const filename = metricView === "products" ? "product-performance" : "service-performance";
