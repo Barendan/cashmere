@@ -143,7 +143,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       <CardContent className="flex-grow flex flex-col p-0 overflow-hidden">
         <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden">
           <Table>
-            <TableHeader className="sticky top-0 bg-white z-10">
+            <TableHeader className="sticky top-0 z-10 bg-spa-cream">
               <TableRow>
                 <TableHead className="w-[180px]">Date & Time</TableHead>
                 <TableHead>Details</TableHead>

@@ -300,7 +300,7 @@ const Finance = () => {
                   </div>
                   
                   <Card className="border-0 shadow-sm overflow-hidden">
-                    <CardHeader className="bg-emerald-50 border-b border-emerald-100 pb-4">
+                    <CardHeader className="border-b border-emerald-100 pb-4">
                       <CardTitle className="text-lg text-gray-900 flex items-center">
                         <Receipt className="h-5 w-5 mr-2 text-emerald-600" />
                         Income Records
@@ -330,7 +330,7 @@ const Finance = () => {
                     </div>
                     
                     <Card className="border-0 shadow-sm overflow-hidden">
-                      <CardHeader className="bg-rose-50 border-b border-rose-100 pb-4">
+                      <CardHeader className="border-b border-rose-100 pb-4">
                         <CardTitle className="text-lg text-gray-900 flex items-center">
                           <CreditCard className="h-5 w-5 mr-2 text-rose-600" />
                           Expense Records

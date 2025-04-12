@@ -131,8 +131,8 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-rose-50 sticky top-0 z-10">
-            <TableRow className="hover:bg-rose-50/80">
+          <TableHeader className="sticky top-0 z-10 bg-spa-cream">
+            <TableRow>
               <TableHead>Date</TableHead>
               <TableHead>Vendor</TableHead>
               <TableHead>Category</TableHead>
@@ -144,7 +144,7 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
           <Table>
             <TableBody>
               {expenses.map((expense) => (
-                <TableRow key={expense.id} className="hover:bg-rose-50/20">
+                <TableRow key={expense.id} className="hover:bg-rose-50">
                   <TableCell>{format(expense.date, "PP")}</TableCell>
                   <TableCell>{expense.vendor || "Unknown"}</TableCell>
                   <TableCell>

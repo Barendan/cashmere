@@ -333,8 +333,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
     <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-emerald-50">
-            <TableRow className="hover:bg-emerald-50/80">
+          <TableHeader>
+            <TableRow className="bg-spa-cream">
               <TableHead>Date</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Service</TableHead>
@@ -345,7 +345,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
           </TableHeader>
           <TableBody>
             {incomeRecords.map((record) => (
-              <TableRow key={record.id} className="hover:bg-emerald-50/20">
+              <TableRow key={record.id} className="hover:bg-green-50">
                 <TableCell>{format(record.date, "PP")}</TableCell>
                 <TableCell>{record.customerName || "Unknown"}</TableCell>
                 <TableCell>{formatServiceNames(record)}</TableCell>
