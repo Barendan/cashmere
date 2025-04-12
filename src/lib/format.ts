@@ -27,3 +27,38 @@ export const formatDate = (date: Date | string): string => {
     minute: 'numeric',
   }).format(date);
 };
+
+/**
+ * Format a number as percentage
+ */
+export const formatPercent = (value: number): string => {
+  return `${value.toFixed(1)}%`;
+};
+
+/**
+ * Format a number with specified decimals
+ */
+export const formatNumber = (value: number, decimals: number = 0): string => {
+  return value.toFixed(decimals);
+};
+
+/**
+ * Format tooltip value for charts
+ */
+export const formatTooltipValue = (value: number | string, type: 'currency' | 'percent' | 'number' = 'number'): string => {
+  if (typeof value === 'string') {
+    value = parseFloat(value);
+  }
+  
+  if (isNaN(value)) return 'N/A';
+  
+  switch (type) {
+    case 'currency':
+      return formatCurrency(value);
+    case 'percent':
+      return formatPercent(value);
+    case 'number':
+    default:
+      return formatNumber(value);
+  }
+};
