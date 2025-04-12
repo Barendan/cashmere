@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from "react";
 import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +38,11 @@ const Metrics = () => {
     // For now, let's simulate service data from the regular transactions
     // In a real implementation, this would come from the finance context
     
-    const serviceTransactions = transactions.filter(t => t.type === "service");
+    const serviceTransactions = transactions.filter(t => 
+      // Fix the type comparison error by using a type guard
+      t.type === "sale" && products.find(p => p.id === t.productId)?.category === "Services"
+    );
+    
     const serviceMap = new Map();
     
     serviceTransactions.forEach(t => {
@@ -64,7 +67,7 @@ const Metrics = () => {
     
     return Array.from(serviceMap.values())
       .sort((a, b) => b.totalRevenue - a.totalRevenue);
-  }, [transactions]);
+  }, [transactions, products]);
 
   const salesData = useMemo(() => {
     const salesByDay = new Map();
@@ -308,400 +311,400 @@ const Metrics = () => {
         </Tabs>
       </div>
 
-      <TabsContent value="products" className="mt-0 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <Tabs defaultValue="products" value={metricView}>
+        <TabsContent value="products" className="mt-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Monthly Revenue</p>
+                    <h3 className="text-2xl font-semibold mt-1">${totalRevenue.toFixed(2)}</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-spa-sage/20 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-spa-deep" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Monthly Profit</p>
+                    <h3 className="text-2xl font-semibold mt-1">${totalProfit.toFixed(2)}</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-spa-water/20 flex items-center justify-center">
+                    <ArrowUp className="h-6 w-6 text-spa-deep" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Items Sold This Month</p>
+                    <h3 className="text-2xl font-semibold mt-1">{totalItemsSold}</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-spa-stone/20 flex items-center justify-center">
+                    <ShoppingBag className="h-6 w-6 text-spa-deep" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Monthly Revenue</p>
-                  <h3 className="text-2xl font-semibold mt-1">${totalRevenue.toFixed(2)}</h3>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-spa-sage/20 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-spa-deep" />
-                </div>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-spa-deep">Sales Overview</CardTitle>
+                <CardDescription>Track your sales performance</CardDescription>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Monthly Profit</p>
-                  <h3 className="text-2xl font-semibold mt-1">${totalProfit.toFixed(2)}</h3>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-spa-water/20 flex items-center justify-center">
-                  <ArrowUp className="h-6 w-6 text-spa-deep" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Items Sold This Month</p>
-                  <h3 className="text-2xl font-semibold mt-1">{totalItemsSold}</h3>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-spa-stone/20 flex items-center justify-center">
-                  <ShoppingBag className="h-6 w-6 text-spa-deep" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-spa-deep">Sales Overview</CardTitle>
-              <CardDescription>Track your sales performance</CardDescription>
-            </div>
-            <Tabs defaultValue="7days" onValueChange={(value) => setTimeRange(value as any)}>
-              <TabsList>
-                <TabsTrigger value="7days">Last 7 Days</TabsTrigger>
-                <TabsTrigger value="30days">Last 30 Days</TabsTrigger>
-                <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip 
-                    formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
-                    contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="revenue" name="Revenue" fill="#AECCC6" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-white">
-            <CardHeader>
-              <CardTitle className="text-spa-deep">Product Performance</CardTitle>
-              <CardDescription>Profit analysis by product</CardDescription>
+              <Tabs defaultValue="7days" onValueChange={(value) => setTimeRange(value as any)}>
+                <TabsList>
+                  <TabsTrigger value="7days">Last 7 Days</TabsTrigger>
+                  <TabsTrigger value="30days">Last 30 Days</TabsTrigger>
+                  <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={productPerformance.slice(0, 6)}
-                    layout="vertical"
-                    margin={{ left: 100 }}
-                  >
+                  <BarChart data={salesData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 12 }} />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fontSize: 12 }}
-                      width={100}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`$${Number(value).toFixed(2)}`]}
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip 
+                      formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
                       contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
                     />
                     <Legend />
-                    <Bar dataKey="profit" name="Profit" fill="#9CB380" />
+                    <Bar dataKey="revenue" name="Revenue" fill="#AECCC6" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-spa-deep">Product Performance</CardTitle>
+                <CardDescription>Profit analysis by product</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={productPerformance.slice(0, 6)}
+                      layout="vertical"
+                      margin={{ left: 100 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 12 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        tick={{ fontSize: 12 }}
+                        width={100}
+                      />
+                      <Tooltip
+                        formatter={(value) => [`$${Number(value).toFixed(2)}`]}
+                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
+                      />
+                      <Legend />
+                      <Bar dataKey="profit" name="Profit" fill="#9CB380" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-spa-deep">Sales by Category</CardTitle>
+                <CardDescription>Revenue distribution by product category</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#8884d8"
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="bg-white">
-            <CardHeader>
-              <CardTitle className="text-spa-deep">Sales by Category</CardTitle>
-              <CardDescription>Revenue distribution by product category</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-spa-deep">Product Profitability</CardTitle>
+                <CardDescription>Detailed product sales and profit analysis</CardDescription>
+              </div>
+              <Button className="bg-spa-deep text-white" onClick={exportCSV}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
-                      contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-spa-deep">Product Profitability</CardTitle>
-              <CardDescription>Detailed product sales and profit analysis</CardDescription>
-            </div>
-            <Button className="bg-spa-deep text-white" onClick={exportCSV}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-spa-sand">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead className="text-right">Quantity Sold</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                    <TableHead className="text-right">Profit Margin</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {productPerformance.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell className="text-right">{product.totalSold}</TableCell>
-                      <TableCell className="text-right">${product.totalRevenue.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${(product.costPrice * product.totalSold).toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${product.profit.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
-                        {product.totalRevenue > 0 
-                          ? `${((product.profit / product.totalRevenue) * 100).toFixed(1)}%` 
-                          : "0%"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {productPerformance.length === 0 && (
+              <div className="rounded-md border border-spa-sand">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                        No product sales data available.
-                      </TableCell>
+                      <TableHead>Product Name</TableHead>
+                      <TableHead className="text-right">Quantity Sold</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
+                      <TableHead className="text-right">Profit Margin</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="services" className="mt-0 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Service Revenue</p>
-                  <h3 className="text-2xl font-semibold mt-1">${totalServiceRevenue.toFixed(2)}</h3>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-spa-sage/20 flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-spa-deep" />
-                </div>
+                  </TableHeader>
+                  <TableBody>
+                    {productPerformance.map((product) => (
+                      <TableRow key={product.id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell className="text-right">{product.totalSold}</TableCell>
+                        <TableCell className="text-right">${product.totalRevenue.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${(product.costPrice * product.totalSold).toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${product.profit.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          {product.totalRevenue > 0 
+                            ? `${((product.profit / product.totalRevenue) * 100).toFixed(1)}%` 
+                            : "0%"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {productPerformance.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                          No product sales data available.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="services" className="mt-0 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Service Revenue</p>
+                    <h3 className="text-2xl font-semibold mt-1">${totalServiceRevenue.toFixed(2)}</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-spa-sage/20 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-spa-deep" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Service Profit</p>
+                    <h3 className="text-2xl font-semibold mt-1">${totalServiceProfit.toFixed(2)}</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-spa-water/20 flex items-center justify-center">
+                    <ArrowUp className="h-6 w-6 text-spa-deep" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Services Provided</p>
+                    <h3 className="text-2xl font-semibold mt-1">{totalServicesProvided}</h3>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-spa-stone/20 flex items-center justify-center">
+                    <Award className="h-6 w-6 text-spa-deep" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Service Profit</p>
-                  <h3 className="text-2xl font-semibold mt-1">${totalServiceProfit.toFixed(2)}</h3>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-spa-water/20 flex items-center justify-center">
-                  <ArrowUp className="h-6 w-6 text-spa-deep" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Services Provided</p>
-                  <h3 className="text-2xl font-semibold mt-1">{totalServicesProvided}</h3>
-                </div>
-                <div className="h-12 w-12 rounded-full bg-spa-stone/20 flex items-center justify-center">
-                  <Award className="h-6 w-6 text-spa-deep" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
+            <CardHeader>
               <CardTitle className="text-spa-deep">Service Revenue</CardTitle>
               <CardDescription>Track your service performance</CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={servicesData.slice(0, 10).map(s => ({ name: s.name, revenue: s.totalRevenue }))}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip 
-                    formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
-                    contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
-                  />
-                  <Legend />
-                  <Bar dataKey="revenue" name="Revenue" fill="#A6C0D0" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="bg-white">
-            <CardHeader>
-              <CardTitle className="text-spa-deep">Service Performance</CardTitle>
-              <CardDescription>Revenue analysis by service</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={servicesData.slice(0, 6)}
-                    layout="vertical"
-                    margin={{ left: 100 }}
+                  <BarChart 
+                    data={servicesData.slice(0, 10).map(s => ({ name: s.name, revenue: s.totalRevenue }))}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 12 }} />
-                    <YAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fontSize: 12 }}
-                      width={100}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`$${Number(value).toFixed(2)}`]}
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                    <YAxis tick={{ fontSize: 12 }} />
+                    <Tooltip 
+                      formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
                       contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
                     />
                     <Legend />
-                    <Bar dataKey="totalRevenue" name="Revenue" fill="#D1C6B8" />
+                    <Bar dataKey="revenue" name="Revenue" fill="#A6C0D0" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-spa-deep">Service Performance</CardTitle>
+                <CardDescription>Revenue analysis by service</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={servicesData.slice(0, 6)}
+                      layout="vertical"
+                      margin={{ left: 100 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 12 }} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        tick={{ fontSize: 12 }}
+                        width={100}
+                      />
+                      <Tooltip
+                        formatter={(value) => [`$${Number(value).toFixed(2)}`]}
+                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
+                      />
+                      <Legend />
+                      <Bar dataKey="totalRevenue" name="Revenue" fill="#D1C6B8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white">
+              <CardHeader>
+                <CardTitle className="text-spa-deep">Services by Type</CardTitle>
+                <CardDescription>Revenue distribution by service type</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={serviceTypeData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#8884d8"
+                        label={({ name, percent }) =>
+                          `${name}: ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {serviceTypeData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
+                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="bg-white">
-            <CardHeader>
-              <CardTitle className="text-spa-deep">Services by Type</CardTitle>
-              <CardDescription>Revenue distribution by service type</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-spa-deep">Service Profitability</CardTitle>
+                <CardDescription>Detailed service revenue analysis</CardDescription>
+              </div>
+              <Button className="bg-spa-deep text-white" onClick={exportCSV}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={serviceTypeData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      label={({ name, percent }) =>
-                        `${name}: ${(percent * 100).toFixed(0)}%`
-                      }
-                    >
-                      {serviceTypeData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => [`$${Number(value).toFixed(2)}`, 'Revenue']}
-                      contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e6dfd9' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="rounded-md border border-spa-sand">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Service Name</TableHead>
+                      <TableHead className="text-right">Times Provided</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead className="text-right">Profit</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {servicesData.map((service) => (
+                      <TableRow key={service.id}>
+                        <TableCell className="font-medium">{service.name}</TableCell>
+                        <TableCell className="text-right">{service.totalSold}</TableCell>
+                        <TableCell className="text-right">${service.totalRevenue.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">${service.profit.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                    {servicesData.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                          No service data available.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        <Card className="bg-white">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-spa-deep">Service Profitability</CardTitle>
-              <CardDescription>Detailed service revenue analysis</CardDescription>
-            </div>
-            <Button className="bg-spa-deep text-white" onClick={exportCSV}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border border-spa-sand">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Service Name</TableHead>
-                    <TableHead className="text-right">Times Provided</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {servicesData.map((service) => (
-                    <TableRow key={service.id}>
-                      <TableCell className="font-medium">{service.name}</TableCell>
-                      <TableCell className="text-right">{service.totalSold}</TableCell>
-                      <TableCell className="text-right">${service.totalRevenue.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${service.profit.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {servicesData.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                        No service data available.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
