@@ -109,7 +109,10 @@ const ServiceMetrics = ({
         <CardContent>
           <div className="h-[300px]">
             <MetricsBarChart 
-              data={servicesData.slice(0, 10).map(s => ({ name: s.name, revenue: s.totalRevenue }))}
+              data={servicesData.slice(0, 10).map(s => ({ 
+                name: s.name, 
+                revenue: s.totalRevenue 
+              }))}
               dataKey="revenue"
               nameKey="name"
               barName="Revenue"
