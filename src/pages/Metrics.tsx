@@ -369,7 +369,7 @@ const Metrics = () => {
   }
 
   return (
-    <div className="w-full space-y-6 min-w-[90vw] px-6">
+    <div className="w-full space-y-6 min-w-[90vw] xl:min-w-[60vw] px-6">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-spa-deep mb-1">Business Metrics</h1>
@@ -403,16 +403,18 @@ const Metrics = () => {
           exportCSV={exportCSV}
         />
       ) : (
-        <ServiceMetrics 
-          totalServiceRevenue={totalServiceRevenue}
-          totalUniqueCustomers={totalUniqueCustomers}
-          totalServicesProvided={totalServicesProvided}
-          servicesData={servicesData}
-          serviceTypeData={serviceTypeData}
-          timeRange={timeRange}
-          setTimeRange={setTimeRange}
-          exportCSV={exportCSV}
-        />
+          <h1>Coming Soon</h1>
+
+        // <ServiceMetrics 
+        //   totalServiceRevenue={totalServiceRevenue}
+        //   totalUniqueCustomers={totalUniqueCustomers}
+        //   totalServicesProvided={totalServicesProvided}
+        //   servicesData={servicesData}
+        //   serviceTypeData={serviceTypeData}
+        //   timeRange={timeRange}
+        //   setTimeRange={setTimeRange}
+        //   exportCSV={exportCSV}
+        // />
       )}
     </div>
   );

@@ -182,7 +182,7 @@ const InventoryPage = () => {
   const outOfStockCount = products.filter(p => p.stockQuantity === 0).length;
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto px-6">
       <div className="mb-6">
         <h2 className="text-3xl font-bold tracking-tight">Inventory Management</h2>
         <p className="text-muted-foreground">Add, edit and track your inventory</p>
@@ -281,7 +281,7 @@ const InventoryPage = () => {
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-spa-cream">
+                  <TableRow className="bg-white">
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
