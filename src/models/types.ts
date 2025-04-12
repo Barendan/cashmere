@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -25,6 +26,8 @@ export interface Transaction {
   userId: string;
   userName: string;
   saleId?: string;
+  discount?: number;           // Added for discount tracking
+  originalPrice?: number;      // Added for original price before discount
 }
 
 export interface Sale {
