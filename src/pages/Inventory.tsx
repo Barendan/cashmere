@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,22 +12,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, Edit, Plus, DollarSign, Archive } from "lucide-react";
+import { Package, Edit, Plus, DollarSign, Calendar, ArrowUpDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/lib/format";
 import { HoverFillButton } from "@/components/ui/hover-fill-button";
+import MonthlyRestockModal from "@/components/inventory/MonthlyRestockModal";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
-  const { products, addProduct, updateProduct, deleteProduct, getTotalInventoryValue, recordRestock } = useData();
-  const { isAdmin } = useAuth();
+  const { products, addProduct, updateProduct, deleteProduct, getTotalInventoryValue, recordMonthlyRestock, lastRestockDate } = useData();
+  const { isAdmin, user } = useAuth();
   const { toast } = useToast();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [isMonthlyRestockModalOpen, setIsMonthlyRestockModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
@@ -38,8 +40,6 @@ const InventoryPage = () => {
     stockQuantity: 0,
     lowStockThreshold: 5,
   });
-  const [restockQuantity, setRestockQuantity] = useState(0);
-  const [thresholdValue, setThresholdValue] = useState(5);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -61,14 +61,11 @@ const InventoryPage = () => {
     setIsEditModalOpen(false);
     setSelectedProduct(null);
   };
-  const openRestockModal = (product: Product) => {
-    setSelectedProduct(product);
-    setIsRestockModalOpen(true);
+  const openMonthlyRestockModal = () => {
+    setIsMonthlyRestockModalOpen(true);
   };
-  const closeRestockModal = () => {
-    setIsRestockModalOpen(false);
-    setSelectedProduct(null);
-    setRestockQuantity(0);
+  const closeMonthlyRestockModal = () => {
+    setIsMonthlyRestockModalOpen(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -139,34 +136,18 @@ const InventoryPage = () => {
     }
   };
 
-  const handleRestock = async () => {
-    if (!selectedProduct) return;
+  const handleMonthlyRestock = async (items: {productId: string, newQuantity: number}[]) => {
     try {
-      await recordRestock(selectedProduct.id, restockQuantity);
-      toast({
-        title: "Success",
-        description: `Added ${restockQuantity} ${selectedProduct.name} to inventory.`,
-      });
-      closeRestockModal();
+      await recordMonthlyRestock(items);
+      closeMonthlyRestockModal();
     } catch (error) {
-      console.error("Error restocking product:", error);
+      console.error("Error performing monthly restock:", error);
       toast({
         title: "Error",
-        description: "Failed to restock product. Please try again.",
+        description: "Failed to complete monthly restock. Please try again.",
         variant: "destructive",
       });
     }
-  };
-
-  const handleApplyThreshold = () => {
-    products.forEach(product => {
-      updateProduct(product.id, { lowStockThreshold: thresholdValue });
-    });
-    
-    toast({
-      title: "Success",
-      description: "Low stock threshold updated for all products.",
-    });
   };
 
   const filteredProducts = products.filter((product) =>
@@ -229,31 +210,25 @@ const InventoryPage = () => {
         <Card className="bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-spa-deep flex items-center">
-              <Archive className="h-4 w-4 mr-2" />
-              Low Stock Alert
+              <Calendar className="h-4 w-4 mr-2" />
+              Monthly Restock
             </CardTitle>
-            <CardDescription>Set threshold for all products</CardDescription>
+            <CardDescription>Perform monthly inventory restock</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="threshold">Low Stock Threshold</Label>
                 <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
                   {lowStockCount} Low Stock Items
                 </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {lastRestockDate ? `Last restock: ${lastRestockDate.toLocaleDateString()}` : 'No recent restocks'}
+                </span>
               </div>
-              <div className="flex space-x-2">
-                <Input 
-                  id="threshold"
-                  type="number" 
-                  value={thresholdValue}
-                  onChange={e => setThresholdValue(parseInt(e.target.value) || 0)}
-                  className="flex-1"
-                />
-                <HoverFillButton variant="accent" onClick={handleApplyThreshold}>
-                  Apply
-                </HoverFillButton>
-              </div>
+              <HoverFillButton variant="accent" onClick={openMonthlyRestockModal} className="w-full">
+                <Package className="h-4 w-4 mr-2" />
+                Start Monthly Restock
+              </HoverFillButton>
             </div>
           </CardContent>
         </Card>
@@ -338,14 +313,6 @@ const InventoryPage = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => openRestockModal(product)}
-                            >
-                              <Package className="h-4 w-4 mr-1" /> 
-                              Restock
-                            </Button>
                             <Button 
                               size="sm" 
                               variant="outline"
@@ -577,33 +544,12 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isRestockModalOpen} onOpenChange={setIsRestockModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Restock Product</DialogTitle>
-          </DialogHeader>
-          {selectedProduct && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="restockQuantity" className="text-right">
-                  Restock Quantity
-                </Label>
-                <Input
-                  type="number"
-                  id="restockQuantity"
-                  name="restockQuantity"
-                  value={restockQuantity}
-                  onChange={(e) => setRestockQuantity(parseInt(e.target.value))}
-                  className="col-span-3"
-                />
-              </div>
-              <Button onClick={handleRestock} className="w-full">
-                Restock Product
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <MonthlyRestockModal
+        isOpen={isMonthlyRestockModalOpen}
+        onClose={closeMonthlyRestockModal}
+        products={products}
+        onRestock={handleMonthlyRestock}
+      />
     </div>
   );
 };

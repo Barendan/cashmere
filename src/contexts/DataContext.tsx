@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -16,8 +15,10 @@ import {
   recordTransactionInDb,
   recordBulkTransactionsInDb,
   updateProductStock,
+  updateBulkProductStock,
   updateProductRestockDate,
-  getLastRestockDate
+  getLastRestockDate,
+  recordMonthlyRestockInDb
 } from "../services/transactionService";
 import { supabase, mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
 
@@ -42,6 +43,7 @@ interface DataContextType {
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
+  recordMonthlyRestock: (items: {productId: string, newQuantity: number}[]) => Promise<void>;
   adjustInventory: (productId: string, newQuantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -85,11 +87,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (data) {
         const transformedServiceIncomes: ServiceIncome[] = data.map(item => {
-          // Use category as the service identifier, with fallback handling
           const categoryId = item.category || "uncategorized";
           const categoryName = item.category || "Uncategorized";
           
-          // Allow for backward compatibility if service_id exists
           const serviceId = item.service_id || categoryId;
           const serviceName = item.services?.name || categoryName;
           
@@ -452,14 +452,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User'
       };
       
-      const { data, error: insertError } = await supabase
-        .from('transactions')
-        .insert(newTransactionData)
-        .select();
-
-      if (insertError) {
-        throw insertError;
-      }
+      const newTransaction = await recordTransactionInDb(newTransactionData);
 
       const updatedProducts = products.map(p =>
         p.id === productId
@@ -471,23 +464,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           : p
       );
       setProducts(updatedProducts);
-      
-      if (data && data.length > 0) {
-        const newLocalTransaction: Transaction = {
-          id: data[0].id,
-          productId,
-          productName: product.name,
-          quantity,
-          price: product.costPrice * quantity,
-          type: "restock",
-          date: now,
-          userId: data[0].user_id,
-          userName: data[0].user_name
-        };
-        
-        setTransactions([newLocalTransaction, ...transactions]);
-        setLastRestockDate(now);
-      }
+      setTransactions([newTransaction, ...transactions]);
+      setLastRestockDate(now);
       
       toast({ title: "Restock Recorded", description: `Added ${quantity} ${product.name} to inventory.` });
     } catch (error) {
@@ -497,6 +475,83 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         description: "Failed to record restock.", 
         variant: "destructive" 
       });
+    }
+  };
+
+  const recordMonthlyRestock = async (items: {productId: string, newQuantity: number}[]) => {
+    if (items.length === 0) {
+      toast({ title: "Error", description: "No items to restock.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const productUpdates = [];
+      let totalCost = 0;
+      let totalItems = 0;
+
+      for (const item of items) {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) continue;
+
+        const restockQuantity = item.newQuantity - product.stockQuantity;
+        if (restockQuantity <= 0) continue;
+
+        productUpdates.push({
+          id: item.productId,
+          quantity: item.newQuantity
+        });
+
+        totalCost += product.costPrice * restockQuantity;
+        totalItems += restockQuantity;
+      }
+
+      if (productUpdates.length === 0) {
+        toast({ title: "Info", description: "No changes to inventory levels." });
+        return;
+      }
+
+      await updateBulkProductStock(productUpdates);
+
+      const restockData = {
+        totalCost,
+        productCount: productUpdates.length,
+        userId: user?.id || 'unknown',
+        userName: user?.name || 'Unknown User',
+        date: now.toISOString(),
+        notes: `Monthly restock: ${productUpdates.length} products, ${totalItems} items`
+      };
+
+      const newTransaction = await recordMonthlyRestockInDb(restockData);
+
+      const updatedProducts = products.map(p => {
+        const update = productUpdates.find(u => u.id === p.id);
+        if (update) {
+          return {
+            ...p,
+            stockQuantity: update.quantity,
+            lastRestocked: now
+          };
+        }
+        return p;
+      });
+
+      setProducts(updatedProducts);
+      setTransactions([newTransaction, ...transactions]);
+      setLastRestockDate(now);
+
+      toast({ 
+        title: "Monthly Restock Complete", 
+        description: `Restocked ${productUpdates.length} products with ${totalItems} items.` 
+      });
+    } catch (error) {
+      console.error('Error performing monthly restock:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to complete monthly restock.", 
+        variant: "destructive" 
+      });
+      throw error;
     }
   };
 
@@ -529,37 +584,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User'
       };
       
-      const { data, error: insertError } = await supabase
-        .from('transactions')
-        .insert(newTransactionData)
-        .select();
-
-      if (insertError) {
-        throw insertError;
-      }
+      const newTransaction = await recordTransactionInDb(newTransactionData);
 
       const updatedProducts = products.map(p =>
         p.id === productId
           ? { ...p, stockQuantity: newQuantity }
           : p
       );
-      setProducts(updatedProducts);
       
-      if (data && data.length > 0) {
-        const newLocalTransaction: Transaction = {
-          id: data[0].id,
-          productId,
-          productName: product.name,
-          quantity: Math.abs(difference),
-          price: 0,
-          type: "adjustment",
-          date: now,
-          userId: data[0].user_id,
-          userName: data[0].user_name
-        };
-        
-        setTransactions([newLocalTransaction, ...transactions]);
-      }
+      setProducts(updatedProducts);
+      setTransactions([newTransaction, ...transactions]);
       
       toast({ 
         title: "Inventory Adjusted", 
@@ -725,6 +759,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         recordSale,
         recordBulkSale,
         recordRestock,
+        recordMonthlyRestock,
         adjustInventory,
         updateLastRestockDate,
         undoLastTransaction,

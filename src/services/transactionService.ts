@@ -113,6 +113,34 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
   }
 };
 
+export const recordMonthlyRestockInDb = async (restockData: {
+  totalCost: number;
+  productCount: number;
+  userId: string;
+  userName: string;
+  date: string;
+  notes?: string;
+}) => {
+  try {
+    const transactionData = {
+      product_id: '00000000-0000-0000-0000-000000000000', // Using a dummy ID for monthly restock
+      product_name: `Monthly Restock (${restockData.productCount} products)`,
+      quantity: restockData.productCount,
+      price: restockData.totalCost,
+      type: 'monthly-restock',
+      date: restockData.date,
+      user_id: restockData.userId,
+      user_name: restockData.userName,
+      notes: restockData.notes || 'Monthly inventory restock'
+    };
+    
+    return await recordTransactionInDb(transactionData);
+  } catch (err) {
+    console.error("Exception in recordMonthlyRestockInDb:", err);
+    throw err;
+  }
+};
+
 export const updateProductStock = async (productId: string, newQuantity: number) => {
   const { error } = await supabase
     .from('products')
@@ -124,6 +152,38 @@ export const updateProductStock = async (productId: string, newQuantity: number)
 
   if (error) {
     throw error;
+  }
+};
+
+export const updateBulkProductStock = async (updates: { id: string, quantity: number }[]) => {
+  if (updates.length === 0) return [];
+  
+  try {
+    // For each product in the updates array, perform an update
+    const promises = updates.map(update => 
+      supabase
+        .from('products')
+        .update({ 
+          stock_quantity: update.quantity,
+          last_restocked: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', update.id)
+    );
+    
+    const results = await Promise.all(promises);
+    
+    // Check for errors
+    const errors = results.filter(result => result.error);
+    if (errors.length > 0) {
+      console.error("Errors updating product stocks:", errors);
+      throw new Error(`Failed to update ${errors.length} products`);
+    }
+    
+    return results;
+  } catch (err) {
+    console.error("Exception in updateBulkProductStock:", err);
+    throw err;
   }
 };
 
@@ -145,7 +205,7 @@ export const getLastRestockDate = async () => {
   const { data, error } = await supabase
     .from('transactions')
     .select('*')
-    .eq('type', 'restock')
+    .in('type', ['restock', 'monthly-restock'])
     .order('date', { ascending: false })
     .limit(1);
   
