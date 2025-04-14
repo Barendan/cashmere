@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Package, Edit, Plus, DollarSign, Archive } from "lucide-react";
+import { Package, Edit, Plus, DollarSign, CalendarDays, X, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,13 +20,20 @@ import { HoverFillButton } from "@/components/ui/hover-fill-button";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
-  const { products, addProduct, updateProduct, deleteProduct, getTotalInventoryValue, recordRestock } = useData();
-  const { isAdmin } = useAuth();
+  const { 
+    products, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    getTotalInventoryValue, 
+    recordMonthlyRestock 
+  } = useData();
+  const { isAdmin, user } = useAuth();
   const { toast } = useToast();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
+  const [isMonthlyRestockModalOpen, setIsMonthlyRestockModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
@@ -38,7 +45,7 @@ const InventoryPage = () => {
     stockQuantity: 0,
     lowStockThreshold: 5,
   });
-  const [restockQuantity, setRestockQuantity] = useState(0);
+  const [productUpdates, setProductUpdates] = useState<{product: Product, newQuantity: number}[]>([]);
   const [thresholdValue, setThresholdValue] = useState(5);
 
   useEffect(() => {
@@ -51,6 +58,16 @@ const InventoryPage = () => {
     }
   }, [isAdmin, toast]);
 
+  useEffect(() => {
+    if (isMonthlyRestockModalOpen) {
+      const initialUpdates = products.map(product => ({
+        product,
+        newQuantity: product.stockQuantity
+      }));
+      setProductUpdates(initialUpdates);
+    }
+  }, [isMonthlyRestockModalOpen, products]);
+
   const openAddModal = () => setIsAddModalOpen(true);
   const closeAddModal = () => setIsAddModalOpen(false);
   const openEditModal = (product: Product) => {
@@ -61,14 +78,12 @@ const InventoryPage = () => {
     setIsEditModalOpen(false);
     setSelectedProduct(null);
   };
-  const openRestockModal = (product: Product) => {
-    setSelectedProduct(product);
-    setIsRestockModalOpen(true);
+  const openMonthlyRestockModal = () => {
+    setIsMonthlyRestockModalOpen(true);
   };
-  const closeRestockModal = () => {
-    setIsRestockModalOpen(false);
-    setSelectedProduct(null);
-    setRestockQuantity(0);
+  const closeMonthlyRestockModal = () => {
+    setIsMonthlyRestockModalOpen(false);
+    setProductUpdates([]);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -82,6 +97,54 @@ const InventoryPage = () => {
       ...prev,
       [name]: parseFloat(value) || 0,
     }));
+  };
+
+  const handleRestockQuantityChange = (productId: string, quantity: number) => {
+    setProductUpdates(prev => 
+      prev.map(item => 
+        item.product.id === productId 
+          ? { ...item, newQuantity: Math.max(0, quantity) } 
+          : item
+      )
+    );
+  };
+
+  const handleApplyThreshold = () => {
+    products.forEach(product => {
+      updateProduct(product.id, { lowStockThreshold: thresholdValue });
+    });
+    
+    toast({
+      title: "Success",
+      description: "Low stock threshold updated for all products.",
+    });
+  };
+
+  const handlePerformMonthlyRestock = async () => {
+    try {
+      await recordMonthlyRestock(productUpdates);
+      closeMonthlyRestockModal();
+    } catch (error) {
+      console.error("Error performing monthly restock:", error);
+      toast({
+        title: "Error",
+        description: "Failed to perform monthly restock. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculateRestockTotal = () => {
+    return productUpdates.reduce((total, item) => {
+      const additionalQuantity = Math.max(0, item.newQuantity - item.product.stockQuantity);
+      return total + (additionalQuantity * item.product.costPrice);
+    }, 0);
+  };
+
+  const calculateTotalItems = () => {
+    return productUpdates.reduce((total, item) => {
+      return item.newQuantity > item.product.stockQuantity ? total + 1 : total;
+    }, 0);
   };
 
   const handleAddProduct = async () => {
@@ -158,17 +221,6 @@ const InventoryPage = () => {
     }
   };
 
-  const handleApplyThreshold = () => {
-    products.forEach(product => {
-      updateProduct(product.id, { lowStockThreshold: thresholdValue });
-    });
-    
-    toast({
-      title: "Success",
-      description: "Low stock threshold updated for all products.",
-    });
-  };
-
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -229,31 +281,23 @@ const InventoryPage = () => {
         <Card className="bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-spa-deep flex items-center">
-              <Archive className="h-4 w-4 mr-2" />
-              Low Stock Alert
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Monthly Restock
             </CardTitle>
-            <CardDescription>Set threshold for all products</CardDescription>
+            <CardDescription>Update inventory levels for all products</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="threshold">Low Stock Threshold</Label>
+                <Label>Inventory Status</Label>
                 <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
                   {lowStockCount} Low Stock Items
                 </Badge>
               </div>
-              <div className="flex space-x-2">
-                <Input 
-                  id="threshold"
-                  type="number" 
-                  value={thresholdValue}
-                  onChange={e => setThresholdValue(parseInt(e.target.value) || 0)}
-                  className="flex-1"
-                />
-                <HoverFillButton variant="accent" onClick={handleApplyThreshold}>
-                  Apply
-                </HoverFillButton>
-              </div>
+              <HoverFillButton variant="primary" onClick={openMonthlyRestockModal} className="w-full">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Perform Monthly Restock
+              </HoverFillButton>
             </div>
           </CardContent>
         </Card>
@@ -338,14 +382,6 @@ const InventoryPage = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => openRestockModal(product)}
-                            >
-                              <Package className="h-4 w-4 mr-1" /> 
-                              Restock
-                            </Button>
                             <Button 
                               size="sm" 
                               variant="outline"
@@ -577,31 +613,134 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isRestockModalOpen} onOpenChange={setIsRestockModalOpen}>
-        <DialogContent>
+      <Dialog open={isMonthlyRestockModalOpen} onOpenChange={setIsMonthlyRestockModalOpen} className="w-full">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Restock Product</DialogTitle>
+            <DialogTitle>Monthly Inventory Restock</DialogTitle>
           </DialogHeader>
-          {selectedProduct && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="restockQuantity" className="text-right">
-                  Restock Quantity
-                </Label>
-                <Input
-                  type="number"
-                  id="restockQuantity"
-                  name="restockQuantity"
-                  value={restockQuantity}
-                  onChange={(e) => setRestockQuantity(parseInt(e.target.value))}
-                  className="col-span-3"
-                />
+          
+          <div className="flex-grow overflow-hidden flex flex-col">
+            <div className="bg-muted p-3 rounded-md mb-4">
+              <div className="text-sm font-medium mb-1">Restock Summary</div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Total Cost:</span> 
+                  <span className="font-semibold ml-1">{formatCurrency(calculateRestockTotal())}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Items to Restock:</span> 
+                  <span className="font-semibold ml-1">{calculateTotalItems()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Performed By:</span> 
+                  <span className="font-semibold ml-1">{user?.name || "Unknown User"}</span>
+                </div>
               </div>
-              <Button onClick={handleRestock} className="w-full">
-                Restock Product
+            </div>
+            
+            <ScrollArea className="flex-grow pr-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-center">Current Stock</TableHead>
+                      <TableHead className="text-center">New Quantity</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productUpdates.map((item, index) => {
+                      const isLowStock = item.product.stockQuantity <= item.product.lowStockThreshold;
+                      const isOutOfStock = item.product.stockQuantity === 0;
+                      const isIncreasing = item.newQuantity > item.product.stockQuantity;
+                      const additionalQuantity = Math.max(0, item.newQuantity - item.product.stockQuantity);
+                      const additionalCost = additionalQuantity * item.product.costPrice;
+                      
+                      return (
+                        <TableRow 
+                          key={item.product.id}
+                          className={
+                            isOutOfStock 
+                              ? "bg-red-50" 
+                              : isLowStock 
+                                ? "bg-amber-50" 
+                                : index % 2 === 0 
+                                  ? "bg-white" 
+                                  : "bg-gray-50"
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {item.product.name}
+                            {isOutOfStock && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-red-50 text-red-800 border-red-200 ml-2"
+                              >
+                                Out of Stock
+                              </Badge>
+                            )}
+                            {isLowStock && !isOutOfStock && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
+                              >
+                                Low Stock
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{item.product.category}</TableCell>
+                          <TableCell className="text-center">
+                            {item.product.stockQuantity}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center">
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.newQuantity}
+                                onChange={(e) => handleRestockQuantityChange(
+                                  item.product.id, 
+                                  parseInt(e.target.value) || 0
+                                )}
+                                className="w-24 text-center"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isIncreasing ? (
+                              <span className="text-green-600 font-medium">
+                                +{formatCurrency(additionalCost)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">$0.00</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          </div>
+          
+          <DialogFooter className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-muted-foreground">
+              This will create a single monthly restock transaction.
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={closeMonthlyRestockModal}>
+                <X className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+              <Button onClick={handlePerformMonthlyRestock} disabled={calculateTotalItems() === 0}>
+                <Check className="h-4 w-4 mr-1" />
+                Complete Restock
               </Button>
             </div>
-          )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

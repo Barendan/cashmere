@@ -21,7 +21,7 @@ export interface Transaction {
   productName: string;
   quantity: number;
   price: number;
-  type: 'sale' | 'restock' | 'adjustment' | 'return';
+  type: 'sale' | 'restock' | 'adjustment' | 'return' | 'monthly-restock';
   date: Date;
   userId: string;
   userName: string;

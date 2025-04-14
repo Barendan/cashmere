@@ -1,4 +1,3 @@
-
 import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
 import { Product, Sale, Transaction } from "../models/types";
 
@@ -154,4 +153,51 @@ export const getLastRestockDate = async () => {
   }
   
   return new Date(data[0].date);
+};
+
+export const recordMonthlyRestockInDb = async (userData: any, totalCost: number) => {
+  try {
+    const now = new Date();
+    
+    // Create a single monthly restock transaction
+    const monthlyRestockData = {
+      product_id: "00000000-0000-0000-0000-000000000000", // Use a dummy ID for system-level transaction
+      product_name: "Monthly Inventory Restock",
+      quantity: 0, // Not applicable for this transaction type
+      price: totalCost,
+      type: 'monthly-restock',
+      date: now.toISOString(),
+      user_id: userData.id || 'unknown',
+      user_name: userData.name || 'Unknown User'
+    };
+    
+    return await recordTransactionInDb(monthlyRestockData);
+  } catch (err) {
+    console.error("Exception in recordMonthlyRestockInDb:", err);
+    throw err;
+  }
+};
+
+export const updateMultipleProductStocks = async (productUpdates: {productId: string, newQuantity: number}[]) => {
+  try {
+    // For each product, create an update operation
+    const updatePromises = productUpdates.map(update => 
+      supabase
+        .from('products')
+        .update({ 
+          stock_quantity: update.newQuantity,
+          last_restocked: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', update.productId)
+    );
+    
+    // Execute all updates in parallel
+    await Promise.all(updatePromises);
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating multiple product stocks:', error);
+    throw error;
+  }
 };

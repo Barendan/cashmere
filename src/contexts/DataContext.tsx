@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -17,7 +16,9 @@ import {
   recordBulkTransactionsInDb,
   updateProductStock,
   updateProductRestockDate,
-  getLastRestockDate
+  getLastRestockDate,
+  recordMonthlyRestockInDb,
+  updateMultipleProductStocks
 } from "../services/transactionService";
 import { supabase, mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
 
@@ -46,6 +47,7 @@ interface DataContextType {
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
+  recordMonthlyRestock: (productUpdates: {product: Product, newQuantity: number}[]) => Promise<void>;
   isLoading: boolean;
   getTotalInventoryValue: () => number;
 }
@@ -85,11 +87,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (data) {
         const transformedServiceIncomes: ServiceIncome[] = data.map(item => {
-          // Use category as the service identifier, with fallback handling
           const categoryId = item.category || "uncategorized";
           const categoryName = item.category || "Uncategorized";
           
-          // Allow for backward compatibility if service_id exists
           const serviceId = item.service_id || categoryId;
           const serviceName = item.services?.name || categoryName;
           
@@ -701,6 +701,70 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const recordMonthlyRestock = async (productUpdates: {product: Product, newQuantity: number}[]) => {
+    const validUpdates = productUpdates.filter(
+      update => update.newQuantity > update.product.stockQuantity
+    );
+    
+    if (validUpdates.length === 0) {
+      toast({ 
+        title: "No Restocks Needed", 
+        description: "All products have sufficient quantity or no increases were specified.", 
+        variant: "warning" 
+      });
+      return;
+    }
+    
+    try {
+      const totalCost = validUpdates.reduce((sum, update) => {
+        const additionalQuantity = update.newQuantity - update.product.stockQuantity;
+        return sum + (additionalQuantity * update.product.costPrice);
+      }, 0);
+      
+      const newTransaction = await recordMonthlyRestockInDb(
+        { id: user?.id || 'unknown', name: user?.name || 'Unknown User' }, 
+        totalCost
+      );
+      
+      const dbProductUpdates = validUpdates.map(update => ({
+        productId: update.product.id,
+        newQuantity: update.newQuantity
+      }));
+      
+      await updateMultipleProductStocks(dbProductUpdates);
+      
+      setProducts(products.map(p => {
+        const update = validUpdates.find(u => u.product.id === p.id);
+        if (update) {
+          return { 
+            ...p, 
+            stockQuantity: update.newQuantity,
+            lastRestocked: new Date()
+          };
+        }
+        return p;
+      }));
+      
+      const now = new Date();
+      setLastRestockDate(now);
+      
+      setTransactions([newTransaction, ...transactions]);
+      
+      toast({ 
+        title: "Monthly Restock Complete", 
+        description: `Restocked ${validUpdates.length} products for ${formatCurrency(totalCost)}.`,
+      });
+      
+    } catch (error) {
+      console.error('Error performing monthly restock:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to complete monthly restock.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const getProduct = (id: string) => {
     return products.find(p => p.id === id);
   };
@@ -729,6 +793,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateLastRestockDate,
         undoLastTransaction,
         getProduct,
+        recordMonthlyRestock,
         isLoading,
         getTotalInventoryValue
       }}

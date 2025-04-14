@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Percent } from 'lucide-react';
+import { ChevronDown, ChevronRight, Percent, Archive, Package, CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +44,8 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return "bg-green-100 text-green-800";
       case "restock":
         return "bg-blue-100 text-blue-800";
+      case "monthly-restock":
+        return "bg-indigo-100 text-indigo-800";
       case "adjustment":
         return "bg-amber-100 text-amber-800";
       case "return":
@@ -52,9 +55,31 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     }
   };
   
+  const getTransactionTypeIcon = (type: string) => {
+    switch (type) {
+      case "sale":
+        return <></>;
+      case "restock":
+        return <Package className="h-3 w-3 mr-1" />;
+      case "monthly-restock":
+        return <CalendarDays className="h-3 w-3 mr-1" />;
+      case "adjustment":
+        return <></>;
+      case "return":
+        return <></>;
+      default:
+        return <></>;
+    }
+  };
+  
   const groupTransactions = (): GroupedTransaction[] => {
     const filteredTransactions = transactions.filter((transaction) => {
-      if (filterType !== "all" && transaction.type !== filterType) return false;
+      if (filterType !== "all" && 
+          !(filterType === "restock" && 
+            (transaction.type === "restock" || transaction.type === "monthly-restock")) && 
+          transaction.type !== filterType) {
+        return false;
+      }
       
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -67,7 +92,9 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     const groupMap = new Map<string, Transaction[]>();
     
     filteredTransactions.forEach(transaction => {
-      const key = transaction.saleId || 'no-sale-id';
+      const key = transaction.saleId || 
+                 (transaction.type === 'monthly-restock' ? 
+                  `monthly-restock-${transaction.id}` : 'no-sale-id');
       if (!groupMap.has(key)) {
         groupMap.set(key, []);
       }
@@ -169,7 +196,11 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                         </TableCell>
                         <TableCell>
                           {group.saleId ? (
-                            <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                            group.transactions[0].type === 'monthly-restock' ? (
+                              <span className="font-medium">Monthly Inventory Restock</span>
+                            ) : (
+                              <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                            )
                           ) : (
                             <span className="font-medium">{group.transactions[0].productName}</span>
                           )}
@@ -192,7 +223,10 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                         </TableCell>
                         <TableCell>
                           <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                            {group.transactions[0].type}
+                            <span className="flex items-center">
+                              {getTransactionTypeIcon(group.transactions[0].type)}
+                              {group.transactions[0].type === 'monthly-restock' ? 'Monthly Restock' : group.transactions[0].type}
+                            </span>
                           </Badge>
                           {group.discount && group.discount > 0 && (
                             <Badge className="ml-2 bg-red-100 text-red-800">
