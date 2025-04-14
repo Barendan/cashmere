@@ -20,7 +20,7 @@ import { HoverFillButton } from "@/components/ui/hover-fill-button";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
-  const { products, addProduct, updateProduct, deleteProduct, getTotalInventoryValue } = useData();
+  const { products, addProduct, updateProduct, deleteProduct, getTotalInventoryValue, recordRestock } = useData();
   const { isAdmin } = useAuth();
   const { toast } = useToast();
 
@@ -142,17 +142,14 @@ const InventoryPage = () => {
   const handleRestock = async () => {
     if (!selectedProduct) return;
     try {
-      await updateProduct(selectedProduct.id, {
-        ...selectedProduct,
-        stockQuantity: selectedProduct.stockQuantity + restockQuantity,
-      });
+      await recordRestock(selectedProduct.id, restockQuantity);
       toast({
         title: "Success",
-        description: "Product restocked successfully.",
+        description: `Added ${restockQuantity} ${selectedProduct.name} to inventory.`,
       });
       closeRestockModal();
     } catch (error) {
-      console.error("Error restock product:", error);
+      console.error("Error restocking product:", error);
       toast({
         title: "Error",
         description: "Failed to restock product. Please try again.",

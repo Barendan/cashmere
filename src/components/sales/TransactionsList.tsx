@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
@@ -161,7 +160,12 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                     <React.Fragment key={group.saleId || `no-sale-${group.date.getTime()}`}>
                       <TableRow className="bg-gray-50 font-medium">
                         <TableCell className="text-sm">
-                          {formatDate(group.date)}
+                          <div>
+                            {new Date(group.date).toLocaleDateString()}
+                            <div className="text-xs text-muted-foreground">
+                              {new Date(group.date).toLocaleTimeString()}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {group.saleId ? (
