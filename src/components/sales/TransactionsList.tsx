@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +7,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDate, formatCurrency } from '@/lib/format';
+import { format } from 'date-fns';
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from '@/lib/format';
 
 interface GroupedTransaction {
   saleId: string | null;
@@ -29,6 +41,10 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
   const [filterType, setFilterType] = useState<string>("all");
   const [openSale, setOpenSale] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const { isAdmin } = useAuth();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [incomeToDelete, setIncomeToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const toggleSale = (saleId: string | null) => {
     if (openSale === saleId) {
@@ -120,6 +136,39 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     return groupedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
   };
   
+    const handleDeleteIncome = async () => {
+    if (!incomeToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('finances')
+        .delete()
+        .eq('id', incomeToDelete);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Income record deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting income record:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete income record",
+        variant: "destructive",
+      });
+    } finally {
+      setIncomeToDelete(null);
+      setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const openDeleteDialog = (id: string) => {
+    setIncomeToDelete(id);
+    setIsDeleteDialogOpen(true);
+  };
+  
   const groupedTransactions = groupTransactions();
   
   return (
@@ -141,28 +190,29 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         </div>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col p-0 overflow-hidden">
-        <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden">
+        <div className="rounded-md border border-spa-sand overflow-hidden">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-white">
               <TableRow>
                 <TableHead className="w-[180px]">Date & Time</TableHead>
                 <TableHead>Details</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Payment Method</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                {isAdmin && <TableHead className="w-20">Actions</TableHead>}
               </TableRow>
             </TableHeader>
-          </Table>
-          <ScrollArea className="flex-grow overflow-auto max-h-[30vh]">
-            <Table>
+            <ScrollArea className="max-h-[30vh]">
               <TableBody>
                 {groupedTransactions.length > 0 ? (
                   groupedTransactions.map((group) => (
                     <React.Fragment key={group.saleId || `no-sale-${group.date.getTime()}`}>
                       <TableRow className="bg-gray-50 font-medium">
                         <TableCell className="text-sm">
-                          {formatDate(group.date)}
+                          <div className="flex flex-col">
+                            <span>{format(group.date, 'MMM d, yyyy')}</span>
+                            <span className="text-xs text-muted-foreground">{format(group.date, 'h:mm a')}</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {group.saleId ? (
@@ -172,6 +222,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                           )}
                         </TableCell>
                         <TableCell>{group.userName}</TableCell>
+                        <TableCell>Payment Method Here</TableCell>
                         <TableCell>
                           {group.discount && group.discount > 0 ? (
                             <div className="flex flex-col">
@@ -187,31 +238,23 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                             formatCurrency(group.totalAmount)
                           )}
                         </TableCell>
-                        <TableCell>
-                          <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                            {group.transactions[0].type}
-                          </Badge>
-                          {group.discount && group.discount > 0 && (
-                            <Badge className="ml-2 bg-red-100 text-red-800">
-                              Discount: {formatCurrency(group.discount)}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {group.transactions.length > 1 && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0"
-                              onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
-                            >
-                              {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
-                                <ChevronDown className="h-4 w-4" /> : 
-                                <ChevronRight className="h-4 w-4" />
-                              }
-                            </Button>
-                          )}
-                        </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right">
+                            {group.transactions.length > 1 && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
+                              >
+                                {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
+                                  <ChevronDown className="h-4 w-4" /> : 
+                                  <ChevronRight className="h-4 w-4" />
+                                }
+                              </Button>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                       
                       {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) && (
@@ -226,12 +269,13 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                                 </div>
                               </TableCell>
                               <TableCell></TableCell>
+                              <TableCell>Payment Method Here</TableCell>
                               <TableCell>
                                 <div className="flex items-center">
                                   <span>{transaction.quantity} item(s)</span>
                                 </div>
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="text-right">
                                 {transaction.discount && transaction.discount > 0 && (
                                   <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
                                     <Percent className="h-2 w-2 mr-0.5" />
@@ -267,10 +311,27 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
-          </ScrollArea>
+            </ScrollArea>
+          </Table>
         </div>
       </CardContent>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this income record. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteIncome} className="bg-rose-600 text-white hover:bg-rose-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
