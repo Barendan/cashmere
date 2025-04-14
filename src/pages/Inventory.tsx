@@ -594,7 +594,7 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
       
-      <Dialog open={isMonthlyRestockModalOpen} onOpenChange={setIsMonthlyRestockModalOpen} className="w-full">
+      <Dialog open={isMonthlyRestockModalOpen} onOpenChange={setIsMonthlyRestockModalOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Monthly Inventory Restock</DialogTitle>
