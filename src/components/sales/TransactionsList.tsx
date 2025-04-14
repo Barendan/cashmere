@@ -127,7 +127,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-spa-deep">Sales & Inventory Log</CardTitle>
+            <CardTitle className="text-spa-deep">Product Sales Log</CardTitle>
             <CardDescription>History of all transactions</CardDescription>
           </div>
           <Tabs defaultValue="all" onValueChange={setFilterType} className="w-[400px]">
@@ -140,22 +140,21 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
           </Tabs>
         </div>
       </CardHeader>
+
       <CardContent className="flex-grow flex flex-col p-0 overflow-hidden">
         <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden">
-          <Table>
-            <TableHeader className="sticky top-0 z-10 bg-white">
-              <TableRow>
-                <TableHead className="w-[180px]">Date & Time</TableHead>
-                <TableHead>Details</TableHead>
-                <TableHead>User</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-          </Table>
           <ScrollArea className="flex-grow overflow-auto max-h-[30vh]">
             <Table>
+              <TableHeader className="bg-white">
+                <TableRow>
+                  <TableHead className="w-[180px]">Date & Time</TableHead>
+                  <TableHead>Details</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {groupedTransactions.length > 0 ? (
                   groupedTransactions.map((group) => (
@@ -204,6 +203,8 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               size="sm" 
                               className="h-8 w-8 p-0"
                               onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
+                              aria-label={openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
+                                "Collapse transaction details" : "Expand transaction details"}
                             >
                               {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
                                 <ChevronDown className="h-4 w-4" /> : 
