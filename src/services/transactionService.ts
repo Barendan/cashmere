@@ -159,9 +159,9 @@ export const recordMonthlyRestockInDb = async (userData: any, totalCost: number)
   try {
     const now = new Date();
     
-    // Create a single monthly restock transaction
+    // Create a single monthly restock transaction - using null UUID instead of string
     const monthlyRestockData = {
-      product_id: "00000000-0000-0000-0000-000000000000", // Use a dummy ID for system-level transaction
+      product_id: null, // Use null instead of a dummy UUID string
       product_name: "Monthly Inventory Restock",
       quantity: 0, // Not applicable for this transaction type
       price: totalCost,

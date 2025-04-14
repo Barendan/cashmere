@@ -202,25 +202,6 @@ const InventoryPage = () => {
     }
   };
 
-  const handleRestock = async () => {
-    if (!selectedProduct) return;
-    try {
-      await recordRestock(selectedProduct.id, restockQuantity);
-      toast({
-        title: "Success",
-        description: `Added ${restockQuantity} ${selectedProduct.name} to inventory.`,
-      });
-      closeRestockModal();
-    } catch (error) {
-      console.error("Error restocking product:", error);
-      toast({
-        title: "Error",
-        description: "Failed to restock product. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );

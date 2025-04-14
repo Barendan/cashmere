@@ -21,6 +21,7 @@ import {
   updateMultipleProductStocks
 } from "../services/transactionService";
 import { supabase, mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
+import { formatCurrency } from "../lib/format";
 
 interface ServiceIncome {
   id: string;
@@ -710,7 +711,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast({ 
         title: "No Restocks Needed", 
         description: "All products have sufficient quantity or no increases were specified.", 
-        variant: "warning" 
+        variant: "default" 
       });
       return;
     }
@@ -752,7 +753,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       toast({ 
         title: "Monthly Restock Complete", 
-        description: `Restocked ${validUpdates.length} products for ${formatCurrency(totalCost)}.`,
+        description: `Restocked ${validUpdates.length} products for ${formatCurrency(totalCost)}`,
       });
       
     } catch (error) {
