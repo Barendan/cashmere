@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
@@ -44,8 +43,6 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return "bg-green-100 text-green-800";
       case "restock":
         return "bg-blue-100 text-blue-800";
-      case "monthly-restock":
-        return "bg-indigo-100 text-indigo-800";
       case "adjustment":
         return "bg-amber-100 text-amber-800";
       case "return":
@@ -133,11 +130,10 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
             <CardDescription>History of all transactions</CardDescription>
           </div>
           <Tabs defaultValue="all" onValueChange={setFilterType} className="w-[400px]">
-            <TabsList className="grid grid-cols-5">
+            <TabsList className="grid grid-cols-4">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="sale">Sales</TabsTrigger>
               <TabsTrigger value="restock">Restocks</TabsTrigger>
-              <TabsTrigger value="monthly-restock">Monthly</TabsTrigger>
               <TabsTrigger value="adjustment">Adjustments</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -196,7 +192,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                         </TableCell>
                         <TableCell>
                           <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                            {group.transactions[0].type === 'monthly-restock' ? 'monthly restock' : group.transactions[0].type}
+                            {group.transactions[0].type}
                           </Badge>
                           {group.discount && group.discount > 0 && (
                             <Badge className="ml-2 bg-red-100 text-red-800">
