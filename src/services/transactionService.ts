@@ -1,5 +1,5 @@
 import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
-import { Product, Sale, Transaction } from "../models/types";
+import { Product, Sale, Transaction, TransactionInput } from "../models/types";
 
 export const fetchTransactions = async () => {
   const { data: transactionsData, error: transactionsError } = await supabase
@@ -48,11 +48,19 @@ export const recordSaleInDb = async (saleData: any) => {
   return { id: data[0].id, sale: mapSaleRowToSale(data[0]) };
 };
 
-export const recordTransactionInDb = async (transactionData: any) => {
-  // Using proper RPC call pattern
+export const recordTransactionInDb = async (transactionData: TransactionInput): Promise<Transaction> => {
+  // Format the transaction data with proper UUID handling
+  const formattedTransaction = {
+    ...transactionData,
+    date: transactionData.date.toISOString(),
+    // Explicitly handle product_id and sale_id, casting will be done by the RPC function
+    product_id: transactionData.product_id,
+    sale_id: transactionData.sale_id || null
+  };
+
   const { data, error } = await supabase
     .rpc('insert_transaction_with_sale', { 
-      p_transaction: transactionData 
+      p_transaction: formattedTransaction 
     });
   
   if (error) {
