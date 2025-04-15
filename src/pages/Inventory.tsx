@@ -26,7 +26,8 @@ const InventoryPage = () => {
     updateProduct, 
     deleteProduct, 
     getTotalInventoryValue, 
-    recordMonthlyRestock 
+    recordMonthlyRestock, 
+    recordTransactionInDb
   } = useData();
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -47,6 +48,7 @@ const InventoryPage = () => {
   });
   const [productUpdates, setProductUpdates] = useState<{product: Product, newQuantity: number}[]>([]);
   const [thresholdValue, setThresholdValue] = useState(5);
+  const [originalQuantity, setOriginalQuantity] = useState<number>(0);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -72,6 +74,7 @@ const InventoryPage = () => {
   const closeAddModal = () => setIsAddModalOpen(false);
   const openEditModal = (product: Product) => {
     setSelectedProduct(product);
+    setOriginalQuantity(product.stockQuantity);
     setIsEditModalOpen(true);
   };
   const closeEditModal = () => {
@@ -168,7 +171,27 @@ const InventoryPage = () => {
   const handleUpdateProduct = async () => {
     if (!selectedProduct) return;
     try {
+      const quantityDifference = selectedProduct.stockQuantity - originalQuantity;
+
+      if (quantityDifference !== 0) {
+        // Create adjustment transaction
+        const now = new Date();
+        const transactionData = {
+          product_id: selectedProduct.id,
+          product_name: selectedProduct.name,
+          quantity: Math.abs(quantityDifference),
+          price: 0, // Price is 0 for adjustments
+          type: 'adjustment',
+          date: now.toISOString(),
+          user_id: user?.id || 'unknown',
+          user_name: user?.name || 'Unknown User'
+        };
+
+        await recordTransactionInDb(transactionData);
+      }
+
       await updateProduct(selectedProduct.id, selectedProduct);
+      
       toast({
         title: "Success",
         description: "Product updated successfully.",
@@ -559,25 +582,7 @@ const InventoryPage = () => {
                   onChange={(e) =>
                     setSelectedProduct({
                       ...selectedProduct,
-                      stockQuantity: parseInt(e.target.value),
-                    })
-                  }
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="lowStockThreshold" className="text-right">
-                  Low Stock Threshold
-                </Label>
-                <Input
-                  type="number"
-                  id="lowStockThreshold"
-                  name="lowStockThreshold"
-                  value={selectedProduct.lowStockThreshold}
-                  onChange={(e) =>
-                    setSelectedProduct({
-                      ...selectedProduct,
-                      lowStockThreshold: parseInt(e.target.value),
+                      stockQuantity: parseInt(e.target.value) || 0,
                     })
                   }
                   className="col-span-3"
