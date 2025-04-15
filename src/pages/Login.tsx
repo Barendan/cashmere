@@ -8,16 +8,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Leaf, AlertCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
@@ -32,17 +35,28 @@ const Login = () => {
     }
   };
 
-  const handleDemoLogin = async (type: "admin" | "employee") => {
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
     setIsLoading(true);
+
     try {
-      if (type === "admin") {
-        await login("admin@serenityspa.com", "admin123");
-      } else {
-        await login("employee@serenityspa.com", "employee123");
-      }
-      navigate("/");
-    } catch (error) {
-      setError("Could not login with demo account");
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'employee' // Default role for new users
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      setError("Please check your email for the confirmation link.");
+    } catch (error: any) {
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -59,70 +73,118 @@ const Login = () => {
             <CardTitle className="text-2xl text-spa-deep">Serenity Spa</CardTitle>
             <CardDescription>Inventory Management System</CardDescription>
           </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+          
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login">
+              <CardContent>
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    placeholder="your-email@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                    className="border-spa-sand focus:border-spa-sage"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    className="border-spa-sand focus:border-spa-sage"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-2">
-            <div className="text-sm text-center mb-2">Demo Accounts:</div>
-            <div className="flex space-x-2 w-full">
-              <Button
-                variant="outline"
-                className="flex-1 text-xs border-spa-sand"
-                onClick={() => handleDemoLogin("admin")}
-                disabled={isLoading}
-              >
-                Admin Demo
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 text-xs border-spa-sand"
-                onClick={() => handleDemoLogin("employee")}
-                disabled={isLoading}
-              >
-                Employee Demo
-              </Button>
-            </div>
-          </CardFooter>
+                <form onSubmit={handleLogin}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="your-email@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                        className="border-spa-sand focus:border-spa-sage"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="border-spa-sand focus:border-spa-sage"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Signing In..." : "Sign In"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </TabsContent>
+
+            <TabsContent value="register">
+              <CardContent>
+                {error && (
+                  <Alert variant={error.includes("check your email") ? "default" : "destructive"} className="mb-4">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                <form onSubmit={handleSignUp}>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Full Name</Label>
+                      <Input
+                        id="signup-name"
+                        placeholder="John Doe"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isLoading}
+                        className="border-spa-sand focus:border-spa-sage"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="your-email@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isLoading}
+                        className="border-spa-sand focus:border-spa-sage"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Choose a password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={isLoading}
+                        className="border-spa-sand focus:border-spa-sage"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Signing Up..." : "Sign Up"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </TabsContent>
+          </Tabs>
         </Card>
       </div>
     </div>

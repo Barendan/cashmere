@@ -1,10 +1,12 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { User, Session } from '@supabase/supabase-js';
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = "admin" | "employee";
 
-interface User {
+interface AuthUser {
   id: string;
   name: string;
   email: string;
@@ -12,67 +14,94 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for demonstration
-const MOCK_USERS = [
-  { 
-    id: "1", 
-    name: "Admin User", 
-    email: "admin@serenityspa.com", 
-    password: "admin123", 
-    role: "admin" as UserRole 
-  },
-  { 
-    id: "2", 
-    name: "Employee", 
-    email: "employee@serenityspa.com", 
-    password: "employee123", 
-    role: "employee" as UserRole 
-  }
-];
-
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem("spaUser");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              name: profile.name,
+              email: profile.email,
+              role: profile.role as UserRole,
+            });
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data: profile }) => {
+            if (profile) {
+              setUser({
+                id: session.user.id,
+                name: profile.name,
+                email: profile.email,
+                role: profile.role as UserRole,
+              });
+            }
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Mock authentication
-    const foundUser = MOCK_USERS.find(
-      (u) => u.email === email && u.password === password
-    );
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (foundUser) {
-      const { password: _, ...userWithoutPassword } = foundUser;
-      setUser(userWithoutPassword);
-      localStorage.setItem("spaUser", JSON.stringify(userWithoutPassword));
-      toast.success(`Welcome back, ${userWithoutPassword.name}!`);
-      return;
+    if (error) {
+      toast.error(error.message);
+      throw error;
     }
 
-    toast.error("Invalid email or password");
-    throw new Error("Invalid credentials");
+    toast.success("Successfully logged in!");
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Error signing out");
+      throw error;
+    }
     setUser(null);
-    localStorage.removeItem("spaUser");
     toast.info("You have been logged out");
   };
 
