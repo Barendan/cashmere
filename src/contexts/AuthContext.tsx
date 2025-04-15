@@ -32,21 +32,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          const { data: profile } = await supabase
+          console.log("Auth state change - user authenticated:", session.user.id);
+          const { data: profile, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
+          if (error) {
+            console.error("Error fetching user profile:", error);
+          }
+
           if (profile) {
-            setUser({
+            const authUser: AuthUser = {
               id: session.user.id,
-              name: profile.name,
-              email: profile.email,
-              role: profile.role as UserRole,
-            });
+              name: profile.name || 'Unknown User',
+              email: profile.email || session.user.email || '',
+              role: profile.role as UserRole || 'employee',
+            };
+            console.log("Setting auth user:", authUser);
+            setUser(authUser);
+          } else {
+            console.warn("No profile found for user:", session.user.id);
+            setUser(null);
           }
         } else {
+          console.log("Auth state change - user not authenticated");
           setUser(null);
         }
       }
@@ -55,23 +66,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
+        console.log("Existing session found, fetching profile");
         supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single()
-          .then(({ data: profile }) => {
+          .then(({ data: profile, error }) => {
+            if (error) {
+              console.error("Error fetching user profile:", error);
+            }
+            
             if (profile) {
               setUser({
                 id: session.user.id,
-                name: profile.name,
-                email: profile.email,
-                role: profile.role as UserRole,
+                name: profile.name || 'Unknown User',
+                email: profile.email || session.user.email || '',
+                role: profile.role as UserRole || 'employee',
               });
             }
             setLoading(false);
           });
       } else {
+        console.log("No existing session found");
         setLoading(false);
       }
     });

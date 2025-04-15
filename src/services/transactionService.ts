@@ -1,3 +1,4 @@
+
 import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
 import { Product, Sale, Transaction, TransactionInput } from "../models/types";
 
@@ -64,6 +65,7 @@ export const recordTransactionInDb = async (transactionData: TransactionInput): 
     });
   
   if (error) {
+    console.error("Transaction insert error:", error);
     throw error;
   }
   
@@ -78,10 +80,10 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
   console.log("Processing transactions for RPC call:", JSON.stringify(transactions));
   
   try {
-    // Format transactions - no need to call toString() on UUIDs
-    // The RPC function will handle proper UUID casting on the PostgreSQL side
+    // Format transactions for Supabase RPC function
+    // The PGSQL function expects valid JSON objects where the UUIDs will be cast on the server side
     const formattedTransactions = transactions.map(tx => ({
-      product_id: tx.product_id, // Pass UUID directly
+      product_id: tx.product_id, // Pass UUID as string
       product_name: tx.product_name,
       quantity: tx.quantity,
       price: tx.price,
@@ -89,9 +91,9 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
       date: tx.date,
       user_id: tx.user_id,
       user_name: tx.user_name,
-      sale_id: tx.sale_id, // Pass UUID directly
-      discount: tx.discount || null, // Add discount field
-      original_price: tx.original_price || null // Add original price field
+      sale_id: tx.sale_id, // Pass UUID as string
+      discount: tx.discount || null,
+      original_price: tx.original_price || null
     }));
     
     console.log("Formatted transactions for RPC:", JSON.stringify(formattedTransactions));
