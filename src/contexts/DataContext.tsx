@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -49,6 +50,7 @@ interface DataContextType {
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
   recordMonthlyRestock: (productUpdates: {product: Product, newQuantity: number}[]) => Promise<void>;
+  recordTransactionInDb: (transactionData: any) => Promise<Transaction>;
   isLoading: boolean;
   getTotalInventoryValue: () => number;
 }
@@ -795,6 +797,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         undoLastTransaction,
         getProduct,
         recordMonthlyRestock,
+        recordTransactionInDb,
         isLoading,
         getTotalInventoryValue
       }}
