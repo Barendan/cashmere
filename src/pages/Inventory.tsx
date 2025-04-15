@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
-import { Product } from "../models/types";
+import { Product, TransactionInput } from "../models/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -176,13 +176,13 @@ const InventoryPage = () => {
       if (quantityDifference !== 0) {
         // Create adjustment transaction
         const now = new Date();
-        const transactionData = {
+        const transactionData: TransactionInput = {
           product_id: selectedProduct.id,
           product_name: selectedProduct.name,
           quantity: Math.abs(quantityDifference),
           price: 0, // Price is 0 for adjustments
           type: 'adjustment',
-          date: now.toISOString(),
+          date: now,
           user_id: user?.id || 'unknown',
           user_name: user?.name || 'Unknown User'
         };

@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Product, Transaction, Sale } from "../models/types";
+import { Product, Transaction, Sale, TransactionInput } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { 
@@ -266,13 +265,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       await updateProductStock(productId, product.stockQuantity - quantity);
       
-      const newTransactionData = {
+      const newTransactionData: TransactionInput = {
         product_id: productId,
         product_name: product.name,
         quantity,
         price: product.sellPrice * quantity,
         type: 'sale',
-        date: now.toISOString(),
+        date: now,
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User',
         sale_id: saleId
@@ -521,13 +520,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       await updateProductStock(productId, newQuantity);
 
-      const newTransactionData = {
+      const newTransactionData: TransactionInput = {
         product_id: productId,
         product_name: product.name,
         quantity: Math.abs(difference),
         price: 0,
         type: 'adjustment',
-        date: now.toISOString(),
+        date: now,
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User'
       };
