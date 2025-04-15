@@ -217,7 +217,11 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                             group.transactions[0].type === 'monthly-restock' ? (
                               <span className="font-medium">Monthly Inventory Restock</span>
                             ) : (
-                              <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                              group.itemCount === 1 ? (
+                                <span className="font-medium">{group.transactions[0].productName}</span>
+                              ) : (
+                                <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                              )
                             )
                           ) : (
                             <span className="font-medium">{group.transactions[0].productName}</span>

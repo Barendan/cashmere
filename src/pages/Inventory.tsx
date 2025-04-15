@@ -181,7 +181,7 @@ const InventoryPage = () => {
         const transactionData: TransactionInput = {
           product_id: selectedProduct.id,
           product_name: selectedProduct.name,
-          quantity: Math.abs(quantityDifference),
+          quantity: quantityDifference, // No longer using Math.abs - keeping the sign intact
           price: 0, // Price is 0 for adjustments
           type: 'adjustment',
           date: now,
