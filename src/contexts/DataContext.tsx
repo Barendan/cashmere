@@ -20,7 +20,7 @@ import {
   recordMonthlyRestockInDb,
   updateMultipleProductStocks
 } from "../services/transactionService";
-import { supabase, mapSaleRowToSale, mapTransactionRowToTransaction } from "../integrations/supabase/client";
+import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
 
 interface ServiceIncome {
@@ -83,30 +83,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .eq('type', 'income')
         .order('date', { ascending: false });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
-        const transformedServiceIncomes: ServiceIncome[] = data.map(item => {
-          const categoryId = item.category || "uncategorized";
-          const categoryName = item.category || "Uncategorized";
-          
-          const serviceId = item.service_id || categoryId;
-          const serviceName = item.services?.name || categoryName;
-          
-          return {
-            id: item.id,
-            serviceId: serviceId,
-            serviceName: serviceName,
-            amount: item.amount,
-            date: new Date(item.date),
-            customerName: item.customer_name
-          };
-        });
-
-        setServiceIncomes(transformedServiceIncomes);
-        return transformedServiceIncomes;
+        return data.map(item => ({
+          id: item.id,
+          serviceId: item.service_id || item.category || "uncategorized",
+          serviceName: item.services?.name || item.category || "Uncategorized",
+          amount: item.amount,
+          date: new Date(item.date),
+          customerName: item.customer_name
+        }));
       }
 
       return [];

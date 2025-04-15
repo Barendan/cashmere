@@ -1,9 +1,6 @@
-import * as React from "react"
 
-import type {
-  ToastActionElement,
-  ToastProps,
-} from "@/components/ui/toast"
+import * as React from "react"
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -32,22 +29,10 @@ function genId() {
 type ActionType = typeof actionTypes
 
 type Action =
-  | {
-      type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
-    }
-  | {
-      type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
-    }
-  | {
-      type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
-  | {
-      type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+  | { type: ActionType["ADD_TOAST"]; toast: ToasterToast }
+  | { type: ActionType["UPDATE_TOAST"]; toast: Partial<ToasterToast> }
+  | { type: ActionType["DISMISS_TOAST"]; toastId?: ToasterToast["id"] }
+  | { type: ActionType["REMOVE_TOAST"]; toastId?: ToasterToast["id"] }
 
 interface State {
   toasts: ToasterToast[]
@@ -56,16 +41,11 @@ interface State {
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
 const addToRemoveQueue = (toastId: string) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
+  if (toastTimeouts.has(toastId)) return
+  
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId)
-    dispatch({
-      type: "REMOVE_TOAST",
-      toastId: toastId,
-    })
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId })
   }, TOAST_REMOVE_DELAY)
 
   toastTimeouts.set(toastId, timeout)
@@ -90,8 +70,6 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -104,20 +82,15 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.map((t) =>
           t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
+            ? { ...t, open: false }
             : t
         ),
       }
     }
+    
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
-        return {
-          ...state,
-          toasts: [],
-        }
+        return { ...state, toasts: [] }
       }
       return {
         ...state,
@@ -127,7 +100,6 @@ export const reducer = (state: State, action: Action): State => {
 }
 
 const listeners: Array<(state: State) => void> = []
-
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
