@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -28,7 +27,8 @@ const InventoryPage = () => {
     deleteProduct, 
     getTotalInventoryValue, 
     recordMonthlyRestock, 
-    recordTransactionInDb
+    recordTransactionInDb,
+    refreshData
   } = useData();
   const { isAdmin, user } = useAuth();
   const { toast } = useToast();
@@ -90,7 +90,6 @@ const InventoryPage = () => {
     setProductUpdates([]);
   };
 
-  // Fix input handlers to correctly handle both input and textarea elements
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewProduct(prev => ({ ...prev, [name]: value }));
@@ -176,13 +175,12 @@ const InventoryPage = () => {
       const quantityDifference = selectedProduct.stockQuantity - originalQuantity;
 
       if (quantityDifference !== 0) {
-        // Create adjustment transaction
         const now = new Date();
         const transactionData: TransactionInput = {
           product_id: selectedProduct.id,
           product_name: selectedProduct.name,
-          quantity: quantityDifference, // No longer using Math.abs - keeping the sign intact
-          price: 0, // Price is 0 for adjustments
+          quantity: quantityDifference,
+          price: 0,
           type: 'adjustment',
           date: now,
           user_id: user?.id || 'unknown',
@@ -193,6 +191,7 @@ const InventoryPage = () => {
       }
 
       await updateProduct(selectedProduct.id, selectedProduct);
+      await refreshData();
       
       toast({
         title: "Success",

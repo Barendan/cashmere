@@ -52,6 +52,7 @@ interface DataContextType {
   recordTransactionInDb: (transactionData: any) => Promise<Transaction>;
   isLoading: boolean;
   getTotalInventoryValue: () => number;
+  refreshData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -66,6 +67,74 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const refreshData = async () => {
+    try {
+      const [
+        transformedProducts,
+        transformedSales,
+        transformedTransactions
+      ] = await Promise.all([
+        fetchProducts(),
+        fetchSales(),
+        fetchTransactions()
+      ]);
+
+      setProducts(transformedProducts);
+
+      const salesWithItems: Sale[] = transformedSales.map(sale => {
+        const saleItems = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
+        return { ...sale, items: saleItems };
+      });
+
+      setSales(salesWithItems);
+      setTransactions(transformedTransactions);
+
+      const restockDate = await getLastRestockDate();
+      if (restockDate) {
+        setLastRestockDate(restockDate);
+      }
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        title: "Error Refreshing Data",
+        description: "Failed to refresh data from database.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoading(true);
+      await refreshData();
+      setIsLoading(false);
+    };
+
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('products-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'products'
+        },
+        async () => {
+          const updatedProducts = await fetchProducts();
+          setProducts(updatedProducts);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchServiceIncomes = async () => {
     try {
@@ -108,54 +177,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  useEffect(() => {
-    async function fetchData() {
-      setIsLoading(true);
-      
-      try {
-        const transformedProducts = await fetchProducts();
-        setProducts(transformedProducts);
-        
-        try {
-          const transformedSales = await fetchSales();
-          
-          const transformedTransactions = await fetchTransactions();
-          
-          const salesWithItems: Sale[] = transformedSales.map(sale => {
-            const saleItems = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
-            return { ...sale, items: saleItems };
-          });
-          
-          setSales(salesWithItems);
-          setTransactions(transformedTransactions);
-
-          await fetchServiceIncomes();
-
-        } catch (error) {
-          console.error('Error fetching sales:', error);
-          setSales([]);
-        }
-
-        const restockDate = await getLastRestockDate();
-        if (restockDate) {
-          setLastRestockDate(restockDate);
-        }
-
-      } catch (error) {
-        console.error('Error loading data:', error);
-        toast({ 
-          title: "Error Loading Data", 
-          description: "Failed to load data from database.", 
-          variant: "destructive"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchData();
-  }, [toast]);
-
   const saveLastAction = (action: string, data: any) => {
     setLastAction({ action, data });
   };
@@ -163,9 +184,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const addProduct = async (product: Omit<Product, "id">): Promise<void> => {
     try {
       const newProduct = await addProductToDb(product);
-      
       setProducts([...products, newProduct]);
       toast({ title: "Product Added", description: `${product.name} was added to inventory.` });
+      await refreshData();
     } catch (error) {
       console.error('Error adding product:', error);
       toast({ 
@@ -190,6 +211,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ));
       
       toast({ title: "Product Updated", description: `${oldProduct.name} was updated.` });
+      await refreshData();
     } catch (error) {
       console.error('Error updating product:', error);
       toast({ 
@@ -211,6 +233,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setProducts(products.filter(p => p.id !== id));
       toast({ title: "Product Deleted", description: `${product.name} was removed from inventory.` });
+      await refreshData();
     } catch (error) {
       console.error('Error deleting product:', error);
       toast({ 
@@ -281,6 +304,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setTransactions([newTransaction, ...transactions]);
       
       toast({ title: "Sale Recorded", description: `Sold ${quantity} ${product.name}.` });
+      await refreshData();
     } catch (error) {
       console.error('Error recording sale:', error);
       toast({ 
@@ -392,6 +416,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             `Sold ${items.length} item(s) with a $${totalDiscount.toFixed(2)} discount.` : 
             `Sold ${items.length} item(s).` 
         });
+        await refreshData();
       } catch (error) {
         console.error('Error in transaction recording:', error);
         toast({ 
@@ -479,6 +504,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       toast({ title: "Restock Recorded", description: `Added ${quantity} ${product.name} to inventory.` });
+      await refreshData();
     } catch (error) {
       console.error('Error recording restock:', error);
       toast({ 
@@ -559,6 +585,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: "Inventory Adjusted", 
         description: `${product.name} quantity updated to ${newQuantity}.` 
       });
+      await refreshData();
     } catch (error) {
       console.error('Error adjusting inventory:', error);
       toast({ 
@@ -790,7 +817,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         recordMonthlyRestock,
         recordTransactionInDb,
         isLoading,
-        getTotalInventoryValue
+        getTotalInventoryValue,
+        refreshData
       }}
     >
       {children}
