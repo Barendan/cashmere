@@ -271,7 +271,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         quantity,
         price: product.sellPrice * quantity,
         type: 'sale',
-        date: now,
+        date: now.toISOString(),
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User',
         sale_id: saleId
@@ -520,13 +520,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       await updateProductStock(productId, newQuantity);
 
-      const newTransactionData: TransactionInput = {
+      const newTransactionData = {
         product_id: productId,
         product_name: product.name,
         quantity: Math.abs(difference),
         price: 0,
         type: 'adjustment',
-        date: now,
+        date: now.toISOString(),
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User'
       };
