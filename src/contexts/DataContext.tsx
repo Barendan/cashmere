@@ -38,7 +38,7 @@ interface DataContextType {
   sales: Sale[];
   serviceIncomes: ServiceIncome[];
   lastRestockDate: Date | null;
-  addProduct: (product: Omit<Product, "id">) => void;
+  addProduct: (product: Omit<Product, "id">) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
@@ -173,7 +173,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLastAction({ action, data });
   };
 
-  const addProduct = async (product: Omit<Product, "id">) => {
+  const addProduct = async (product: Omit<Product, "id">): Promise<void> => {
     try {
       const newProduct = await addProductToDb(product);
       

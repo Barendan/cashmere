@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -89,6 +90,7 @@ const InventoryPage = () => {
     setProductUpdates([]);
   };
 
+  // Fix input handlers to correctly handle both input and textarea elements
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNewProduct(prev => ({ ...prev, [name]: value }));
@@ -450,25 +452,53 @@ const InventoryPage = () => {
               <Label htmlFor="costPrice" className="text-right">
                 Cost Price
               </Label>
-              <Input type="number" id="costPrice" name="costPrice" value={newProduct.costPrice} onChange={handleNumberInputChange} className="col-span-3" />
+              <Input 
+                type="number" 
+                id="costPrice" 
+                name="costPrice" 
+                value={newProduct.costPrice} 
+                onChange={handleNumberInputChange} 
+                className="col-span-3" 
+              />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="sellPrice" className="text-right">
                 Sell Price
               </Label>
-              <Input type="number" id="sellPrice" name="sellPrice" value={newProduct.sellPrice} onChange={handleNumberInputChange} className="col-span-3" />
+              <Input 
+                type="number" 
+                id="sellPrice" 
+                name="sellPrice" 
+                value={newProduct.sellPrice} 
+                onChange={handleNumberInputChange} 
+                className="col-span-3" 
+              />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="stockQuantity" className="text-right">
                 Stock Quantity
               </Label>
-              <Input type="number" id="stockQuantity" name="stockQuantity" value={newProduct.stockQuantity} onChange={handleNumberInputChange} className="col-span-3" />
+              <Input 
+                type="number" 
+                id="stockQuantity" 
+                name="stockQuantity" 
+                value={newProduct.stockQuantity} 
+                onChange={handleNumberInputChange} 
+                className="col-span-3" 
+              />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="lowStockThreshold" className="text-right">
                 Low Stock Threshold
               </Label>
-              <Input type="number" id="lowStockThreshold" name="lowStockThreshold" value={newProduct.lowStockThreshold} onChange={handleNumberInputChange} className="col-span-3" />
+              <Input 
+                type="number" 
+                id="lowStockThreshold" 
+                name="lowStockThreshold" 
+                value={newProduct.lowStockThreshold} 
+                onChange={handleNumberInputChange} 
+                className="col-span-3" 
+              />
             </div>
           </div>
           <Button onClick={handleAddProduct} className="w-full">
