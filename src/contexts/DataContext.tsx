@@ -531,9 +531,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User'
       };
       
+      const formattedTransactionData = {
+        ...newTransactionData,
+        date: now.toISOString()
+      };
+      
       const { data, error: insertError } = await supabase
         .from('transactions')
-        .insert(newTransactionData)
+        .insert(formattedTransactionData)
         .select();
 
       if (insertError) {
