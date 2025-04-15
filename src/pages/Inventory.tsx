@@ -6,395 +6,731 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Package, Edit, Plus, DollarSign, CalendarDays, X, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CheckCircle, XCircle, Edit, Plus, Trash2, PackageOpen, RefreshCw } from "lucide-react";
-import { formatCurrency } from "../lib/format";
-import { supabase } from "../integrations/supabase/client";
-import { recordTransactionInDb } from "../services/transactionService";
-import usePageTitle from "../hooks/usePageTitle";
+import { formatCurrency } from "@/lib/format";
+import { HoverFillButton } from "@/components/ui/hover-fill-button";
 
-interface EditProductModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  product: Product | null;
-  onSave: (product: Product) => void;
-}
-
-interface AddProductModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onAdd: (product: Omit<Product, 'id'>) => void;
-}
-
-const Inventory = () => {
+const InventoryPage = () => {
   usePageTitle("Inventory");
-  const { products, addProduct, updateProduct, deleteProduct } = useData();
-  const { user } = useAuth();
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { 
+    products, 
+    addProduct, 
+    updateProduct, 
+    deleteProduct, 
+    getTotalInventoryValue, 
+    recordMonthlyRestock, 
+    recordTransactionInDb
+  } = useData();
+  const { isAdmin, user } = useAuth();
+  const { toast } = useToast();
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isMonthlyRestockModalOpen, setIsMonthlyRestockModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const categories = ["All", ...new Set(products.map((product) => product.category))];
-
-  const filteredProducts = products.filter((product) => {
-    const categoryMatch = selectedCategory === "All" || product.category === selectedCategory;
-    const searchMatch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return categoryMatch && searchMatch;
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
+    name: "",
+    description: "",
+    category: "Skincare",
+    costPrice: 0,
+    sellPrice: 0,
+    stockQuantity: 0,
+    lowStockThreshold: 5,
   });
+  const [productUpdates, setProductUpdates] = useState<{product: Product, newQuantity: number}[]>([]);
+  const [thresholdValue, setThresholdValue] = useState(5);
+  const [originalQuantity, setOriginalQuantity] = useState<number>(0);
 
-  const handleEditClick = (product: Product) => {
+  useEffect(() => {
+    if (!isAdmin) {
+      toast({
+        title: "Unauthorized",
+        description: "You do not have permission to access this page.",
+        variant: "destructive",
+      });
+    }
+  }, [isAdmin, toast]);
+
+  useEffect(() => {
+    if (isMonthlyRestockModalOpen) {
+      const initialUpdates = products.map(product => ({
+        product,
+        newQuantity: product.stockQuantity
+      }));
+      setProductUpdates(initialUpdates);
+    }
+  }, [isMonthlyRestockModalOpen, products]);
+
+  const openAddModal = () => setIsAddModalOpen(true);
+  const closeAddModal = () => setIsAddModalOpen(false);
+  const openEditModal = (product: Product) => {
     setSelectedProduct(product);
+    setOriginalQuantity(product.stockQuantity);
     setIsEditModalOpen(true);
   };
-
-  const handleAddClick = () => {
-    setIsAddModalOpen(true);
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedProduct(null);
+  };
+  const openMonthlyRestockModal = () => {
+    setIsMonthlyRestockModalOpen(true);
+  };
+  const closeMonthlyRestockModal = () => {
+    setIsMonthlyRestockModalOpen(false);
+    setProductUpdates([]);
   };
 
-  const handleDeleteClick = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      await deleteProduct(id);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewProduct(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewProduct(prev => ({
+      ...prev,
+      [name]: parseFloat(value) || 0,
+    }));
+  };
+
+  const handleRestockQuantityChange = (productId: string, quantity: number) => {
+    setProductUpdates(prev => 
+      prev.map(item => 
+        item.product.id === productId 
+          ? { ...item, newQuantity: Math.max(0, quantity) } 
+          : item
+      )
+    );
+  };
+
+  const handleApplyThreshold = () => {
+    products.forEach(product => {
+      updateProduct(product.id, { lowStockThreshold: thresholdValue });
+    });
+    
+    toast({
+      title: "Success",
+      description: "Low stock threshold updated for all products.",
+    });
+  };
+
+  const handlePerformMonthlyRestock = async () => {
+    try {
+      await recordMonthlyRestock(productUpdates);
+      closeMonthlyRestockModal();
+    } catch (error) {
+      console.error("Error performing monthly restock:", error);
+      toast({
+        title: "Error",
+        description: "Failed to perform monthly restock. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
+  const calculateRestockTotal = () => {
+    return productUpdates.reduce((total, item) => {
+      const additionalQuantity = Math.max(0, item.newQuantity - item.product.stockQuantity);
+      return total + (additionalQuantity * item.product.costPrice);
+    }, 0);
+  };
+
+  const calculateTotalItems = () => {
+    return productUpdates.reduce((total, item) => {
+      return item.newQuantity > item.product.stockQuantity ? total + 1 : total;
+    }, 0);
+  };
+
+  const handleAddProduct = async () => {
+    try {
+      await addProduct(newProduct);
+      toast({
+        title: "Success",
+        description: "Product added successfully.",
+      });
+      closeAddModal();
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!selectedProduct) return;
+    try {
+      const quantityDifference = selectedProduct.stockQuantity - originalQuantity;
+
+      if (quantityDifference !== 0) {
+        // Create adjustment transaction
+        const now = new Date();
+        const transactionData: TransactionInput = {
+          product_id: selectedProduct.id,
+          product_name: selectedProduct.name,
+          quantity: Math.abs(quantityDifference),
+          price: 0, // Price is 0 for adjustments
+          type: 'adjustment',
+          date: now,
+          user_id: user?.id || 'unknown',
+          user_name: user?.name || 'Unknown User'
+        };
+
+        await recordTransactionInDb(transactionData);
+      }
+
+      await updateProduct(selectedProduct.id, selectedProduct);
+      
+      toast({
+        title: "Success",
+        description: "Product updated successfully.",
+      });
+      closeEditModal();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await deleteProduct(productId);
+      toast({
+        title: "Success",
+        description: "Product deleted successfully.",
+      });
+      closeEditModal();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const totalInventoryValue = getTotalInventoryValue();
+  const lowStockCount = products.filter(p => p.stockQuantity <= p.lowStockThreshold).length;
+  const totalProductCount = products.length;
+  const outOfStockCount = products.filter(p => p.stockQuantity === 0).length;
+
   return (
-    <div className="container mx-auto py-6">
-      <Card>
+    <div className="container mx-auto px-6">
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold tracking-tight">Inventory Management</h2>
+        <p className="text-muted-foreground">Add, edit and track your inventory</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <Card className="bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-spa-deep flex items-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Inventory Value
+            </CardTitle>
+            <CardDescription>Total value of current inventory</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <p className="text-muted-foreground text-sm">Based on cost price</p>
+              <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                {totalProductCount} Products
+              </Badge>
+              {outOfStockCount > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
+                  {outOfStockCount} Out of Stock
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-spa-deep flex items-center">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </CardTitle>
+            <CardDescription>Add a new product to inventory</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center h-[100px]">
+            <HoverFillButton variant="primary" onClick={openAddModal} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Product
+            </HoverFillButton>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-spa-deep flex items-center">
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Monthly Restock
+            </CardTitle>
+            <CardDescription>Update inventory levels for all products</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Inventory Status</Label>
+                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
+                  {lowStockCount} Low Stock Items
+                </Badge>
+              </div>
+              <HoverFillButton variant="primary" onClick={openMonthlyRestockModal} className="w-full">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Perform Monthly Restock
+              </HoverFillButton>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Card className="w-full mb-8 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/60">
         <CardHeader>
-          <CardTitle className="text-2xl">Inventory</CardTitle>
-          <CardDescription>Manage your products, track stock levels, and record restocks.</CardDescription>
+          <CardTitle>Inventory Management</CardTitle>
+          <CardDescription>View and modify your product inventory</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0 md:space-x-4">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="search">Search:</Label>
-              <Input
-                type="search"
-                id="search"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="category">Category:</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleAddClick}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Product
-            </Button>
+          <div className="mb-4">
+            <Input 
+              placeholder="Search products..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
           </div>
-          <ScrollArea className="my-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Cost Price</TableHead>
-                  <TableHead>Sell Price</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell>
-                      {product.stockQuantity <= product.lowStockThreshold ? (
-                        <span className="text-red-500 font-bold">{product.stockQuantity}</span>
-                      ) : (
-                        product.stockQuantity
-                      )}
-                    </TableCell>
-                    <TableCell>{formatCurrency(product.costPrice)}</TableCell>
-                    <TableCell>{formatCurrency(product.sellPrice)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditClick(product)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(product.id)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </Button>
-                    </TableCell>
+          
+          <ScrollArea className="h-[500px] pr-4">
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-white">
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
+                    <TableHead className="text-right">Cost</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-                {filteredProducts.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center">
-                      No products found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.length > 0 ? (
+                    filteredProducts.map((product, index) => (
+                      <TableRow 
+                        key={product.id}
+                        className={
+                          product.stockQuantity === 0 
+                            ? "bg-red-50 hover:bg-red-100" 
+                            : index % 2 === 0 
+                              ? "bg-white hover:bg-gray-100" 
+                              : "bg-gray-50 hover:bg-gray-100"
+                        }
+                      >
+                        <TableCell className="font-medium">
+                          <div>
+                            {product.name}
+                            {product.stockQuantity <= product.lowStockThreshold && product.stockQuantity > 0 && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
+                              >
+                                Low Stock
+                              </Badge>
+                            )}
+                            {product.stockQuantity === 0 && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-red-50 text-red-800 border-red-200 ml-2"
+                              >
+                                Out of Stock
+                              </Badge>
+                            )}
+                          </div>
+                          {product.description && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {product.description}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{product.category}</TableCell>
+                        <TableCell className="text-right">
+                          {product.stockQuantity}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${product.costPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          ${product.sellPrice.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => openEditModal(product)}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        {searchQuery ? "No products found matching your search." : "No products have been added yet."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </ScrollArea>
         </CardContent>
       </Card>
-
-      <EditProductModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        product={selectedProduct}
-        onSave={async (updatedProduct) => {
-          if (selectedProduct) {
-            await updateProduct(selectedProduct.id, updatedProduct);
-            setIsEditModalOpen(false);
-          }
-        }}
-      />
-
-      <AddProductModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        onAdd={async (newProduct) => {
-          await addProduct(newProduct);
-          setIsAddModalOpen(false);
-        }}
-      />
+      
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Name
+              </Label>
+              <Input type="text" id="name" name="name" value={newProduct.name} onChange={handleInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Textarea id="description" name="description" value={newProduct.description} onChange={handleInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="category" className="text-right">
+                Category
+              </Label>
+              <Select onValueChange={(value) => setNewProduct(prev => ({ ...prev, category: value }))}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Skincare">Skincare</SelectItem>
+                  <SelectItem value="Makeup">Makeup</SelectItem>
+                  <SelectItem value="Haircare">Haircare</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="costPrice" className="text-right">
+                Cost Price
+              </Label>
+              <Input type="number" id="costPrice" name="costPrice" value={newProduct.costPrice} onChange={handleNumberInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sellPrice" className="text-right">
+                Sell Price
+              </Label>
+              <Input type="number" id="sellPrice" name="sellPrice" value={newProduct.sellPrice} onChange={handleNumberInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="stockQuantity" className="text-right">
+                Stock Quantity
+              </Label>
+              <Input type="number" id="stockQuantity" name="stockQuantity" value={newProduct.stockQuantity} onChange={handleNumberInputChange} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="lowStockThreshold" className="text-right">
+                Low Stock Threshold
+              </Label>
+              <Input type="number" id="lowStockThreshold" name="lowStockThreshold" value={newProduct.lowStockThreshold} onChange={handleNumberInputChange} className="col-span-3" />
+            </div>
+          </div>
+          <Button onClick={handleAddProduct} className="w-full">
+            Add Product
+          </Button>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name
+                </Label>
+                <Input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={selectedProduct.name}
+                  onChange={(e) =>
+                    setSelectedProduct({ ...selectedProduct, name: e.target.value })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={selectedProduct.description}
+                  onChange={(e) =>
+                    setSelectedProduct({ ...selectedProduct, description: e.target.value })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="category" className="text-right">
+                  Category
+                </Label>
+                <Select
+                  onValueChange={(value) =>
+                    setSelectedProduct({ ...selectedProduct, category: value })
+                  }
+                  defaultValue={selectedProduct.category}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Skincare">Skincare</SelectItem>
+                    <SelectItem value="Makeup">Makeup</SelectItem>
+                    <SelectItem value="Haircare">Haircare</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="costPrice" className="text-right">
+                  Cost Price
+                </Label>
+                <Input
+                  type="number"
+                  id="costPrice"
+                  name="costPrice"
+                  value={selectedProduct.costPrice}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      costPrice: parseFloat(e.target.value),
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sellPrice" className="text-right">
+                  Sell Price
+                </Label>
+                <Input
+                  type="number"
+                  id="sellPrice"
+                  name="sellPrice"
+                  value={selectedProduct.sellPrice}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      sellPrice: parseFloat(e.target.value),
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="stockQuantity" className="text-right">
+                  Stock Quantity
+                </Label>
+                <Input
+                  type="number"
+                  id="stockQuantity"
+                  name="stockQuantity"
+                  value={selectedProduct.stockQuantity}
+                  onChange={(e) =>
+                    setSelectedProduct({
+                      ...selectedProduct,
+                      stockQuantity: parseInt(e.target.value) || 0,
+                    })
+                  }
+                  className="col-span-3"
+                />
+              </div>
+              <DialogFooter className="flex justify-between mt-4">
+                <Button variant="destructive" onClick={() => selectedProduct && handleDeleteProduct(selectedProduct.id)}>
+                  Delete Product
+                </Button>
+                <Button onClick={handleUpdateProduct}>Update Product</Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isMonthlyRestockModalOpen} onOpenChange={setIsMonthlyRestockModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Monthly Inventory Restock</DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-grow overflow-hidden flex flex-col">
+            <div className="bg-muted p-3 rounded-md mb-4">
+              <div className="text-sm font-medium mb-1">Restock Summary</div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Total Cost:</span> 
+                  <span className="font-semibold ml-1">{formatCurrency(calculateRestockTotal())}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Items to Restock:</span> 
+                  <span className="font-semibold ml-1">{calculateTotalItems()}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Performed By:</span> 
+                  <span className="font-semibold ml-1">{user?.name || "Unknown User"}</span>
+                </div>
+              </div>
+            </div>
+            
+            <ScrollArea className="flex-grow pr-4">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead className="text-center">Current Stock</TableHead>
+                      <TableHead className="text-center">New Quantity</TableHead>
+                      <TableHead className="text-right">Cost</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {productUpdates.map((item, index) => {
+                      const isLowStock = item.product.stockQuantity <= item.product.lowStockThreshold;
+                      const isOutOfStock = item.product.stockQuantity === 0;
+                      const isIncreasing = item.newQuantity > item.product.stockQuantity;
+                      const additionalQuantity = Math.max(0, item.newQuantity - item.product.stockQuantity);
+                      const additionalCost = additionalQuantity * item.product.costPrice;
+                      
+                      return (
+                        <TableRow 
+                          key={item.product.id}
+                          className={
+                            isOutOfStock 
+                              ? "bg-red-50" 
+                              : isLowStock 
+                                ? "bg-amber-50" 
+                                : index % 2 === 0 
+                                  ? "bg-white" 
+                                  : "bg-gray-50"
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {item.product.name}
+                            {isOutOfStock && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-red-50 text-red-800 border-red-200 ml-2"
+                              >
+                                Out of Stock
+                              </Badge>
+                            )}
+                            {isLowStock && !isOutOfStock && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
+                              >
+                                Low Stock
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{item.product.category}</TableCell>
+                          <TableCell className="text-center">
+                            {item.product.stockQuantity}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center">
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.newQuantity}
+                                onChange={(e) => handleRestockQuantityChange(
+                                  item.product.id, 
+                                  parseInt(e.target.value) || 0
+                                )}
+                                className="w-24 text-center"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isIncreasing ? (
+                              <span className="text-green-600 font-medium">
+                                +{formatCurrency(additionalCost)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">$0.00</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </ScrollArea>
+          </div>
+          
+          <DialogFooter className="mt-4 flex justify-between items-center">
+            <div className="text-sm text-muted-foreground">
+              This will create a single monthly restock transaction.
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={closeMonthlyRestockModal}>
+                <X className="h-4 w-4 mr-1" />
+                Cancel
+              </Button>
+              <Button onClick={handlePerformMonthlyRestock} disabled={calculateTotalItems() === 0}>
+                <Check className="h-4 w-4 mr-1" />
+                Complete Restock
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-interface InputProps {
-  label: string;
-  id: string;
-  type: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  required?: boolean;
-}
-
-const InputField: React.FC<InputProps> = ({ label, id, type, value, onChange, required }) => (
-  <div className="grid w-full max-w-sm items-center gap-1.5">
-    <Label htmlFor={id}>{label}</Label>
-    <Input type={type} id={id} value={value} onChange={onChange} required={required} />
-  </div>
-);
-
-interface TextAreaProps {
-  label: string;
-  id: string;
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-}
-
-const TextAreaField: React.FC<TextAreaProps> = ({ label, id, value, onChange }) => (
-  <div className="grid w-full max-w-sm items-center gap-1.5">
-    <Label htmlFor={id}>{label}</Label>
-    <Input as="textarea" id={id} value={value} onChange={onChange} />
-  </div>
-);
-
-interface EditProductFormProps {
-  product: Product;
-  onSave: (updates: Partial<Product>) => Promise<void>;
-  onClose: () => void;
-}
-
-const EditProductForm: React.FC<EditProductFormProps> = ({ product, onSave, onClose }) => {
-  const [name, setName] = useState(product.name);
-  const [description, setDescription] = useState(product.description || "");
-  const [stockQuantity, setStockQuantity] = useState(product.stockQuantity.toString());
-  const [costPrice, setCostPrice] = useState(product.costPrice.toString());
-  const [sellPrice, setSellPrice] = useState(product.sellPrice.toString());
-  const [category, setCategory] = useState(product.category);
-  const [lowStockThreshold, setLowStockThreshold] = useState(product.lowStockThreshold.toString());
-  const [size, setSize] = useState(product.size || "");
-  const [ingredients, setIngredients] = useState(product.ingredients || "");
-  const [skinConcerns, setSkinConcerns] = useState(product.skinConcerns || "");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!name.trim() || !description.trim() || !stockQuantity.trim() || !costPrice.trim() || !sellPrice.trim() || !category.trim() || !lowStockThreshold.trim()) {
-      alert("Please fill in all required fields.");
-      return;
-    }
-
-    try {
-      const parsedData = {
-        name: name.trim(),
-        description: description.trim(),
-        stockQuantity: parseInt(stockQuantity),
-        costPrice: parseFloat(costPrice),
-        sellPrice: parseFloat(sellPrice),
-        category: category.trim(),
-        lowStockThreshold: parseInt(lowStockThreshold),
-        size: size.trim() || null,
-        ingredients: ingredients.trim() || null,
-        skinConcerns: skinConcerns.trim() || null
-      };
-
-      await onSave(parsedData);
-      onClose();
-    } catch (error) {
-      console.error("Error updating product:", error);
-      alert("Failed to update product. Please check the console for details.");
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-      <InputField label="Name" id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-      <TextAreaField label="Description" id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
-      <InputField label="Stock Quantity" id="stockQuantity" type="number" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} required />
-      <InputField label="Cost Price" id="costPrice" type="number" step="0.01" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required />
-      <InputField label="Sell Price" id="sellPrice" type="number" step="0.01" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} required />
-      <InputField label="Category" id="category" type="text" value={category} onChange={(e) => setCategory(e.target.value)} required />
-      <InputField label="Low Stock Threshold" id="lowStockThreshold" type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} required />
-      <InputField label="Size" id="size" type="text" value={size} onChange={(e) => setSize(e.target.value)} />
-      <InputField label="Ingredients" id="ingredients" type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)} />
-      <InputField label="Skin Concerns" id="skinConcerns" type="text" value={skinConcerns} onChange={(e) => setSkinConcerns(e.target.value)} />
-
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit">Save Changes</Button>
-      </div>
-    </form>
-  );
-};
-
-const EditProductModal = ({ isOpen, onClose, product, onSave }: EditProductModalProps) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Edit Product</DialogTitle>
-          <DialogDescription>Make changes to your product here. Click save when you're done.</DialogDescription>
-        </DialogHeader>
-        {product && (
-          <EditProductForm
-            product={product}
-            onSave={async (updates) => {
-              if (product) {
-                await onSave({ ...product, ...updates });
-                onClose();
-              }
-            }}
-            onClose={onClose}
-          />
-        )}
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-interface AddProductFormProps {
-  onAdd: (product: Omit<Product, 'id'>) => Promise<void>;
-  onClose: () => void;
-}
-
-const AddProductForm: React.FC<AddProductFormProps> = ({ onAdd, onClose }) => {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [stockQuantity, setStockQuantity] = useState("0");
-  const [costPrice, setCostPrice] = useState("0");
-  const [sellPrice, setSellPrice] = useState("0");
-  const [category, setCategory] = useState("");
-  const [lowStockThreshold, setLowStockThreshold] = useState("0");
-  const [size, setSize] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [skinConcerns, setSkinConcerns] = useState("");
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!name.trim() || !description.trim() || !stockQuantity.trim() || !costPrice.trim() || !sellPrice.trim() || !category.trim() || !lowStockThreshold.trim()) {
-      alert("Please fill in all required fields.");
-      return;
-    }
-
-    try {
-      const parsedData: Omit<Product, 'id'> = {
-        name: name.trim(),
-        description: description.trim(),
-        stockQuantity: parseInt(stockQuantity),
-        costPrice: parseFloat(costPrice),
-        sellPrice: parseFloat(sellPrice),
-        category: category.trim(),
-        lowStockThreshold: parseInt(lowStockThreshold),
-        size: size.trim() || undefined,
-        ingredients: ingredients.trim() || undefined,
-        skinConcerns: skinConcerns.trim() || undefined
-      };
-
-      await onAdd(parsedData);
-      onClose();
-    } catch (error) {
-      console.error("Error adding product:", error);
-      alert("Failed to add product. Please check the console for details.");
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-      <InputField label="Name" id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
-      <TextAreaField label="Description" id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
-      <InputField label="Stock Quantity" id="stockQuantity" type="number" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} required />
-      <InputField label="Cost Price" id="costPrice" type="number" step="0.01" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} required />
-      <InputField label="Sell Price" id="sellPrice" type="number" step="0.01" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} required />
-      <InputField label="Category" id="category" type="text" value={category} onChange={(e) => setCategory(e.target.value)} required />
-      <InputField label="Low Stock Threshold" id="lowStockThreshold" type="number" value={lowStockThreshold} onChange={(e) => setLowStockThreshold(e.target.value)} required />
-      <InputField label="Size" id="size" type="text" value={size} onChange={(e) => setSize(e.target.value)} />
-      <InputField label="Ingredients" id="ingredients" type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)} />
-      <InputField label="Skin Concerns" id="skinConcerns" type="text" value={skinConcerns} onChange={(e) => setSkinConcerns(e.target.value)} />
-
-      <div className="flex justify-end space-x-2">
-        <Button type="button" variant="secondary" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit">Add Product</Button>
-      </div>
-    </form>
-  );
-};
-
-const AddProductModal = ({ isOpen, onClose, onAdd }: AddProductModalProps) => {
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Product</DialogTitle>
-          <DialogDescription>Add a new product to your inventory.</DialogDescription>
-        </DialogHeader>
-        <AddProductForm onAdd={onAdd} onClose={onClose} />
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-export default Inventory;
+export default InventoryPage;

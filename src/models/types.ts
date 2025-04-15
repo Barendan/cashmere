@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -94,17 +93,17 @@ export interface FinanceRecord {
   category?: string;
 }
 
-// Interface for transaction input data
+// New interface for transaction input data
 export interface TransactionInput {
   product_id: string;
   product_name: string;
   quantity: number;
   price: number;
   type: 'sale' | 'restock' | 'adjustment' | 'return' | 'monthly-restock';
-  date: Date; // Keeping as Date for ease of use in app code
+  date: Date;
   user_id: string;
   user_name: string;
   sale_id?: string;
-  discount?: number;
-  originalPrice?: number;
+  discount?: number;           // Maintaining consistency with Transaction interface
+  originalPrice?: number;      // Maintaining consistency with Transaction interface
 }

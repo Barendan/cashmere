@@ -1,4 +1,3 @@
-
 import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
 import { Product, Sale, Transaction, TransactionInput } from "../models/types";
 
@@ -53,7 +52,7 @@ export const recordTransactionInDb = async (transactionData: TransactionInput): 
   // Format the transaction data with proper UUID handling
   const formattedTransaction = {
     ...transactionData,
-    date: transactionData.date.toISOString(), // Convert Date to ISO string for Supabase
+    date: transactionData.date.toISOString(),
     // Explicitly handle product_id and sale_id, casting will be done by the RPC function
     product_id: transactionData.product_id,
     sale_id: transactionData.sale_id || null
