@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useData } from "../contexts/DataContext";
 import { useAuth } from "../contexts/AuthContext";
-import { Product, TransactionInput } from "../models/types";
+import { Product } from "../models/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,6 @@ const InventoryPage = () => {
     deleteProduct, 
     getTotalInventoryValue, 
     recordMonthlyRestock, 
-    recordTransactionInDb,
     refreshData
   } = useData();
   const { isAdmin, user } = useAuth();
@@ -49,7 +48,6 @@ const InventoryPage = () => {
   });
   const [productUpdates, setProductUpdates] = useState<{product: Product, newQuantity: number}[]>([]);
   const [thresholdValue, setThresholdValue] = useState(5);
-  const [originalQuantity, setOriginalQuantity] = useState<number>(0);
 
   useEffect(() => {
     if (!isAdmin) {
@@ -75,7 +73,6 @@ const InventoryPage = () => {
   const closeAddModal = () => setIsAddModalOpen(false);
   const openEditModal = (product: Product) => {
     setSelectedProduct(product);
-    setOriginalQuantity(product.stockQuantity);
     setIsEditModalOpen(true);
   };
   const closeEditModal = () => {
@@ -171,25 +168,8 @@ const InventoryPage = () => {
 
   const handleUpdateProduct = async () => {
     if (!selectedProduct) return;
+    
     try {
-      const quantityDifference = selectedProduct.stockQuantity - originalQuantity;
-
-      if (quantityDifference !== 0) {
-        const now = new Date();
-        const transactionData: TransactionInput = {
-          product_id: selectedProduct.id,
-          product_name: selectedProduct.name,
-          quantity: quantityDifference,
-          price: 0,
-          type: 'adjustment',
-          date: now,
-          user_id: user?.id || 'unknown',
-          user_name: user?.name || 'Unknown User'
-        };
-
-        await recordTransactionInDb(transactionData);
-      }
-
       await updateProduct(selectedProduct.id, selectedProduct);
       await refreshData();
       

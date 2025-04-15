@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Percent, Archive, Package, CalendarDays, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronDown, ChevronRight, Package, CalendarDays, Percent } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,8 +45,6 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return "bg-blue-100 text-blue-800";
       case "monthly-restock":
         return "bg-indigo-100 text-indigo-800";
-      case "adjustment":
-        return "bg-amber-100 text-amber-800";
       case "return":
         return "bg-red-100 text-red-800";
       default:
@@ -62,32 +60,11 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return <Package className="h-3 w-3 mr-1" />;
       case "monthly-restock":
         return <CalendarDays className="h-3 w-3 mr-1" />;
-      case "adjustment":
-        return <></>;
       case "return":
         return <></>;
       default:
         return <></>;
     }
-  };
-
-  const formatQuantityChange = (quantity: number, type: string) => {
-    if (type !== 'adjustment') return quantity;
-    
-    const prefix = quantity > 0 ? '+' : '';
-    return `${prefix}${quantity}`;
-  };
-
-  const getQuantityColor = (quantity: number, type: string) => {
-    if (type !== 'adjustment') return "text-gray-900";
-    return quantity > 0 ? "text-green-600" : "text-red-600";
-  };
-
-  const getQuantityIcon = (quantity: number, type: string) => {
-    if (type !== 'adjustment') return null;
-    return quantity > 0 ? 
-      <ArrowUp className="h-3 w-3 text-green-600" /> : 
-      <ArrowDown className="h-3 w-3 text-red-600" />;
   };
 
   const groupTransactions = (): GroupedTransaction[] => {
@@ -288,12 +265,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               </TableCell>
                               <TableCell></TableCell>
                               <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {transaction.type === 'adjustment' && getQuantityIcon(transaction.quantity, transaction.type)}
-                                  <span className={getQuantityColor(transaction.quantity, transaction.type)}>
-                                    {formatQuantityChange(transaction.quantity, transaction.type)} item(s)
-                                  </span>
-                                </div>
+                                
                               </TableCell>
                               <TableCell>
                                 {transaction.discount && transaction.discount > 0 && (

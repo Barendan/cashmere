@@ -44,7 +44,6 @@ interface DataContextType {
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
-  adjustInventory: (productId: string, newQuantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
@@ -197,11 +196,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const updateProduct = async (id: string, updates: Partial<Product>) => {
+  const handleUpdateProduct = async (id: string, updates: Partial<Product>) => {
     const oldProduct = products.find(p => p.id === id);
     if (!oldProduct) return;
-    
-    saveLastAction("updateProduct", { id, oldData: { ...oldProduct } });
     
     try {
       await updateProductInDb(id, updates);
@@ -515,87 +512,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const adjustInventory = async (productId: string, newQuantity: number) => {
-    const product = products.find(p => p.id === productId);
-    if (!product) {
-      toast({ title: "Error", description: "Product not found.", variant: "destructive" });
-      return;
-    }
-
-    saveLastAction("adjustInventory", { 
-      productId, 
-      oldQuantity: product.stockQuantity 
-    });
-
-    try {
-      const difference = newQuantity - product.stockQuantity;
-      const now = new Date();
-      
-      await updateProductStock(productId, newQuantity);
-
-      const newTransactionData: TransactionInput = {
-        product_id: productId,
-        product_name: product.name,
-        quantity: difference,
-        price: 0,
-        type: 'adjustment',
-        date: now,
-        user_id: user?.id || 'unknown',
-        user_name: user?.name || 'Unknown User'
-      };
-      
-      const formattedTransactionData = {
-        ...newTransactionData,
-        date: now.toISOString()
-      };
-      
-      const { data, error: insertError } = await supabase
-        .from('transactions')
-        .insert(formattedTransactionData)
-        .select();
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      const updatedProducts = products.map(p =>
-        p.id === productId
-          ? { ...p, stockQuantity: newQuantity }
-          : p
-      );
-      setProducts(updatedProducts);
-      
-      if (data && data.length > 0) {
-        const newLocalTransaction: Transaction = {
-          id: data[0].id,
-          productId,
-          productName: product.name,
-          quantity: difference,
-          price: 0,
-          type: "adjustment",
-          date: now,
-          userId: data[0].user_id,
-          userName: data[0].user_name
-        };
-        
-        setTransactions([newLocalTransaction, ...transactions]);
-      }
-      
-      toast({ 
-        title: "Inventory Adjusted", 
-        description: `${product.name} quantity updated to ${newQuantity}.` 
-      });
-      await refreshData();
-    } catch (error) {
-      console.error('Error adjusting inventory:', error);
-      toast({ 
-        title: "Error", 
-        description: "Failed to adjust inventory.", 
-        variant: "destructive" 
-      });
-    }
-  };
-
   const updateLastRestockDate = async () => {
     saveLastAction("updateLastRestockDate", { 
       oldDate: lastRestockDate
@@ -621,7 +537,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       switch (action) {
         case "recordSale":
         case "recordRestock":
-        case "adjustInventory":
           await updateProductStock(data.productId, data.oldQuantity);
           
           if (transactions.length > 0) {
@@ -805,12 +720,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         serviceIncomes,
         lastRestockDate,
         addProduct,
-        updateProduct,
+        updateProduct: handleUpdateProduct,
         deleteProduct,
         recordSale,
         recordBulkSale,
         recordRestock,
-        adjustInventory,
         updateLastRestockDate,
         undoLastTransaction,
         getProduct,
