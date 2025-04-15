@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Percent, Archive, Package, CalendarDays } from 'lucide-react';
+import { ChevronDown, ChevronRight, Percent, Archive, Package, CalendarDays, ArrowUp, ArrowDown } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,7 +70,26 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return <></>;
     }
   };
-  
+
+  const formatQuantityChange = (quantity: number, type: string) => {
+    if (type !== 'adjustment') return quantity;
+    
+    const prefix = quantity > 0 ? '+' : '';
+    return `${prefix}${quantity}`;
+  };
+
+  const getQuantityColor = (quantity: number, type: string) => {
+    if (type !== 'adjustment') return "text-gray-900";
+    return quantity > 0 ? "text-green-600" : "text-red-600";
+  };
+
+  const getQuantityIcon = (quantity: number, type: string) => {
+    if (type !== 'adjustment') return null;
+    return quantity > 0 ? 
+      <ArrowUp className="h-3 w-3 text-green-600" /> : 
+      <ArrowDown className="h-3 w-3 text-red-600" />;
+  };
+
   const groupTransactions = (): GroupedTransaction[] => {
     const filteredTransactions = transactions.filter((transaction) => {
       if (filterType !== "all" && 
@@ -266,8 +284,11 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               </TableCell>
                               <TableCell></TableCell>
                               <TableCell>
-                                <div className="flex items-center">
-                                  <span>{transaction.quantity} item(s)</span>
+                                <div className="flex items-center gap-2">
+                                  {transaction.type === 'adjustment' && getQuantityIcon(transaction.quantity, transaction.type)}
+                                  <span className={getQuantityColor(transaction.quantity, transaction.type)}>
+                                    {formatQuantityChange(transaction.quantity, transaction.type)} item(s)
+                                  </span>
                                 </div>
                               </TableCell>
                               <TableCell>

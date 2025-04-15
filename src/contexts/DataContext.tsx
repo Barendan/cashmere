@@ -523,7 +523,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const newTransactionData: TransactionInput = {
         product_id: productId,
         product_name: product.name,
-        quantity: Math.abs(difference),
+        quantity: difference,
         price: 0,
         type: 'adjustment',
         date: now,
@@ -557,7 +557,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           id: data[0].id,
           productId,
           productName: product.name,
-          quantity: Math.abs(difference),
+          quantity: difference,
           price: 0,
           type: "adjustment",
           date: now,
