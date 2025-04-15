@@ -16,8 +16,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
   }
 
   // If a specific role is required
-  if (requiredRole && user?.role !== requiredRole && requiredRole === "admin") {
-    return <Navigate to="/" replace />;
+  if (requiredRole) {
+    if (user?.role !== requiredRole) {
+      // Redirect non-admin users from admin routes to a default page
+      return <Navigate to="/" replace />;
+    }
   }
 
   return (
