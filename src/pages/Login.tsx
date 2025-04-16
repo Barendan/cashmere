@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Leaf, AlertCircle } from "lucide-react";
+import { Leaf, AlertCircle, RefreshCw } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,15 +19,17 @@ const Login = () => {
   const [localError, setLocalError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const { login, isAuthenticated, error: authError, isLoading } = useAuth();
+  const { login, authState, error: authError, retryProfileLoad } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (authState.status === 'authenticated' || 
+        authState.status === 'profile-loading' || 
+        authState.status === 'profile-loaded') {
       navigate("/");
     }
-  }, [isAuthenticated, navigate]);
+  }, [authState, navigate]);
 
   // Show auth errors from context
   useEffect(() => {
@@ -96,9 +98,12 @@ const Login = () => {
     }
   };
 
+  // Show retry option if in error state
+  const showRetryOption = authState.status === 'error';
+
   // Determine if button should be disabled
-  const isLoginDisabled = isProcessing || isLoading;
-  const isSignupDisabled = isProcessing || isLoading;
+  const isLoginDisabled = isProcessing || authState.status === 'authenticating';
+  const isSignupDisabled = isProcessing || authState.status === 'authenticating';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-spa-sand/30">
@@ -111,6 +116,23 @@ const Login = () => {
             <CardTitle className="text-2xl text-spa-deep">Serenity Spa</CardTitle>
             <CardDescription>Inventory Management System</CardDescription>
           </CardHeader>
+          
+          {showRetryOption && (
+            <div className="px-6 pb-4">
+              <Alert variant="destructive" className="mb-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>Authentication system error. Please try again.</AlertDescription>
+              </Alert>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2 mt-2" 
+                onClick={() => retryProfileLoad()}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry Authentication
+              </Button>
+            </div>
+          )}
           
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
