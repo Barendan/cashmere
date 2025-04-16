@@ -1,46 +1,77 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Leaf, AlertCircle } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [localError, setLocalError] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const { login, isAuthenticated, error: authError, isLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Show auth errors from context
+  useEffect(() => {
+    if (authError) {
+      setLocalError(authError);
+    }
+  }, [authError]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
+    setLocalError("");
+    setIsProcessing(true);
+    
     try {
+      // Validate inputs
+      if (!email.trim() || !password.trim()) {
+        setLocalError("Email and password are required");
+        setIsProcessing(false);
+        return;
+      }
+      
       await login(email, password);
-      navigate("/");
-    } catch (error) {
-      setError("Invalid email or password");
+      // Navigate is handled by the useEffect
+    } catch (error: any) {
+      // Error is already handled in the auth context
+      console.error("Login form error:", error);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
+    setLocalError("");
+    setIsProcessing(true);
+    
     try {
+      // Validate inputs
+      if (!email.trim() || !password.trim() || !name.trim()) {
+        setLocalError("All fields are required");
+        setIsProcessing(false);
+        return;
+      }
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -54,13 +85,20 @@ const Login = () => {
 
       if (error) throw error;
 
-      setError("Please check your email for the confirmation link.");
+      toast.success("Registration successful! Please check your email for confirmation.");
+      setLocalError("Please check your email for the confirmation link.");
     } catch (error: any) {
-      setError(error.message);
+      console.error("Signup error:", error);
+      setLocalError(error.message || "Registration failed");
+      toast.error(error.message || "Registration failed");
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
+
+  // Determine if button should be disabled
+  const isLoginDisabled = isProcessing || isLoading;
+  const isSignupDisabled = isProcessing || isLoading;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-spa-sand/30">
@@ -82,10 +120,10 @@ const Login = () => {
             
             <TabsContent value="login">
               <CardContent>
-                {error && (
+                {localError && (
                   <Alert variant="destructive" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription>{localError}</AlertDescription>
                   </Alert>
                 )}
 
@@ -99,7 +137,7 @@ const Login = () => {
                         placeholder="your-email@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isLoginDisabled}
                         className="border-spa-sand focus:border-spa-sage"
                       />
                     </div>
@@ -111,16 +149,16 @@ const Login = () => {
                         placeholder="Your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isLoginDisabled}
                         className="border-spa-sand focus:border-spa-sage"
                       />
                     </div>
                     <Button
                       type="submit"
                       className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                      disabled={isLoading}
+                      disabled={isLoginDisabled}
                     >
-                      {isLoading ? "Signing In..." : "Sign In"}
+                      {isLoginDisabled ? "Signing In..." : "Sign In"}
                     </Button>
                   </div>
                 </form>
@@ -129,10 +167,10 @@ const Login = () => {
 
             <TabsContent value="register">
               <CardContent>
-                {error && (
-                  <Alert variant={error.includes("check your email") ? "default" : "destructive"} className="mb-4">
+                {localError && (
+                  <Alert variant={localError.includes("check your email") ? "default" : "destructive"} className="mb-4">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
+                    <AlertDescription>{localError}</AlertDescription>
                   </Alert>
                 )}
 
@@ -145,7 +183,7 @@ const Login = () => {
                         placeholder="John Doe"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isSignupDisabled}
                         className="border-spa-sand focus:border-spa-sage"
                       />
                     </div>
@@ -157,7 +195,7 @@ const Login = () => {
                         placeholder="your-email@example.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isSignupDisabled}
                         className="border-spa-sand focus:border-spa-sage"
                       />
                     </div>
@@ -169,16 +207,16 @@ const Login = () => {
                         placeholder="Choose a password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoading}
+                        disabled={isSignupDisabled}
                         className="border-spa-sand focus:border-spa-sage"
                       />
                     </div>
                     <Button
                       type="submit"
                       className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                      disabled={isLoading}
+                      disabled={isSignupDisabled}
                     >
-                      {isLoading ? "Signing Up..." : "Sign Up"}
+                      {isSignupDisabled ? "Signing Up..." : "Sign Up"}
                     </Button>
                   </div>
                 </form>
