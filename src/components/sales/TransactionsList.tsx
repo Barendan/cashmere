@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
@@ -53,19 +52,18 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     }
   };
   
-  // Updated function to return null instead of empty fragments
   const getTransactionTypeIcon = (type: string): JSX.Element | null => {
     switch (type) {
       case "sale":
-        return null; // Changed from <></> to null
+        return null;
       case "restock":
         return <Package className="h-3 w-3 mr-1" />;
       case "monthly-restock":
         return <CalendarDays className="h-3 w-3 mr-1" />;
       case "return":
-        return null; // Changed from <></> to null
+        return null;
       default:
-        return null; // Changed from <></> to null
+        return null;
     }
   };
 
@@ -254,47 +252,45 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                         </TableCell>
                       </TableRow>
                       
-                      {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) && (
-                        <>
-                          {group.transactions.map(transaction => (
-                            <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
-                              <TableCell></TableCell>
-                              <TableCell className="py-2 pl-8">
-                                <div className="flex items-center">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
-                                  {transaction.productName}
+                      {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) &&
+                        group.transactions.map(transaction => (
+                          <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
+                            <TableCell></TableCell>
+                            <TableCell className="py-2 pl-8">
+                              <div className="flex items-center">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
+                                {transaction.productName}
+                              </div>
+                            </TableCell>
+                            <TableCell></TableCell>
+                            <TableCell>
+                              
+                            </TableCell>
+                            <TableCell>
+                              {transaction.discount && transaction.discount > 0 && (
+                                <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
+                                  <Percent className="h-2 w-2 mr-0.5" />
+                                  {formatCurrency(transaction.discount)}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="text-xs text-muted-foreground line-through">
+                                    {formatCurrency(transaction.originalPrice)}
+                                  </span>
+                                  <span className="text-red-600">
+                                    {formatCurrency(transaction.price)}
+                                  </span>
                                 </div>
-                              </TableCell>
-                              <TableCell></TableCell>
-                              <TableCell>
-                                
-                              </TableCell>
-                              <TableCell>
-                                {transaction.discount && transaction.discount > 0 && (
-                                  <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
-                                    <Percent className="h-2 w-2 mr-0.5" />
-                                    {formatCurrency(transaction.discount)}
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
-                                  <div className="flex flex-col items-end">
-                                    <span className="text-xs text-muted-foreground line-through">
-                                      {formatCurrency(transaction.originalPrice)}
-                                    </span>
-                                    <span className="text-red-600">
-                                      {formatCurrency(transaction.price)}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  formatCurrency(transaction.price)
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </>
-                      )}
+                              ) : (
+                                formatCurrency(transaction.price)
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      }
                     </React.Fragment>
                   ))
                 ) : (
