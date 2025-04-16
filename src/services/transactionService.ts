@@ -1,4 +1,3 @@
-
 import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
 import { Product, Sale, Transaction, TransactionInput } from "../models/types";
 
@@ -81,7 +80,7 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
   
   try {
     // Format transactions for Supabase RPC function
-    // The PGSQL function expects valid JSON objects where the UUIDs will be cast on the server side
+    // Remove discount and original_price fields since they are not in the transactions table
     const formattedTransactions = transactions.map(tx => ({
       product_id: tx.product_id, // Pass UUID as string
       product_name: tx.product_name,
@@ -91,9 +90,8 @@ export const recordBulkTransactionsInDb = async (transactions: any[]) => {
       date: tx.date,
       user_id: tx.user_id,
       user_name: tx.user_name,
-      sale_id: tx.sale_id, // Pass UUID as string
-      discount: tx.discount || null,
-      original_price: tx.original_price || null
+      sale_id: tx.sale_id // Pass UUID as string
+      // Discount and original_price fields are intentionally omitted
     }));
     
     console.log("Formatted transactions for RPC:", JSON.stringify(formattedTransactions));

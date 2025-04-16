@@ -360,7 +360,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       for (const item of items) {
         const itemTotal = item.product.sellPrice * item.quantity;
-        const originalPrice = item.discount > 0 ? itemTotal : undefined;
         const finalPrice = Math.max(0, itemTotal - item.discount);
         
         newTransactions.push({
@@ -368,8 +367,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           product_name: item.product.name,
           quantity: item.quantity,
           price: finalPrice,
-          original_price: item.discount > 0 ? itemTotal : null,
-          discount: item.discount > 0 ? item.discount : null,
           type: 'sale',
           date: now.toISOString(),
           user_id: user?.id || 'unknown',

@@ -118,9 +118,7 @@ export const mapTransactionRowToTransaction = (row: TransactionRow | RpcTransact
   date: new Date(row.date),
   userId: row.user_id,
   userName: row.user_name,
-  saleId: row.sale_id || undefined,
-  discount: (row as any).discount || undefined,           // Handle discount field
-  originalPrice: (row as any).original_price || undefined // Handle original price field
+  saleId: row.sale_id || undefined
 });
 
 export const mapSaleRowToSale = (row: SaleRow | RpcSaleResult) => ({
@@ -131,6 +129,6 @@ export const mapSaleRowToSale = (row: SaleRow | RpcSaleResult) => ({
   userName: row.user_name,
   paymentMethod: row.payment_method || undefined,
   notes: row.notes || undefined,
-  discount: (row as any).discount || undefined,           // Handle discount field 
-  originalTotal: (row as any).original_total || undefined // Handle original total field
+  discount: (row as any).discount || undefined,           // Keep discount field here
+  originalTotal: (row as any).original_total || undefined // Keep original total field here
 });
