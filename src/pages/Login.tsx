@@ -19,14 +19,12 @@ const Login = () => {
   const [localError, setLocalError] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const { login, authState, error: authError, retryProfileLoad } = useAuth();
+  const { login, authState, error: authError, retryAuth } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (authState.status === 'authenticated' || 
-        authState.status === 'profile-loading' || 
-        authState.status === 'profile-loaded') {
+    if (authState.status === 'authenticated') {
       navigate("/");
     }
   }, [authState, navigate]);
@@ -126,7 +124,7 @@ const Login = () => {
               <Button 
                 variant="outline" 
                 className="w-full gap-2 mt-2" 
-                onClick={() => retryProfileLoad()}
+                onClick={() => retryAuth()}
               >
                 <RefreshCw className="h-4 w-4" />
                 Retry Authentication

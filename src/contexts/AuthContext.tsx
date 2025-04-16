@@ -6,13 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type UserRole = "admin" | "employee";
 
-// Define a proper auth state type
+// Simplified Auth State with fewer transitions
 export type AuthState = 
-  | { status: 'idle' }
+  | { status: 'unauthenticated' }
   | { status: 'authenticating' }
-  | { status: 'authenticated', session: Session }
-  | { status: 'profile-loading', session: Session }
-  | { status: 'profile-loaded', session: Session, user: AuthUser }
+  | { status: 'authenticated', session: Session, user: AuthUser }
   | { status: 'error', error: string };
 
 interface AuthUser {
@@ -32,18 +30,16 @@ interface AuthContextType {
   user: AuthUser | null;
   error: string | null;
   session: Session | null;
-  retryProfileLoad: () => Promise<void>;
+  retryAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Maximum duration to wait for initial authentication
-const AUTH_TIMEOUT = 10000; 
-// Maximum duration to wait for profile loading
-const PROFILE_TIMEOUT = 8000;
+// Single timeout for the entire auth process
+const AUTH_TIMEOUT = 8000;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>({ status: 'idle' });
+  const [authState, setAuthState] = useState<AuthState>({ status: 'unauthenticated' });
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   // Clear any active timeout
@@ -61,7 +57,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTimeoutId(id);
   };
 
-  const createUserFromSession = async (session: Session): Promise<AuthUser | null> => {
+  // Combined function to fetch user and profile data
+  const fetchCompleteUserData = async (session: Session): Promise<AuthUser | null> => {
     try {
       // Fetch user profile from database
       const { data: profile, error } = await supabase
@@ -72,16 +69,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (error) {
         console.warn("Error fetching profile:", error.message);
-        
-        // Create basic user from session if profile not found
-        return {
-          id: session.user.id,
-          name: session.user.email?.split('@')[0] || 'Unknown User',
-          email: session.user.email || '',
-          role: 'employee'
-        };
+        throw new Error("Failed to load user profile");
       }
 
+      // Return the complete user data
       return {
         id: session.user.id,
         name: profile.name || session.user.email?.split('@')[0] || 'Unknown User',
@@ -89,55 +80,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role: profile.role as UserRole || 'employee',
       };
     } catch (err) {
-      console.error("Failed to create user from session:", err);
-      return null;
+      console.error("Failed to fetch complete user data:", err);
+      throw err;
     }
   };
 
-  // Load user profile data
-  const loadUserProfile = async (session: Session) => {
+  // Retry authentication after an error
+  const retryAuth = async () => {
     try {
-      setAuthState({ status: 'profile-loading', session });
+      setAuthState({ status: 'authenticating' });
       
-      // Set a timeout for profile loading
+      // Set timeout for auth process
       setNewTimeout(() => {
-        console.warn("Profile loading timed out, allowing navigation with limited data");
-        // Continue with a basic user profile even if full profile loading fails
-        const basicUser: AuthUser = {
-          id: session.user.id,
-          name: session.user.email?.split('@')[0] || 'Unknown User',
-          email: session.user.email || '',
-          role: 'employee'
-        };
-        setAuthState({ status: 'profile-loaded', session, user: basicUser });
-      }, PROFILE_TIMEOUT);
+        console.warn("Authentication timed out");
+        setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
+      }, AUTH_TIMEOUT);
+
+      const { data } = await supabase.auth.getSession();
       
-      const user = await createUserFromSession(session);
-      
-      // Clear timeout as profile loaded successfully
-      clearActiveTimeout();
-      
-      if (user) {
-        setAuthState({ status: 'profile-loaded', session, user });
+      if (data.session) {
+        const user = await fetchCompleteUserData(data.session);
+        
+        clearActiveTimeout();
+        
+        if (user) {
+          setAuthState({ 
+            status: 'authenticated', 
+            session: data.session, 
+            user 
+          });
+          console.log("Authentication successful");
+        } else {
+          setAuthState({ status: 'error', error: "Failed to load user profile" });
+        }
       } else {
-        setAuthState({ status: 'error', error: "Failed to load user profile" });
+        clearActiveTimeout();
+        setAuthState({ status: 'unauthenticated' });
       }
     } catch (err: any) {
       clearActiveTimeout();
-      console.error("Error loading profile:", err);
-      setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
-    }
-  };
-
-  // Retry loading the profile if it failed
-  const retryProfileLoad = async () => {
-    if (authState.status === 'error' || authState.status === 'profile-loading') {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        loadUserProfile(data.session);
-      } else {
-        setAuthState({ status: 'idle' });
-      }
+      console.error("Error during retry authentication:", err);
+      setAuthState({ status: 'error', error: err.message || "Authentication failed" });
     }
   };
 
@@ -146,10 +129,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Keep track of mounted state to prevent state updates after unmount
     let isMounted = true;
     
-    // Start with a timeout for initial authentication
+    // Start with a timeout for authentication
     setNewTimeout(() => {
       if (isMounted) {
-        console.warn("Authentication timed out, resetting to idle state");
+        console.warn("Authentication timed out, resetting to error state");
         setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
       }
     }, AUTH_TIMEOUT);
@@ -165,31 +148,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (session) {
             console.log("Auth state change - user authenticated:", session.user.id);
             
-            // Clear the auth timeout
-            clearActiveTimeout();
+            // Only update to authenticating if not already authenticated
+            if (authState.status !== 'authenticated') {
+              setAuthState({ status: 'authenticating' });
+            }
             
-            // Update state to authenticated immediately
-            setAuthState({ status: 'authenticated', session });
-            
-            // Then load the user profile asynchronously
-            setTimeout(() => {
-              if (isMounted) {
-                loadUserProfile(session);
-              }
-            }, 0);
+            // Fetch the complete user data (synchronously within the setState call)
+            fetchCompleteUserData(session)
+              .then(user => {
+                if (isMounted) {
+                  clearActiveTimeout();
+                  setAuthState({ 
+                    status: 'authenticated', 
+                    session, 
+                    user 
+                  });
+                }
+              })
+              .catch(err => {
+                if (isMounted) {
+                  clearActiveTimeout();
+                  setAuthState({ 
+                    status: 'error', 
+                    error: err.message || "Failed to load user data" 
+                  });
+                }
+              });
           } else {
             console.log("Auth state change - user not authenticated");
             
             clearActiveTimeout();
             
             if (isMounted) {
-              setAuthState({ status: 'idle' });
+              setAuthState({ status: 'unauthenticated' });
             }
           }
         } catch (err) {
           console.error("Error processing auth state change:", err);
           
           if (isMounted) {
+            clearActiveTimeout();
             setAuthState({ status: 'error', error: "Authentication error. Please try again." });
           }
         }
@@ -206,31 +204,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (data.session) {
           console.log("Existing session found");
           
-          // Clear the auth timeout
-          clearActiveTimeout();
-          
-          // Update state to authenticated immediately
-          setAuthState({ status: 'authenticated', session: data.session });
-          
-          // Then load the user profile asynchronously
-          setTimeout(() => {
+          try {
+            // Fetch the complete user data
+            const user = await fetchCompleteUserData(data.session);
+            
+            clearActiveTimeout();
+            
             if (isMounted) {
-              loadUserProfile(data.session!);
+              setAuthState({ 
+                status: 'authenticated', 
+                session: data.session, 
+                user 
+              });
             }
-          }, 0);
+          } catch (err: any) {
+            clearActiveTimeout();
+            
+            if (isMounted) {
+              setAuthState({ 
+                status: 'error', 
+                error: err.message || "Failed to load user profile" 
+              });
+            }
+          }
         } else {
           console.log("No existing session found");
           
           clearActiveTimeout();
           
           if (isMounted) {
-            setAuthState({ status: 'idle' });
+            setAuthState({ status: 'unauthenticated' });
           }
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error checking existing session:", err);
         
         if (isMounted) {
+          clearActiveTimeout();
           setAuthState({ status: 'error', error: "Failed to check authentication status" });
         }
       }
@@ -250,21 +260,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     try {
       setAuthState({ status: 'authenticating' });
+      
+      // Set timeout for auth process
+      setNewTimeout(() => {
+        console.warn("Authentication timed out");
+        setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
+      }, AUTH_TIMEOUT);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
       
-      // Auth state listener will handle the successful login
-      // Don't set state here - let the auth state listener do it
-      
-      toast.success("Successfully logged in!");
+      if (data.session) {
+        try {
+          // Fetch the complete user data
+          const user = await fetchCompleteUserData(data.session);
+          
+          clearActiveTimeout();
+          
+          setAuthState({ 
+            status: 'authenticated', 
+            session: data.session, 
+            user 
+          });
+          
+          toast.success("Successfully logged in!");
+        } catch (err: any) {
+          clearActiveTimeout();
+          setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
+          toast.error(err.message || "Failed to load user profile");
+          throw err;
+        }
+      }
     } catch (error: any) {
       console.error("Login error:", error);
       
+      clearActiveTimeout();
       setAuthState({ status: 'error', error: error.message || "Failed to log in" });
       toast.error(error.message || "Failed to log in");
       throw error;
@@ -274,36 +308,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = async () => {
     try {
       // Set a temporary loading state
-      if (authState.status === 'profile-loaded' || authState.status === 'authenticated') {
-        setAuthState({ status: 'authenticating' });
-      }
+      setAuthState({ status: 'authenticating' });
 
       const { error } = await supabase.auth.signOut();
       
       if (error) throw error;
       
-      // Auth state listener will handle setting user to null
-      // Don't set auth state here - let the auth state listener do it
+      clearActiveTimeout();
+      setAuthState({ status: 'unauthenticated' });
       
       toast.info("You have been logged out");
     } catch (error: any) {
       console.error("Logout error:", error);
       
+      clearActiveTimeout();
       setAuthState({ status: 'error', error: error.message || "Failed to log out" });
       toast.error("Error signing out");
       throw error;
     }
   };
 
-  // Derive simplified states from the auth state machine for backward compatibility
-  const isAuthenticated = authState.status === 'authenticated' || 
-                           authState.status === 'profile-loading' || 
-                           authState.status === 'profile-loaded';
-  const isLoading = authState.status === 'authenticating' || authState.status === 'profile-loading';
+  // Derive simplified states from the auth state machine
+  const isAuthenticated = authState.status === 'authenticated';
+  const isLoading = authState.status === 'authenticating';
   const error = authState.status === 'error' ? authState.error : null;
-  const session = isAuthenticated ? 
-    (authState as { session: Session }).session : null;
-  const user = authState.status === 'profile-loaded' ? authState.user : null;
+  const session = isAuthenticated ? authState.session : null;
+  const user = isAuthenticated ? authState.user : null;
   const isAdmin = user?.role === "admin";
 
   const value = {
@@ -316,10 +346,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     error,
     session,
-    retryProfileLoad
+    retryAuth
   };
 
-  // Show a minimalist loading screen only for the initial authentication
+  // Show a minimalist loading screen only during authentication
   if (authState.status === 'authenticating') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-spa-cream">
