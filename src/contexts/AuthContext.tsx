@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { User, Session } from '@supabase/supabase-js';
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,26 +35,31 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Single timeout for the entire auth process
-const AUTH_TIMEOUT = 8000;
+// Single timeout for the entire auth process - increased for more reliability
+const AUTH_TIMEOUT = 15000;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({ status: 'unauthenticated' });
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  
+  // Use a ref to track timeouts - prevents stale closure issues
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Clear any active timeout
-  const clearActiveTimeout = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      setTimeoutId(null);
+  const clearAllTimeouts = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      console.log("Auth timeout cleared");
     }
   };
 
-  // Set a new timeout
-  const setNewTimeout = (callback: () => void, duration: number) => {
-    clearActiveTimeout();
-    const id = setTimeout(callback, duration);
-    setTimeoutId(id);
+  // Set a new timeout and track it with the ref
+  const setAuthTimeout = (callback: () => void, duration: number) => {
+    // Always clear existing timeout first
+    clearAllTimeouts();
+    
+    console.log(`Setting new auth timeout for ${duration}ms`);
+    timeoutRef.current = setTimeout(callback, duration);
   };
 
   // Combined function to fetch user and profile data
@@ -90,35 +95,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setAuthState({ status: 'authenticating' });
       
-      // Set timeout for auth process
-      setNewTimeout(() => {
-        console.warn("Authentication timed out");
+      // Set timeout for auth process - will be cleared on success
+      setAuthTimeout(() => {
+        console.warn("Authentication retry timed out");
         setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
       }, AUTH_TIMEOUT);
 
       const { data } = await supabase.auth.getSession();
       
       if (data.session) {
-        const user = await fetchCompleteUserData(data.session);
-        
-        clearActiveTimeout();
-        
-        if (user) {
-          setAuthState({ 
-            status: 'authenticated', 
-            session: data.session, 
-            user 
-          });
-          console.log("Authentication successful");
-        } else {
-          setAuthState({ status: 'error', error: "Failed to load user profile" });
+        try {
+          const user = await fetchCompleteUserData(data.session);
+          
+          // Clear timeout on success
+          clearAllTimeouts();
+          
+          if (user) {
+            setAuthState({ 
+              status: 'authenticated', 
+              session: data.session, 
+              user 
+            });
+            console.log("Authentication retry successful");
+          } else {
+            setAuthState({ status: 'error', error: "Failed to load user profile" });
+          }
+        } catch (err: any) {
+          clearAllTimeouts();
+          setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
         }
       } else {
-        clearActiveTimeout();
+        clearAllTimeouts();
         setAuthState({ status: 'unauthenticated' });
       }
     } catch (err: any) {
-      clearActiveTimeout();
+      clearAllTimeouts();
       console.error("Error during retry authentication:", err);
       setAuthState({ status: 'error', error: err.message || "Authentication failed" });
     }
@@ -128,18 +139,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     // Keep track of mounted state to prevent state updates after unmount
     let isMounted = true;
+    console.log("Setting up auth state listeners");
     
-    // Start with a timeout for authentication
-    setNewTimeout(() => {
-      if (isMounted) {
-        console.warn("Authentication timed out, resetting to error state");
-        setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
-      }
-    }, AUTH_TIMEOUT);
-
-    // Set up auth state change listener FIRST
+    // Set up auth state change listener FIRST - without setting a timeout
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log("Auth state change event:", event);
 
         if (!isMounted) return;
@@ -151,33 +155,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Only update to authenticating if not already authenticated
             if (authState.status !== 'authenticated') {
               setAuthState({ status: 'authenticating' });
+              
+              // Fetch the complete user data without setting additional timeouts
+              fetchCompleteUserData(session)
+                .then(user => {
+                  if (isMounted) {
+                    // Clear any lingering timeouts
+                    clearAllTimeouts();
+                    
+                    setAuthState({ 
+                      status: 'authenticated', 
+                      session, 
+                      user 
+                    });
+                  }
+                })
+                .catch(err => {
+                  if (isMounted) {
+                    // Clear any lingering timeouts
+                    clearAllTimeouts();
+                    
+                    setAuthState({ 
+                      status: 'error', 
+                      error: err.message || "Failed to load user data" 
+                    });
+                  }
+                });
             }
-            
-            // Fetch the complete user data (synchronously within the setState call)
-            fetchCompleteUserData(session)
-              .then(user => {
-                if (isMounted) {
-                  clearActiveTimeout();
-                  setAuthState({ 
-                    status: 'authenticated', 
-                    session, 
-                    user 
-                  });
-                }
-              })
-              .catch(err => {
-                if (isMounted) {
-                  clearActiveTimeout();
-                  setAuthState({ 
-                    status: 'error', 
-                    error: err.message || "Failed to load user data" 
-                  });
-                }
-              });
           } else {
             console.log("Auth state change - user not authenticated");
             
-            clearActiveTimeout();
+            // Clear any active timeout
+            clearAllTimeouts();
             
             if (isMounted) {
               setAuthState({ status: 'unauthenticated' });
@@ -187,7 +196,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.error("Error processing auth state change:", err);
           
           if (isMounted) {
-            clearActiveTimeout();
+            // Clear any active timeout
+            clearAllTimeouts();
+            
             setAuthState({ status: 'error', error: "Authentication error. Please try again." });
           }
         }
@@ -197,6 +208,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // THEN check for existing session
     const checkExistingSession = async () => {
       try {
+        // Set initial timeout for the complete authentication process
+        setAuthTimeout(() => {
+          if (isMounted) {
+            console.warn("Initial authentication timed out");
+            setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
+          }
+        }, AUTH_TIMEOUT);
+        
         const { data } = await supabase.auth.getSession();
         
         if (!isMounted) return;
@@ -208,7 +227,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Fetch the complete user data
             const user = await fetchCompleteUserData(data.session);
             
-            clearActiveTimeout();
+            // Clear timeout after successful authentication
+            clearAllTimeouts();
             
             if (isMounted) {
               setAuthState({ 
@@ -218,7 +238,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               });
             }
           } catch (err: any) {
-            clearActiveTimeout();
+            // Clear timeout on error
+            clearAllTimeouts();
             
             if (isMounted) {
               setAuthState({ 
@@ -230,7 +251,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         } else {
           console.log("No existing session found");
           
-          clearActiveTimeout();
+          // Clear timeout when no session found
+          clearAllTimeouts();
           
           if (isMounted) {
             setAuthState({ status: 'unauthenticated' });
@@ -240,7 +262,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error("Error checking existing session:", err);
         
         if (isMounted) {
-          clearActiveTimeout();
+          // Clear timeout on error
+          clearAllTimeouts();
+          
           setAuthState({ status: 'error', error: "Failed to check authentication status" });
         }
       }
@@ -252,7 +276,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Clean up
     return () => {
       isMounted = false;
-      clearActiveTimeout();
+      clearAllTimeouts();
       subscription.unsubscribe();
     };
   }, []);
@@ -262,8 +286,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthState({ status: 'authenticating' });
       
       // Set timeout for auth process
-      setNewTimeout(() => {
-        console.warn("Authentication timed out");
+      setAuthTimeout(() => {
+        console.warn("Login timed out");
         setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
       }, AUTH_TIMEOUT);
 
@@ -279,7 +303,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Fetch the complete user data
           const user = await fetchCompleteUserData(data.session);
           
-          clearActiveTimeout();
+          // Clear the timeout after successful authentication
+          clearAllTimeouts();
           
           setAuthState({ 
             status: 'authenticated', 
@@ -289,7 +314,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           toast.success("Successfully logged in!");
         } catch (err: any) {
-          clearActiveTimeout();
+          // Clear timeout on error
+          clearAllTimeouts();
+          
           setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
           toast.error(err.message || "Failed to load user profile");
           throw err;
@@ -298,7 +325,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error: any) {
       console.error("Login error:", error);
       
-      clearActiveTimeout();
+      // Clear timeout on error
+      clearAllTimeouts();
+      
       setAuthState({ status: 'error', error: error.message || "Failed to log in" });
       toast.error(error.message || "Failed to log in");
       throw error;
@@ -314,14 +343,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (error) throw error;
       
-      clearActiveTimeout();
+      // Clear any active timeout
+      clearAllTimeouts();
+      
       setAuthState({ status: 'unauthenticated' });
       
       toast.info("You have been logged out");
     } catch (error: any) {
       console.error("Logout error:", error);
       
-      clearActiveTimeout();
+      // Clear any active timeout
+      clearAllTimeouts();
+      
       setAuthState({ status: 'error', error: error.message || "Failed to log out" });
       toast.error("Error signing out");
       throw error;

@@ -17,6 +17,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
 
   // Show error state with retry button
   if (authState.status === 'error') {
+    console.log("Protected route rendering error state");
+    
     return (
       <Layout>
         <div className="container mx-auto p-6">
@@ -30,7 +32,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
             <Button 
               variant="outline" 
               className="gap-2" 
-              onClick={() => retryAuth()}
+              onClick={() => {
+                console.log("Retry button clicked");
+                retryAuth();
+              }}
             >
               <RefreshCw className="h-4 w-4" />
               Retry
@@ -55,16 +60,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
+    console.log("Protected route redirecting to login - user not authenticated");
     return <Navigate to="/login" replace />;
   }
 
   // Check for required role
   if (requiredRole && user?.role !== requiredRole) {
+    console.log(`Protected route redirecting to home - user doesn't have required role: ${requiredRole}`);
     // Redirect non-admin users from admin routes to the default page
     return <Navigate to="/" replace />;
   }
 
   // User is authenticated and has the required role, render the layout with outlet
+  console.log("Protected route rendering authorized content");
   return (
     <Layout>
       <Outlet />
