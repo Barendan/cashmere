@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
@@ -52,18 +53,19 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     }
   };
   
-  const getTransactionTypeIcon = (type: string) => {
+  // Updated function to return null instead of empty fragments
+  const getTransactionTypeIcon = (type: string): JSX.Element | null => {
     switch (type) {
       case "sale":
-        return <></>;
+        return null; // Changed from <></> to null
       case "restock":
         return <Package className="h-3 w-3 mr-1" />;
       case "monthly-restock":
         return <CalendarDays className="h-3 w-3 mr-1" />;
       case "return":
-        return <></>;
+        return null; // Changed from <></> to null
       default:
-        return <></>;
+        return null; // Changed from <></> to null
     }
   };
 
