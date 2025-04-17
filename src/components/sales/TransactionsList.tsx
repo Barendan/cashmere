@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatCurrency } from '@/lib/format';
+import TransactionRowGroup from './TransactionRowGroup';
 
 interface GroupedTransaction {
   saleId: string | null;
@@ -179,7 +180,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
               <TableBody>
                 {groupedTransactions.length > 0 ? (
                   groupedTransactions.map((group) => (
-                    <React.Fragment key={group.saleId || `no-sale-${group.date.getTime()}`}>
+                    <TransactionRowGroup key={group.saleId || `no-sale-${group.date.getTime()}`}>
                       <TableRow className="bg-gray-50 font-medium">
                         <TableCell className="text-sm">
                           <div>
@@ -291,7 +292,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                           </TableRow>
                         ))
                       }
-                    </React.Fragment>
+                    </TransactionRowGroup>
                   ))
                 ) : (
                   <TableRow>
