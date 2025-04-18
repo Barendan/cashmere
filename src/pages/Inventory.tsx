@@ -250,16 +250,31 @@ const InventoryPage = () => {
         <Card className="bg-white">
           <CardHeader className="pb-2">
             <CardTitle className="text-spa-deep flex items-center">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
+              <CalendarDays className="h-4 w-4 mr-2" />
+              Low Stock Threshold
             </CardTitle>
-            <CardDescription>Add a new product to inventory</CardDescription>
+            <CardDescription>Set minimum stock level for all products</CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-center h-[100px]">
-            <HoverFillButton variant="primary" onClick={openAddModal} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Product
-            </HoverFillButton>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="flex-grow">
+                  <Input
+                    type="number"
+                    value={thresholdValue}
+                    onChange={(e) => setThresholdValue(parseInt(e.target.value) || 0)}
+                    min="0"
+                    placeholder="Set threshold value"
+                  />
+                </div>
+                <HoverFillButton variant="primary" onClick={handleApplyThreshold}>
+                  Apply
+                </HoverFillButton>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Products below this quantity will be marked as low stock
+              </p>
+            </div>
           </CardContent>
         </Card>
         
@@ -294,13 +309,18 @@ const InventoryPage = () => {
           <CardDescription>View and modify your product inventory</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <Input 
-              placeholder="Search products..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-sm"
-            />
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="flex-1 max-w-sm">
+              <Input 
+                placeholder="Search products..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <HoverFillButton variant="primary" onClick={openAddModal}>
+              <Plus className="h-4 w-4" />
+              Add New Product
+            </HoverFillButton>
           </div>
           
           <ScrollArea className="h-[500px] pr-4">
