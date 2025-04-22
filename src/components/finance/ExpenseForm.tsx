@@ -210,8 +210,9 @@ const ExpenseForm = ({ onExpenseAdded }) => {
             <FormItem>
               <FormLabel>Category</FormLabel>
               <Select
+                value={field.value}
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                key={field.value} // ensures remount (optional, but robust)
               >
                 <FormControl>
                   <SelectTrigger>
@@ -243,8 +244,9 @@ const ExpenseForm = ({ onExpenseAdded }) => {
             <FormItem>
               <FormLabel>Payment Method</FormLabel>
               <Select
+                value={field.value}
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                key={field.value}
               >
                 <FormControl>
                   <SelectTrigger>

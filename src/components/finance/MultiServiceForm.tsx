@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -244,7 +243,6 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         onSubmit={form.handleSubmit(onSubmit)}
         className="grid grid-cols-1 md:grid-cols-12 gap-6"
       >
-        {/* Left column - form fields */}
         <div className="md:col-span-7 flex flex-col space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -313,8 +311,9 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                 <FormItem>
                   <FormLabel>Payment Method</FormLabel>
                   <Select
+                    value={field.value}
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    key={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -448,7 +447,6 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
           </div>
         </div>
 
-        {/* Right column - available services */}
         <div className="md:col-span-5 flex flex-col">
           <FormLabel className="mb-2">Available Services</FormLabel>
           <div className="border rounded-md flex-grow h-[400px]">
