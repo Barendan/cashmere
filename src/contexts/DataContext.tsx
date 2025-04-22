@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale, TransactionInput } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -203,22 +202,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const handleUpdateProduct = async (id: string, updates: Partial<Product>) => {
     const oldProduct = products.find(p => p.id === id);
     if (!oldProduct) return;
-    
+
     try {
+      const updatingQuantity =
+        updates.stockQuantity !== undefined &&
+        updates.stockQuantity !== oldProduct.stockQuantity;
+
       await updateProductInDb(id, updates);
-      
-      setProducts(products.map(p => 
+
+      setProducts(products.map(p =>
         p.id === id ? { ...p, ...updates } : p
       ));
-      
-      toast({ title: "Product Updated", description: `${oldProduct.name} was updated.` });
+
+      if (updatingQuantity && oldProduct) {
+        const adjustmentAmount = updates.stockQuantity! - oldProduct.stockQuantity;
+        if (adjustmentAmount !== 0) {
+          const now = new Date();
+          const adjustmentTransaction = {
+            product_id: oldProduct.id,
+            product_name: oldProduct.name,
+            quantity: adjustmentAmount,
+            price: adjustmentAmount * oldProduct.costPrice,
+            type: "adjustment",
+            date: now,
+            user_id: user?.id || 'unknown',
+            user_name: user?.name || 'Unknown User',
+          };
+          await recordTransactionInDb(adjustmentTransaction);
+        }
+      }
+
+      toast({
+        title: "Product Updated",
+        description: `${oldProduct.name} was updated.` + 
+          (updatingQuantity ? " Adjustment log created." : "")
+      });
       await refreshData();
     } catch (error) {
       console.error('Error updating product:', error);
-      toast({ 
-        title: "Error", 
-        description: "Failed to update product.", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "Failed to update product.",
+        variant: "destructive"
       });
     }
   };
