@@ -75,11 +75,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const [
         transformedProducts,
         transformedSales,
-        transformedTransactions
+        transformedTransactions,
+        transformedServiceIncomes
       ] = await Promise.all([
         fetchProducts(),
         fetchSales(),
-        fetchTransactions()
+        fetchTransactions(),
+        fetchServiceIncomes()
       ]);
 
       setProducts(transformedProducts);
@@ -91,11 +93,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setSales(salesWithItems);
       setTransactions(transformedTransactions);
+      setServiceIncomes(transformedServiceIncomes);
 
       const restockDate = await getLastRestockDate();
       if (restockDate) {
         setLastRestockDate(restockDate);
       }
+      
+      console.log(`Loaded ${transformedServiceIncomes.length} service income records`);
     } catch (error) {
       console.error('Error refreshing data:', error);
       toast({
@@ -138,8 +143,31 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('finances-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'finances'
+        },
+        async () => {
+          const updatedServiceIncomes = await fetchServiceIncomes();
+          setServiceIncomes(updatedServiceIncomes);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchServiceIncomes = async () => {
     try {
+      console.log("Fetching service incomes...");
       const { data, error } = await supabase
         .from('finances')
         .select(`
@@ -157,7 +185,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
 
       if (data) {
-        return data.map(item => ({
+        const transformedData = data.map(item => ({
           id: item.id,
           serviceId: item.service_id || item.category || "uncategorized",
           serviceName: item.services?.name || item.category || "Uncategorized",
@@ -165,6 +193,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           date: new Date(item.date),
           customerName: item.customer_name
         }));
+        
+        console.log(`Fetched ${transformedData.length} service income records`);
+        return transformedData;
       }
 
       return [];

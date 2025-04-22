@@ -38,6 +38,11 @@ const Metrics = () => {
     totalUniqueCustomers
   } = useServiceMetricsCalculation(serviceIncomes, timeRange);
 
+  // Output service metrics data for debugging
+  console.log(`Service Metrics Data: ${servicesData.length} services, ${serviceIncomes.length} income records`);
+  console.log(`Service Type Data: ${serviceTypeData.length} service types`);
+  console.log(`Service Metrics Totals: Revenue: ${totalServiceRevenue}, Services: ${totalServicesProvided}, Customers: ${totalUniqueCustomers}`);
+
   // Setup metrics export
   const { exportData: exportProductsData, isExporting: isExportingProducts } = useMetricsExport({
     getExportData: () => productPerformance,

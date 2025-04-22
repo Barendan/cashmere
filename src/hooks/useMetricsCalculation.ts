@@ -74,6 +74,9 @@ export const useServiceMetricsCalculation = (
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
   const { sevenDaysAgo, thirtyDaysAgo, startOfMonth } = dateRanges;
 
+  // Log service income data for debugging
+  console.log(`Processing ${serviceIncomes.length} service income records for metrics`);
+
   const servicesData = useMemo(() => {
     const data = metricsUtils.calculateServicesData(serviceIncomes, timeRange, { sevenDaysAgo, thirtyDaysAgo });
     console.log(`Calculated metrics for ${data.length} services`);
