@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Product, Transaction, Sale, TransactionInput } from "../models/types";
 import { useToast } from "../hooks/use-toast";
@@ -18,6 +19,8 @@ import {
   updateProductRestockDate,
   getLastRestockDate,
   recordMonthlyRestockInDb,
+  recordChildRestockTransactions,
+  getRestockDetails,
   updateMultipleProductStocks
 } from "../services/transactionService";
 import { supabase } from "../integrations/supabase/client";
