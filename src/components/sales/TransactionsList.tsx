@@ -11,6 +11,7 @@ import { formatDate, formatCurrency } from '@/lib/format';
 import TransactionRowGroup from './TransactionRowGroup';
 import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isSystemMonthlyRestockProduct } from "@/config/systemProducts";
 import { getRestockDetails } from '@/services/transactionService';
+import RestockDetailsModal from "./RestockDetailsModal";
 
 interface GroupedTransaction {
   saleId: string | null;
@@ -36,6 +37,11 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [childTransactionsMap, setChildTransactionsMap] = useState<Record<string, Transaction[]>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
+  const [restockModal, setRestockModal] = useState<{
+    open: boolean;
+    parent: Transaction | null;
+    children: Transaction[];
+  }>({ open: false, parent: null, children: [] });
   
   const toggleGroup = async (groupId: string, isParentRestock: boolean) => {
     if (openGroup === groupId) {
@@ -170,6 +176,22 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     return groupedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
   };
   
+  const handleRestockClick = async (parentTransactionId: string, parentTx: Transaction) => {
+    setLoadingDetails({...loadingDetails, [parentTransactionId]: true});
+    try {
+      const childTransactions = await getRestockDetails(parentTransactionId);
+      setRestockModal({
+        open: true,
+        parent: parentTx,
+        children: childTransactions,
+      });
+    } catch (error) {
+      console.error("Error loading restock details:", error);
+    } finally {
+      setLoadingDetails(current => ({...current, [parentTransactionId]: false}));
+    }
+  };
+
   const groupedTransactions = groupTransactions();
   
   return (
@@ -213,13 +235,67 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                                       (group.isParentRestock && (childTransactionsMap[group.parentTransactionId!]?.length > 0 || 
                                       !childTransactionsMap[group.parentTransactionId!]));
                     
+                    const isRestockParent = group.isParentRestock;
+
+                    if (isRestockParent) {
+                      return (
+                        <React.Fragment key={groupId}>
+                          <TableRow
+                            className="bg-gray-50 font-medium cursor-pointer hover:bg-spa-sand/30 transition"
+                            onClick={() => handleRestockClick(group.parentTransactionId!, group.transactions[0])}
+                          >
+                            <TableCell className="text-sm">
+                              <div>
+                                {new Date(group.date).toLocaleDateString()}
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(group.date).toLocaleTimeString()}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="font-medium">Restock</span>
+                              {loadingDetails[groupId] && <span className="ml-2 text-xs text-muted-foreground">(Loading details...)</span>}
+                            </TableCell>
+                            <TableCell>{group.userName}</TableCell>
+                            <TableCell>{formatCurrency(group.totalAmount)}</TableCell>
+                            <TableCell>
+                              <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
+                                <span className="flex items-center">
+                                  Restock
+                                </span>
+                              </Badge>
+                              {group.discount && group.discount > 0 && (
+                                <Badge className="ml-2 bg-red-100 text-red-800">
+                                  Discount: {formatCurrency(group.discount)}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={e => { 
+                                  e.stopPropagation();
+                                  handleRestockClick(group.parentTransactionId!, group.transactions[0]);
+                                }}
+                                aria-label="Show restock details"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
+                      );
+                    }
+
                     return (
                       <TransactionRowGroup 
                         key={groupId}
-                        hasDetails={hasDetails}
+                        hasDetails={group.transactions.length > 1}
                         detailsExpanded={openGroup === groupId}
                         onToggleDetails={() => toggleGroup(groupId, group.isParentRestock)}
-                        childTransactions={group.isParentRestock ? childTransactionsMap[group.parentTransactionId!] || [] : []}
+                        childTransactions={[]}
                       >
                         <TableRow className="bg-gray-50 font-medium">
                           <TableCell className="text-sm">
@@ -313,7 +389,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               </TableCell>
                               <TableCell></TableCell>
                               <TableCell>
-                                
+                                {transaction.quantity} × {formatCurrency(transaction.price / transaction.quantity)}
                               </TableCell>
                               <TableCell>
                                 {transaction.discount && transaction.discount > 0 && (
@@ -353,6 +429,12 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
               </TableBody>
             </Table>
           </ScrollArea>
+          <RestockDetailsModal
+            open={restockModal.open}
+            onOpenChange={open => setRestockModal(modal => ({...modal, open }))}
+            parentTransaction={restockModal.parent}
+            childTransactions={restockModal.children}
+          />
         </div>
       </CardContent>
     </Card>

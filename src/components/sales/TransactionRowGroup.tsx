@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Transaction } from "@/models/types";
 import { Button } from "@/components/ui/button";
@@ -23,21 +22,10 @@ const TransactionRowGroup = ({
   childTransactions = [],
   ...props 
 }: TransactionRowGroupProps) => {
-  const [expanded, setExpanded] = useState(detailsExpanded);
-  
-  const toggleExpanded = () => {
-    if (onToggleDetails) {
-      onToggleDetails();
-    } else {
-      setExpanded(!expanded);
-    }
-  };
-
   return (
     <>
       {children}
-      
-      {hasDetails && expanded && childTransactions.length > 0 && (
+      {hasDetails && detailsExpanded && childTransactions.length > 0 && (
         <>
           {childTransactions.map(transaction => (
             <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
