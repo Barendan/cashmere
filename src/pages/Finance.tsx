@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "../contexts/AuthContext";
@@ -26,6 +27,15 @@ const Finance = () => {
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Add the missing handler functions for income and expense additions
+  const handleIncomeAdded = (income) => {
+    setNewIncome(income);
+  };
+
+  const handleExpenseAdded = (expense) => {
+    setNewExpense(expense);
+  };
 
   const currentMonth = format(new Date(), "MMMM yyyy");
 

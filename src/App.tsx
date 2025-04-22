@@ -31,13 +31,13 @@ const App = () => (
               {/* Protected routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/" element={<SalesLog />} />
-                <Route path="/metrics" element={<Metrics />} />
                 <Route path="/finance" element={<Finance />} />
               </Route>
               
               {/* Admin-only routes */}
               <Route element={<ProtectedRoute requiredRole="admin" />}>
                 <Route path="/inventory" element={<Inventory />} />
+                <Route path="/metrics" element={<Metrics />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />
