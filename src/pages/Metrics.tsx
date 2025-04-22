@@ -54,6 +54,13 @@ const Metrics = () => {
   const salesTransactions = useMemo(() => {
     return transactions.filter(t => t.type === "sale");
   }, [transactions]);
+  
+  const currentMonthTransactions = useMemo(() => {
+    return salesTransactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date);
+      return transactionDate >= startOfMonth;
+    });
+  }, [salesTransactions, startOfMonth]);
 
   const productPerformance = useMemo(() => {
     const productMap = new Map();
