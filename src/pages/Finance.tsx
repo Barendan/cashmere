@@ -94,84 +94,86 @@ const Finance = () => {
         </p>
       </motion.div>
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-3 gap-5"
-      >
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-l-4 border-emerald-500 shadow-md hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-emerald-600 mb-1">Monthly Income</p>
-                  <div className="flex items-baseline">
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      <FinanceSummary.Income newIncome={newIncome} newExpense={newExpense} />
-                    </h3>
-                    <span className="ml-2 text-xs font-medium text-emerald-600 px-2 py-0.5 rounded-full bg-emerald-50">
-                      +4.3%
-                    </span>
+      {isAdmin && (
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-3 gap-5"
+        >
+          <motion.div variants={itemVariants}>
+            <Card className="overflow-hidden border-l-4 border-emerald-500 shadow-md hover:shadow-lg transition-shadow duration-300">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-medium text-emerald-600 mb-1">Monthly Income</p>
+                    <div className="flex items-baseline">
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        <FinanceSummary.Income newIncome={newIncome} newExpense={newExpense} />
+                      </h3>
+                      <span className="ml-2 text-xs font-medium text-emerald-600 px-2 py-0.5 rounded-full bg-emerald-50">
+                        +4.3%
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Compared to last month</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Compared to last month</p>
+                  <div className="h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-emerald-500" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center">
-                  <TrendingUp className="h-6 w-6 text-emerald-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-l-4 border-rose-500 shadow-md hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-rose-600 mb-1">Monthly Expenses</p>
-                  <div className="flex items-baseline">
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      <FinanceSummary.Expenses newIncome={newIncome} newExpense={newExpense} />
-                    </h3>
-                    <span className="ml-2 text-xs font-medium text-rose-600 px-2 py-0.5 rounded-full bg-rose-50">
-                      +2.7%
-                    </span>
+          <motion.div variants={itemVariants}>
+            <Card className="overflow-hidden border-l-4 border-rose-500 shadow-md hover:shadow-lg transition-shadow duration-300">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-medium text-rose-600 mb-1">Monthly Expenses</p>
+                    <div className="flex items-baseline">
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        <FinanceSummary.Expenses newIncome={newIncome} newExpense={newExpense} />
+                      </h3>
+                      <span className="ml-2 text-xs font-medium text-rose-600 px-2 py-0.5 rounded-full bg-rose-50">
+                        +2.7%
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Compared to last month</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Compared to last month</p>
+                  <div className="h-12 w-12 rounded-full bg-rose-50 flex items-center justify-center">
+                    <TrendingDown className="h-6 w-6 text-rose-500" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-rose-50 flex items-center justify-center">
-                  <TrendingDown className="h-6 w-6 text-rose-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        <motion.div variants={itemVariants}>
-          <Card className="overflow-hidden border-l-4 border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-300">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm font-medium text-blue-600 mb-1">Net Profit</p>
-                  <div className="flex items-baseline">
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      <FinanceSummary.NetProfit newIncome={newIncome} newExpense={newExpense} />
-                    </h3>
-                    <span className="ml-2 text-xs font-medium text-blue-600 px-2 py-0.5 rounded-full bg-blue-50">
-                      +5.8%
-                    </span>
+          <motion.div variants={itemVariants}>
+            <Card className="overflow-hidden border-l-4 border-blue-500 shadow-md hover:shadow-lg transition-shadow duration-300">
+              <CardContent className="p-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm font-medium text-blue-600 mb-1">Net Profit</p>
+                    <div className="flex items-baseline">
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        <FinanceSummary.NetProfit newIncome={newIncome} newExpense={newExpense} />
+                      </h3>
+                      <span className="ml-2 text-xs font-medium text-blue-600 px-2 py-0.5 rounded-full bg-blue-50">
+                        +5.8%
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Compared to last month</p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Compared to last month</p>
+                  <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
+                    <PieChart className="h-6 w-6 text-blue-500" />
+                  </div>
                 </div>
-                <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
-                  <PieChart className="h-6 w-6 text-blue-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -220,21 +222,7 @@ const Finance = () => {
               <div className="p-6">
                 <TabsContent value="summary" className="m-0 space-y-6">
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    <div className="lg:col-span-2">
-                      <Card className="shadow-sm border border-slate-200 h-full">
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
-                            <PieChart className="h-5 w-5 text-blue-500" />
-                            Financial Summary
-                          </CardTitle>
-                          <CardDescription>Overview for {currentMonth}</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <FinanceSummary newIncome={newIncome} newExpense={newExpense} />
-                        </CardContent>
-                      </Card>
-                    </div>
-                    <div className="lg:col-span-3">
+                    <div className="lg:col-span-5">
                       <Card className="shadow-sm border border-slate-200">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-lg text-gray-900">Recent Transactions</CardTitle>
