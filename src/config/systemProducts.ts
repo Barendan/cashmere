@@ -9,3 +9,9 @@ export const BULK_RESTOCK_PRODUCT_ID = '11111111-1111-1111-1111-111111111111';
 export function isBulkRestockProduct(productId: string): boolean {
   return productId === BULK_RESTOCK_PRODUCT_ID;
 }
+
+// Renamed from isSystemMonthlyRestockProduct to match the existing function
+export function isSystemMonthlyRestockProduct(productId: string): boolean {
+  return isBulkRestockProduct(productId);
+}
+
