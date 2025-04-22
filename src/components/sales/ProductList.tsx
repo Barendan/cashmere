@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Product } from '@/models/types';
 import ProductCard from './ProductCard';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { isSystemMonthlyRestockProduct } from "@/config/systemProducts";
+import { isBulkRestockProduct } from "@/config/systemProducts";
 
 interface ProductListProps {
   products: Product[];
@@ -17,7 +18,7 @@ const ProductList = ({ products }: ProductListProps) => {
   const { addItem, removeItem, isProductInCart } = useCart();
   
   const availableProducts = products
-    .filter((product) => product.stockQuantity > 0 && !isSystemMonthlyRestockProduct(product.id))
+    .filter((product) => product.stockQuantity > 0 && !isBulkRestockProduct(product.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   
   const filteredProducts = availableProducts.filter(product => {

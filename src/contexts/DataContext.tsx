@@ -22,7 +22,7 @@ import {
 } from "../services/transactionService";
 import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
-import { MONTHLY_RESTOCK_PRODUCT_ID, isSystemMonthlyRestockProduct } from "../config/systemProducts";
+import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct } from "../config/systemProducts";
 
 interface ServiceIncome {
   id: string;
@@ -700,11 +700,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getProduct = (id: string) => {
-    if (isSystemMonthlyRestockProduct(id)) return undefined;
+    if (isBulkRestockProduct(id)) return undefined;
     return products.find(p => p.id === id);
   };
 
-  const displayableProducts = products.filter(p => !isSystemMonthlyRestockProduct(p.id));
+  const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
 
   return (
     <DataContext.Provider

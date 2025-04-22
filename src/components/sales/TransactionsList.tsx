@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatCurrency } from '@/lib/format';
 import TransactionRowGroup from './TransactionRowGroup';
+import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct } from "@/config/systemProducts";
 
 interface GroupedTransaction {
   saleId: string | null;
@@ -44,8 +45,6 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return "bg-green-100 text-green-800";
       case "restock":
         return "bg-blue-100 text-blue-800";
-      case "monthly-restock":
-        return "bg-indigo-100 text-indigo-800";
       case "return":
         return "bg-red-100 text-red-800";
       default:
@@ -53,28 +52,25 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     }
   };
   
-  const getTransactionTypeIcon = (type: string): JSX.Element | null => {
-    switch (type) {
-      case "sale":
-        return null;
-      case "restock":
-        return <Package className="h-3 w-3 mr-1" />;
-      case "monthly-restock":
-        return <CalendarDays className="h-3 w-3 mr-1" />;
-      case "return":
-        return null;
-      default:
-        return null;
+  const getTransactionTypeIcon = (type: string, productId: string): JSX.Element | null => {
+    if (type === "restock" && isBulkRestockProduct(productId)) {
+      return <CalendarDays className="h-3 w-3 mr-1" />;
+    } else if (type === "restock") {
+      return <Package className="h-3 w-3 mr-1" />;
     }
+    return null;
   };
 
   const groupTransactions = (): GroupedTransaction[] => {
     const filteredTransactions = transactions.filter((transaction) => {
-      if (filterType !== "all" && 
-          !(filterType === "restock" && 
-            (transaction.type === "restock" || transaction.type === "monthly-restock")) && 
-          transaction.type !== filterType) {
-        return false;
+      if (filterType !== "all") {
+        if (filterType === "restock") {
+          if (transaction.type !== "restock") {
+            return false;
+          }
+        } else if (transaction.type !== filterType) {
+          return false;
+        }
       }
       
       if (searchTerm) {
@@ -192,7 +188,8 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                         </TableCell>
                         <TableCell>
                           {group.saleId ? (
-                            group.transactions[0].type === 'monthly-restock' ? (
+                            group.transactions[0].type === 'restock' && 
+                            isBulkRestockProduct(group.transactions[0].productId) ? (
                               <span className="font-medium">Monthly Inventory Restock</span>
                             ) : (
                               group.itemCount === 1 ? (
@@ -224,8 +221,14 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                         <TableCell>
                           <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
                             <span className="flex items-center">
-                              {getTransactionTypeIcon(group.transactions[0].type)}
-                              {group.transactions[0].type === 'monthly-restock' ? 'Monthly Restock' : group.transactions[0].type}
+                              {getTransactionTypeIcon(
+                                group.transactions[0].type, 
+                                group.transactions[0].productId
+                              )}
+                              {group.transactions[0].type === 'restock' && 
+                               isBulkRestockProduct(group.transactions[0].productId) 
+                                ? 'Monthly Restock' 
+                                : group.transactions[0].type}
                             </span>
                           </Badge>
                           {group.discount && group.discount > 0 && (
