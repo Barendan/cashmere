@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +15,12 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FinanceRecord } from "@/models/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const categoryColors: Record<string, string> = {
   supplies: "bg-blue-100 text-blue-800 border-blue-200",
@@ -80,6 +87,25 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     }
   }, [newExpense, limit]);
 
+  const renderDescription = (desc?: string) => {
+    if (!desc) return <span className="text-gray-400 italic">No description</span>;
+    if (desc.length <= 40) {
+      return <span>{desc}</span>;
+    }
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate max-w-xs block cursor-pointer" title={desc}>{desc}</span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-md">
+            {desc}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -118,6 +144,8 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
                 >
                   {expense.category || "Other"}
                 </Badge>
+                <span>•</span>
+                <span className="truncate max-w-xs">{expense.description || <span className="text-gray-400 italic">No description</span>}</span>
               </div>
             </div>
             <div className="font-semibold text-rose-600">${expense.amount.toFixed(2)}</div>
@@ -131,39 +159,40 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     <div className="border rounded-md overflow-hidden">
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="sticky top-0 z-10 bg-spa-cream">
-            <TableRow>
+          <TableHeader>
+            <TableRow className="bg-spa-cream">
               <TableHead>Date</TableHead>
               <TableHead>Vendor</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Description</TableHead>
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
           </TableHeader>
+          <TableBody>
+            {expenses.map((expense) => (
+              <TableRow key={expense.id} className="hover:bg-rose-50">
+                <TableCell>{format(expense.date, "PP")}</TableCell>
+                <TableCell>{expense.vendor || "Unknown"}</TableCell>
+                <TableCell>
+                  <Badge 
+                    variant="outline"
+                    className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
+                  >
+                    {expense.category || "Other"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="truncate max-w-xs">
+                  {renderDescription(expense.description)}
+                </TableCell>
+                <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
-        <ScrollArea className="max-h-[30vh]">
-          <Table>
-            <TableBody>
-              {expenses.map((expense) => (
-                <TableRow key={expense.id} className="hover:bg-rose-50">
-                  <TableCell>{format(expense.date, "PP")}</TableCell>
-                  <TableCell>{expense.vendor || "Unknown"}</TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline"
-                      className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
-                    >
-                      {expense.category || "Other"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
       </div>
     </div>
   );
 };
 
 export default ExpenseList;
+
