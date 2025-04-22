@@ -1,4 +1,5 @@
-import { supabase, mapTransactionRowToTransaction, mapSaleRowToSale } from "../integrations/supabase/client";
+
+import { supabase, mapSaleRowToSale } from "../integrations/supabase/client";
 import { Transaction, TransactionInput } from "../models/types";
 import { BULK_RESTOCK_PRODUCT_ID } from "../config/systemProducts";
 
@@ -7,7 +8,7 @@ type SafeTransaction = Omit<Transaction, 'parentTransactionId'> & {
   parentTransactionId?: string;
 }
 
-// Update mapTransactionRowToTransaction to handle parent transaction safely
+// Define our local mapping function
 const mapTransactionRowToTransaction = (row: any): SafeTransaction => {
   return {
     id: row.id,
