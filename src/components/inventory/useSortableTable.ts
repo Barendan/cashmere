@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export type SortDirection = "asc" | "desc" | null;
 
@@ -36,7 +36,7 @@ export function useSortableTable<T>(initialData: T[]) {
   };
 
   // Update sorted data if initialData changes and no sorting is applied
-  React.useEffect(() => {
+  useEffect(() => {
     if (!sortState.column) setSortedData(initialData);
   }, [initialData, sortState.column]);
 
