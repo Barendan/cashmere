@@ -1,5 +1,5 @@
-import { supabase, RpcSaleResult, RpcTransactionResult, mapTransactionRowToTransaction, ExtendedTransactionInsert, mapSaleRowToSale, SaleInsert } from "../integrations/supabase/client";
-import { Product, Sale, Transaction, TransactionInput } from "../models/types";
+import { supabase, mapTransactionRowToTransaction, mapSaleRowToSale } from "../integrations/supabase/client";
+import { Transaction, TransactionInput } from "../models/types";
 
 export const fetchTransactions = async () => {
   const { data: transactionsData, error: transactionsError } = await supabase
