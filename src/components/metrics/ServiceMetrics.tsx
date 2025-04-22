@@ -8,17 +8,7 @@ import MetricsCard from "./MetricsCard";
 import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
-
-type ServiceMetricsProps = {
-  totalServiceRevenue: number;
-  totalUniqueCustomers: number;
-  totalServicesProvided: number;
-  servicesData: any[];
-  serviceTypeData: any[];
-  timeRange: "7days" | "30days" | "monthly";
-  setTimeRange: (range: "7days" | "30days" | "monthly") => void;
-  exportCSV: () => void;
-};
+import { ServiceMetricsProps } from "./types";
 
 const ServiceMetrics = ({
   totalServiceRevenue,
@@ -28,7 +18,8 @@ const ServiceMetrics = ({
   serviceTypeData,
   timeRange,
   setTimeRange,
-  exportCSV
+  exportCSV,
+  isExporting = false
 }: ServiceMetricsProps) => {
   const serviceColumns = [
     { key: "name", header: "Service Name", className: "font-medium" },
@@ -169,9 +160,19 @@ const ServiceMetrics = ({
             <CardTitle className="text-spa-deep">Service Performance</CardTitle>
             <CardDescription>Detailed service revenue analysis</CardDescription>
           </div>
-          <Button className="bg-spa-deep text-white" onClick={exportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
+          <Button 
+            className="bg-spa-deep text-white" 
+            onClick={exportCSV}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>Loading...</>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </>
+            )}
           </Button>
         </CardHeader>
         <CardContent>

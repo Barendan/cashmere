@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,18 +7,7 @@ import MetricsCard from "./MetricsCard";
 import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
-
-type ProductMetricsProps = {
-  totalRevenue: number;
-  totalProfit: number;
-  totalItemsSold: number;
-  salesData: any[];
-  productPerformance: any[];
-  categoryData: any[];
-  timeRange: "7days" | "30days" | "monthly";
-  setTimeRange: (range: "7days" | "30days" | "monthly") => void;
-  exportCSV: () => void;
-};
+import { ProductMetricsProps } from "./types";
 
 const ProductMetrics = ({
   totalRevenue,
@@ -30,7 +18,8 @@ const ProductMetrics = ({
   categoryData,
   timeRange,
   setTimeRange,
-  exportCSV
+  exportCSV,
+  isExporting = false
 }: ProductMetricsProps) => {
   const productColumns = [
     { key: "name", header: "Product Name", className: "font-medium" },
@@ -188,9 +177,19 @@ const ProductMetrics = ({
             <CardTitle className="text-spa-deep">Product Profitability</CardTitle>
             <CardDescription>Detailed product sales and profit analysis</CardDescription>
           </div>
-          <Button className="bg-spa-deep text-white" onClick={exportCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
+          <Button 
+            className="bg-spa-deep text-white" 
+            onClick={exportCSV}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>Loading...</>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </>
+            )}
           </Button>
         </CardHeader>
         <CardContent>

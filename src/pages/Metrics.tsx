@@ -11,6 +11,7 @@ import { Navigate } from "react-router-dom";
 import { TimeRangeType } from "@/components/metrics/types";
 import { useProductMetricsCalculation, useServiceMetricsCalculation } from "@/hooks/useMetricsCalculation";
 import useMetricsExport from "@/hooks/useMetricsExport";
+import TimeRangeSelector from "@/components/metrics/TimeRangeSelector";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");

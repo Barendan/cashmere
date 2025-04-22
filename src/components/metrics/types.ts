@@ -47,3 +47,28 @@ export interface CategoryDataPoint {
 }
 
 export type TimeRangeType = "7days" | "30days" | "monthly";
+
+export interface ProductMetricsProps {
+  totalRevenue: number;
+  totalProfit: number;
+  totalItemsSold: number;
+  salesData: SalesDataPoint[];
+  productPerformance: ProductMetric[];
+  categoryData: CategoryDataPoint[];
+  timeRange: TimeRangeType;
+  setTimeRange: (range: TimeRangeType) => void;
+  exportCSV: () => void;
+  isExporting?: boolean; // Added isExporting prop
+}
+
+export interface ServiceMetricsProps {
+  totalServiceRevenue: number;
+  totalUniqueCustomers: number;
+  totalServicesProvided: number;
+  servicesData: ServiceMetric[];
+  serviceTypeData: CategoryDataPoint[];
+  timeRange: TimeRangeType;
+  setTimeRange: (range: TimeRangeType) => void;
+  exportCSV: () => void;
+  isExporting?: boolean; // Added isExporting prop
+}
