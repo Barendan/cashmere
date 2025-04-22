@@ -199,7 +199,6 @@ export type Database = {
           created_at: string
           date: string
           id: string
-          parent_transaction_id: string | null
           price: number
           product_id: string
           product_name: string
@@ -213,7 +212,6 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
-          parent_transaction_id?: string | null
           price: number
           product_id: string
           product_name: string
@@ -227,7 +225,6 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
-          parent_transaction_id?: string | null
           price?: number
           product_id?: string
           product_name?: string
@@ -238,13 +235,6 @@ export type Database = {
           user_name?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "transactions_parent_transaction_id_fkey"
-            columns: ["parent_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "transactions"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "transactions_product_id_fkey"
             columns: ["product_id"]
@@ -285,7 +275,6 @@ export type Database = {
           created_at: string
           date: string
           id: string
-          parent_transaction_id: string | null
           price: number
           product_id: string
           product_name: string
@@ -315,7 +304,6 @@ export type Database = {
           created_at: string
           date: string
           id: string
-          parent_transaction_id: string | null
           price: number
           product_id: string
           product_name: string
