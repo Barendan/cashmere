@@ -5,6 +5,8 @@ import { Loader2, Package2, Award } from "lucide-react";
 import usePageTitle from "@/hooks/usePageTitle";
 import ProductMetrics from "@/components/metrics/ProductMetrics";
 import ServiceMetrics from "@/components/metrics/ServiceMetrics";
+import { useAuth } from "../contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 interface ServiceIncomeWithCategory {
   id: string;
@@ -34,8 +36,13 @@ interface ServiceMetric {
 const Metrics = () => {
   usePageTitle("Business Metrics");
   const { products, transactions, sales, serviceIncomes, isLoading } = useData();
+  const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<"7days" | "30days" | "monthly">("7days");
   const [metricView, setMetricView] = useState<"products" | "services">("products");
+
+  if (!authLoading && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const today = new Date();
   const sevenDaysAgo = new Date(today);
@@ -403,18 +410,7 @@ const Metrics = () => {
           exportCSV={exportCSV}
         />
       ) : (
-          <h1>Coming Soon</h1>
-
-        // <ServiceMetrics 
-        //   totalServiceRevenue={totalServiceRevenue}
-        //   totalUniqueCustomers={totalUniqueCustomers}
-        //   totalServicesProvided={totalServicesProvided}
-        //   servicesData={servicesData}
-        //   serviceTypeData={serviceTypeData}
-        //   timeRange={timeRange}
-        //   setTimeRange={setTimeRange}
-        //   exportCSV={exportCSV}
-        // />
+        <h1>Coming Soon</h1>
       )}
     </div>
   );

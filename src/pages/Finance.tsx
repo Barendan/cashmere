@@ -23,20 +23,6 @@ const Finance = () => {
   const [newExpense, setNewExpense] = useState(null);
 
   useEffect(() => {
-    if (!isAdmin && activeTab === "expenses") {
-      setActiveTab("summary");
-    }
-  }, [isAdmin, activeTab]);
-
-  const handleIncomeAdded = (income) => {
-    setNewIncome(income);
-  };
-
-  const handleExpenseAdded = (expense) => {
-    setNewExpense(expense);
-  };
-
-  useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
@@ -206,15 +192,13 @@ const Finance = () => {
                       <Receipt className="h-4 w-4 mr-2" />
                       Income
                     </TabsTrigger>
-                    {isAdmin && (
-                      <TabsTrigger 
-                        value="expenses" 
-                        className="data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-rose-500 rounded-none px-5 h-14"
-                      >
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Expenses
-                      </TabsTrigger>
-                    )}
+                    <TabsTrigger 
+                      value="expenses" 
+                      className="data-[state=active]:bg-white data-[state=active]:text-rose-600 data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-rose-500 rounded-none px-5 h-14"
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Expenses
+                    </TabsTrigger>
                   </TabsList>
                 </div>
               </div>
@@ -248,26 +232,24 @@ const Finance = () => {
                             </div>
                           </div>
                           
-                          {isAdmin && (
-                            <div className="space-y-4">
-                              <div className="border-b pb-2">
-                                <h4 className="font-medium text-rose-600 flex items-center">
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  Recent Expenses
-                                </h4>
-                              </div>
-                              <ExpenseList newExpense={newExpense} limit={5} compact={true} />
-                              <div className="text-right mt-2">
-                                <button 
-                                  onClick={() => setActiveTab("expenses")} 
-                                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center ml-auto"
-                                >
-                                  View all expense records 
-                                  <ArrowRight className="h-3 w-3 ml-1" /> 
-                                </button>
-                              </div>
+                          <div className="space-y-4">
+                            <div className="border-b pb-2">
+                              <h4 className="font-medium text-rose-600 flex items-center">
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Recent Expenses
+                              </h4>
                             </div>
-                          )}
+                            <ExpenseList newExpense={newExpense} limit={5} compact={true} />
+                            <div className="text-right mt-2">
+                              <button 
+                                onClick={() => setActiveTab("expenses")} 
+                                className="text-sm text-blue-600 hover:text-blue-800 flex items-center ml-auto"
+                              >
+                                View all expense records 
+                                <ArrowRight className="h-3 w-3 ml-1" /> 
+                              </button>
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     </div>
@@ -303,45 +285,34 @@ const Finance = () => {
                   </Card>
                 </TabsContent>
 
-                {isAdmin && (
-                  <TabsContent value="expenses" className="m-0 space-y-6">
-                    <div className="bg-white rounded-lg border border-rose-100 shadow-sm">
-                      <div className="border-b border-rose-100 p-5">
-                        <h3 className="font-medium text-gray-900 flex items-center">
-                          <CreditCard className="h-5 w-5 mr-2 text-rose-500" />
-                          Record New Expense
-                        </h3>
-                      </div>
-                      <div className="p-5">
-                        <ExpenseForm onExpenseAdded={handleExpenseAdded} />
-                      </div>
+                <TabsContent value="expenses" className="m-0 space-y-6">
+                  <div className="bg-white rounded-lg border border-rose-100 shadow-sm">
+                    <div className="border-b border-rose-100 p-5">
+                      <h3 className="font-medium text-gray-900 flex items-center">
+                        <CreditCard className="h-5 w-5 mr-2 text-rose-500" />
+                        Record New Expense
+                      </h3>
                     </div>
-                    
-                    <Card className="border-0 shadow-sm overflow-hidden">
-                      <CardHeader className="border-b border-rose-100 pb-4">
-                        <CardTitle className="text-lg text-gray-900 flex items-center">
-                          <CreditCard className="h-5 w-5 mr-2 text-rose-600" />
-                          Expense Records
-                        </CardTitle>
-                        <CardDescription>
-                          History of all recorded business expenses
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <ExpenseList newExpense={newExpense} />
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                )}
-
-                {!isAdmin && activeTab === "expenses" && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      You don't have permission to view the expenses tab.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                    <div className="p-5">
+                      <ExpenseForm onExpenseAdded={handleExpenseAdded} />
+                    </div>
+                  </div>
+                  
+                  <Card className="border-0 shadow-sm overflow-hidden">
+                    <CardHeader className="border-b border-rose-100 pb-4">
+                      <CardTitle className="text-lg text-gray-900 flex items-center">
+                        <CreditCard className="h-5 w-5 mr-2 text-rose-600" />
+                        Expense Records
+                      </CardTitle>
+                      <CardDescription>
+                        History of all recorded business expenses
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <ExpenseList newExpense={newExpense} />
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </div>
             </Tabs>
           </CardContent>
