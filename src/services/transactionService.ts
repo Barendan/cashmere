@@ -2,6 +2,28 @@ import { supabase, mapTransactionRowToTransaction, mapSaleRowToSale } from "../i
 import { Transaction, TransactionInput } from "../models/types";
 import { BULK_RESTOCK_PRODUCT_ID } from "../config/systemProducts";
 
+// Simplified type to prevent deep recursion
+type SafeTransaction = Omit<Transaction, 'parentTransactionId'> & {
+  parentTransactionId?: string;
+}
+
+// Update mapTransactionRowToTransaction to handle parent transaction safely
+const mapTransactionRowToTransaction = (row: any): SafeTransaction => {
+  return {
+    id: row.id,
+    productId: row.product_id,
+    productName: row.product_name,
+    quantity: row.quantity,
+    price: row.price,
+    type: row.type,
+    date: new Date(row.date),
+    userId: row.user_id,
+    userName: row.user_name,
+    saleId: row.sale_id || undefined,
+    parentTransactionId: row.parent_transaction_id || undefined
+  };
+};
+
 export const fetchTransactions = async () => {
   const { data: transactionsData, error: transactionsError } = await supabase
     .from('transactions')
@@ -281,3 +303,5 @@ export const updateMultipleProductStocks = async (productUpdates: {productId: st
     throw error;
   }
 };
+
+export { mapTransactionRowToTransaction };

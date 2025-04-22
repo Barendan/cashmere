@@ -1,16 +1,15 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Transaction } from "@/models/types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, MinusCircle, PackageCheck } from "lucide-react";
+import { PlusCircle, MinusCircle } from "lucide-react";
 
 interface TransactionRowGroupProps {
   transactions: Transaction[];
 }
 
 const TransactionRowGroup = ({ transactions }: TransactionRowGroupProps) => {
-  // Group transactions by product
   const renderTransactionRows = () => {
     return transactions.map((transaction, index) => (
       <div 
@@ -45,7 +44,7 @@ const TransactionRowGroup = ({ transactions }: TransactionRowGroupProps) => {
           </Badge>
         </div>
         
-        <div className="text-center">{formatDate(transaction.date, true)}</div>
+        <div className="text-center">{formatDate(transaction.date)}</div>
         
         <div className="text-center">
           {transaction.type === 'sale' ? '-' : '+'}{transaction.quantity}
@@ -66,3 +65,4 @@ const TransactionRowGroup = ({ transactions }: TransactionRowGroupProps) => {
 };
 
 export default TransactionRowGroup;
+
