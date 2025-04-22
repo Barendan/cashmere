@@ -55,10 +55,6 @@ const Metrics = () => {
     return transactions.filter(t => t.type === "sale");
   }, [transactions]);
 
-  const currentMonthTransactions = useMemo(() => {
-    return salesTransactions.filter(t => new Date(t.date) >= startOfMonth);
-  }, [salesTransactions, startOfMonth]);
-
   const productPerformance = useMemo(() => {
     const productMap = new Map();
     
@@ -127,110 +123,137 @@ const Metrics = () => {
   const servicesData = useMemo(() => {
     const filteredServiceIncomes = serviceIncomes.filter(income => {
       const incomeDate = new Date(income.date);
-      
-      switch(timeRange) {
-        case "7days":
-          return incomeDate >= sevenDaysAgo;
-        case "30days":
-          return incomeDate >= thirtyDaysAgo;
-        case "monthly":
-          return true;
-        default:
-          return false;
-      }
-    }) as ServiceIncomeWithCategory[];
-    
-    const serviceMap = new Map<string, ServiceMetric>();
-    
-    filteredServiceIncomes.forEach(income => {
-      if (income.category) {
-        try {
-          const parsedCategory = JSON.parse(income.category) as ParsedServiceCategory;
-          
-          if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds) &&
-              parsedCategory.serviceNames && Array.isArray(parsedCategory.serviceNames) &&
-              parsedCategory.servicePrices && Array.isArray(parsedCategory.servicePrices)) {
-            
-            const totalPriceBeforeDiscount = parsedCategory.servicePrices.reduce((sum, price) => sum + price, 0);
-            const totalDiscount = parsedCategory.discount || 0;
-            
-            parsedCategory.serviceIds.forEach((serviceId, index) => {
-              const serviceName = parsedCategory.serviceNames?.[index] || "Unknown Service";
-              const servicePrice = parsedCategory.servicePrices?.[index] || 0;
-              
-              const serviceDiscount = totalPriceBeforeDiscount > 0 
-                ? (servicePrice / totalPriceBeforeDiscount) * totalDiscount 
-                : 0;
-                
-              const finalPrice = Math.max(0, servicePrice - serviceDiscount);
-              
-              updateServiceMap(
-                serviceMap, 
-                serviceId, 
-                serviceName, 
-                finalPrice, 
-                income.customerName
-              );
-            });
-          } else {
-            processRegularService(income, serviceMap);
-          }
-        } catch (e) {
-          console.error("Error parsing service details:", e);
-          processRegularService(income, serviceMap);
-        }
-      } else {
-        processRegularService(income, serviceMap);
+      switch (timeRange) {
+        case "7days": return incomeDate >= sevenDaysAgo;
+        case "30days": return incomeDate >= thirtyDaysAgo;
+        case "monthly": return true;
+        default: return false;
       }
     });
-    
-    return Array.from(serviceMap.values())
-      .map(service => ({
-        ...service,
-        uniqueCustomers: service.customers.size,
-        customers: undefined
-      }))
-      .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    const serviceMap = new Map();
+
+    filteredServiceIncomes.forEach(income => {
+      const category = (income as any).category;
+      if (category) {
+        try {
+          const parsed = JSON.parse(category);
+          if (
+            Array.isArray(parsed.serviceIds) &&
+            Array.isArray(parsed.serviceNames) &&
+            Array.isArray(parsed.servicePrices)
+          ) {
+            // Handle bundled/multi-service with discount
+            const totalBeforeDiscount = parsed.servicePrices.reduce((s, v) => s + v, 0);
+            const discount = parsed.discount || 0;
+            parsed.serviceIds.forEach((id: string, idx: number) => {
+              const name = parsed.serviceNames[idx] || "Unknown Service";
+              const price = parsed.servicePrices[idx] || 0;
+              const allocation = totalBeforeDiscount ? (price / totalBeforeDiscount) * discount : 0;
+              const netPrice = Math.max(0, price - allocation);
+
+              if (!serviceMap.has(id)) {
+                serviceMap.set(id, {
+                  id,
+                  name,
+                  totalSold: 0,
+                  totalRevenue: 0,
+                  customers: new Set()
+                });
+              }
+              const entry = serviceMap.get(id);
+              entry.totalSold += 1;
+              entry.totalRevenue += netPrice;
+              if (income.customerName) {
+                entry.customers.add(income.customerName);
+              }
+            });
+          } else {
+            // Default/fallback processing
+            const id = income.serviceId || "unknown";
+            const name = income.serviceName || "Unknown Service";
+            if (!serviceMap.has(id)) {
+              serviceMap.set(id, {
+                id,
+                name,
+                totalSold: 0,
+                totalRevenue: 0,
+                customers: new Set()
+              });
+            }
+            const entry = serviceMap.get(id);
+            entry.totalSold += 1;
+            entry.totalRevenue += income.amount;
+            if (income.customerName) entry.customers.add(income.customerName);
+          }
+        } catch (e) {
+          // If category is not valid JSON
+          const id = income.serviceId || "unknown";
+          const name = income.serviceName || "Unknown Service";
+          if (!serviceMap.has(id)) {
+            serviceMap.set(id, {
+              id,
+              name,
+              totalSold: 0,
+              totalRevenue: 0,
+              customers: new Set()
+            });
+          }
+          const entry = serviceMap.get(id);
+          entry.totalSold += 1;
+          entry.totalRevenue += income.amount;
+          if (income.customerName) entry.customers.add(income.customerName);
+        }
+      } else {
+        // No category (simple, regular service)
+        const id = income.serviceId || "unknown";
+        const name = income.serviceName || "Unknown Service";
+        if (!serviceMap.has(id)) {
+          serviceMap.set(id, {
+            id,
+            name,
+            totalSold: 0,
+            totalRevenue: 0,
+            customers: new Set()
+          });
+        }
+        const entry = serviceMap.get(id);
+        entry.totalSold += 1;
+        entry.totalRevenue += income.amount;
+        if (income.customerName) entry.customers.add(income.customerName);
+      }
+    });
+
+    // Transform for table/chart/pie components
+    return Array.from(serviceMap.values()).map(item => ({
+      ...item,
+      uniqueCustomers: item.customers.size
+    })).sort((a, b) => b.totalRevenue - a.totalRevenue);
   }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
-  function processRegularService(income: ServiceIncomeWithCategory, serviceMap: Map<string, ServiceMetric>) {
-    const serviceId = income.serviceId || "unknown";
-    const serviceName = income.serviceName || "Unknown Service";
-    
-    updateServiceMap(
-      serviceMap,
-      serviceId,
-      serviceName,
-      income.amount,
-      income.customerName
-    );
-  }
-
-  function updateServiceMap(
-    serviceMap: Map<string, ServiceMetric>,
-    serviceId: string,
-    serviceName: string,
-    amount: number,
-    customerName: string | null
-  ) {
-    if (!serviceMap.has(serviceId)) {
-      serviceMap.set(serviceId, {
-        id: serviceId,
-        name: serviceName,
-        totalSold: 0,
-        totalRevenue: 0,
-        customers: new Set<string>()
+  const totalServiceRevenue = useMemo(
+    () => servicesData.reduce((sum, s) => sum + s.totalRevenue, 0),
+    [servicesData]
+  );
+  const totalServicesProvided = useMemo(
+    () => servicesData.reduce((sum, s) => sum + s.totalSold, 0),
+    [servicesData]
+  );
+  const totalUniqueCustomers = useMemo(
+    () => {
+      const customers = new Set();
+      servicesData.forEach(service => {
+        service.customers?.forEach((c: string) => customers.add(c));
       });
-    }
-    
-    const service = serviceMap.get(serviceId)!;
-    service.totalSold += 1;
-    service.totalRevenue += amount;
-    
-    if (customerName) {
-      service.customers.add(customerName);
-    }
-  }
+      return customers.size;
+    }, [servicesData]
+  );
+
+  const serviceTypeData = useMemo(() =>
+    servicesData.map(s => ({
+      name: s.name,
+      value: s.totalRevenue
+    })), [servicesData]);
 
   const uniqueCustomers = useMemo(() => {
     const customers = new Set();
@@ -269,17 +292,17 @@ const Metrics = () => {
     return profit;
   }, [currentMonthTransactions, products]);
 
-  const totalServiceRevenue = useMemo(() => 
+  const totalServiceRevenue2 = useMemo(() => 
     servicesData.reduce((sum, service) => sum + service.totalRevenue, 0),
     [servicesData]
   );
   
-  const totalServicesProvided = useMemo(() =>
+  const totalServicesProvided2 = useMemo(() =>
     servicesData.reduce((sum, service) => sum + service.totalSold, 0),
     [servicesData]
   );
   
-  const totalUniqueCustomers = useMemo(() => {
+  const totalUniqueCustomers2 = useMemo(() => {
     const allCustomers = new Set<string>();
     
     const filteredServiceIncomes = serviceIncomes.filter(income => {
@@ -328,29 +351,20 @@ const Metrics = () => {
     return Array.from(categories.values());
   }, [salesTransactions, products]);
 
-  const serviceTypeData = useMemo(() => {
-    return servicesData.map(service => ({
-      name: service.name,
-      value: service.totalRevenue
-    }));
-  }, [servicesData]);
-
   const exportCSV = () => {
-    const dataToExport = metricView === "products" ? productPerformance : servicesData;
-    const filename = metricView === "products" ? "product-performance" : "service-performance";
-    
-    let csv = metricView === "products" 
-      ? 'Product Name,Total Sold,Total Revenue,Cost Price,Profit\n'
+    const isProducts = metricView === "products";
+    const dataToExport = isProducts ? productPerformance : servicesData;
+    const filename = isProducts ? "product-performance" : "service-performance";
+    let csv = isProducts ?
+      'Product Name,Total Sold,Total Revenue,Cost Price,Profit\n'
       : 'Service Name,Total Sold,Total Revenue,Unique Customers\n';
-    
     dataToExport.forEach(item => {
-      if (metricView === "products") {
+      if (isProducts) {
         csv += `"${item.name}",${item.totalSold},${item.totalRevenue.toFixed(2)},${item.costPrice.toFixed(2)},${item.profit.toFixed(2)}\n`;
       } else {
         csv += `"${item.name}",${item.totalSold},${item.totalRevenue.toFixed(2)},${item.uniqueCustomers || 0}\n`;
       }
     });
-    
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -394,7 +408,7 @@ const Metrics = () => {
         </Tabs>
       </div>
       {metricView === "products" ? (
-        <ProductMetrics 
+        <ProductMetrics
           totalRevenue={totalRevenue}
           totalProfit={totalProfit}
           totalItemsSold={totalItemsSold}
