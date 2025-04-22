@@ -9,7 +9,7 @@ export interface SortState {
 }
 
 export function useSortableTable<T>(initialData: T[]) {
-  const [sortState, setSortState] = useState<SortState>({ column: null, direction: null });
+  const [sortState, setSortState] = useState<SortState>({ column: "name", direction: "asc" });
   const [sortedData, setSortedData] = useState<T[]>(initialData);
 
   const sortData = (column: string) => {
@@ -35,10 +35,28 @@ export function useSortableTable<T>(initialData: T[]) {
     setSortedData(sorted);
   };
 
-  // Update sorted data if initialData changes and no sorting is applied
   useEffect(() => {
-    if (!sortState.column) setSortedData(initialData);
-  }, [initialData, sortState.column]);
+    if (sortState.column) {
+      // sort by that column and direction
+      const sorted = [...initialData].sort((a, b) => {
+        const av = (a as any)[sortState.column!];
+        const bv = (b as any)[sortState.column!];
+        if (typeof av === "number" && typeof bv === "number") {
+          return sortState.direction === "asc" ? av - bv : bv - av;
+        }
+        if (typeof av === "string" && typeof bv === "string") {
+          return sortState.direction === "asc"
+            ? av.localeCompare(bv)
+            : bv.localeCompare(av);
+        }
+        return 0;
+      });
+      setSortedData(sorted);
+    } else {
+      setSortedData(initialData);
+    }
+  }, [initialData, sortState]);
+  
 
   return {
     sortedData,

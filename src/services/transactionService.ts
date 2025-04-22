@@ -130,6 +130,7 @@ export const updateProductStock = async (productId: string, newQuantity: number)
     .eq('id', productId);
 
   if (error) {
+    console.log('updateProductStock failed', error)
     throw error;
   }
 };
