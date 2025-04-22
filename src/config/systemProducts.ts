@@ -15,3 +15,12 @@ export function isSystemMonthlyRestockProduct(productId: string): boolean {
   return isBulkRestockProduct(productId);
 }
 
+// Helper to identify a parent restock transaction
+export function isParentRestockTransaction(transaction: any): boolean {
+  return transaction.type === 'restock' && isBulkRestockProduct(transaction.productId || transaction.product_id);
+}
+
+// Helper to identify a child restock transaction
+export function isChildRestockTransaction(transaction: any): boolean {
+  return transaction.type === 'restock' && transaction.parentTransactionId !== null;
+}

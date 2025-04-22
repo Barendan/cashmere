@@ -1,86 +1,51 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Package, CalendarDays, Percent } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronUpCircle, ChevronDownCircle, Clock, PlusCircle, MinusCircle, ShoppingBag, PackageCheck, ArrowRight } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatCurrency } from '@/lib/format';
 import TransactionRowGroup from './TransactionRowGroup';
-import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isSystemMonthlyRestockProduct } from "@/config/systemProducts";
+import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isSystemMonthlyRestockProduct, isParentRestockTransaction } from "@/config/systemProducts";
+import { Button } from '@/components/ui/button';
 
 interface GroupedTransaction {
   saleId: string | null;
   transactions: Transaction[];
-  date: Date;
-  userName: string;
-  totalAmount: number;
-  originalTotal: number | undefined;
-  discount: number | undefined;
-  itemCount: number;
+  isExpanded?: boolean;
 }
 
 interface TransactionsListProps {
   transactions: Transaction[];
+  onViewRestockDetails?: (transaction: Transaction) => void;
 }
 
-const TransactionsList = ({ transactions }: TransactionsListProps) => {
-  const [filterType, setFilterType] = useState<string>("all");
-  const [openSale, setOpenSale] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>("");
+const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsListProps) => {
+  const [transactionGroups, setTransactionGroups] = useState<GroupedTransaction[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filteredType, setFilteredType] = useState<string | null>(null);
   
-  const toggleSale = (saleId: string | null) => {
-    if (openSale === saleId) {
-      setOpenSale(null);
-    } else {
-      setOpenSale(saleId);
+  // Filter and group transactions
+  useEffect(() => {
+    let filteredTransactions = [...transactions];
+    
+    // Apply search filter 
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filteredTransactions = filteredTransactions.filter(t => 
+        t.productName.toLowerCase().includes(query) || 
+        t.userName.toLowerCase().includes(query)
+      );
     }
-  };
-  
-  const getTransactionTypeColor = (type: string) => {
-    switch (type) {
-      case "sale":
-        return "bg-green-100 text-green-800";
-      case "restock":
-        return "bg-blue-100 text-blue-800";
-      case "return":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+    
+    // Apply type filter
+    if (filteredType) {
+      filteredTransactions = filteredTransactions.filter(t => t.type === filteredType);
     }
-  };
-  
-  const getTransactionTypeIcon = (type: string, productId: string): JSX.Element | null => {
-    if (type === "restock" && isBulkRestockProduct(productId)) {
-      return <CalendarDays className="h-3 w-3 mr-1" />;
-    } else if (type === "restock") {
-      return <Package className="h-3 w-3 mr-1" />;
-    }
-    return null;
-  };
-
-  const groupTransactions = (): GroupedTransaction[] => {
-    const filteredTransactions = transactions.filter((transaction) => {
-      if (filterType !== "all") {
-        if (filterType === "restock") {
-          if (transaction.type !== "restock") {
-            return false;
-          }
-        } else if (transaction.type !== filterType) {
-          return false;
-        }
-      }
-      
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        return transaction.productName.toLowerCase().includes(searchLower) ||
-              transaction.userName.toLowerCase().includes(searchLower);
-      }
-      return true;
-    });
-
+    
+    // Group transactions by sale id or bulk restock
     const groupMap = new Map<string, Transaction[]>();
     
     filteredTransactions.forEach(transaction => {
@@ -90,222 +55,228 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       if (!groupMap.has(key)) {
         groupMap.set(key, []);
       }
-      groupMap.get(key)?.push(transaction);
+      groupMap.get(key)!.push(transaction);
     });
     
-    const groupedTransactions: GroupedTransaction[] = [];
+    // Convert map to array of groups
+    const groupsArray: GroupedTransaction[] = [];
     
-    groupMap.forEach((transactions, saleId) => {
-      const sortedTransactions = [...transactions].sort((a, b) => 
-        new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-      
-      const firstTransaction = sortedTransactions[0];
-      
-      let originalTotal = 0;
-      let finalTotal = 0;
-      let hasDiscount = false;
-      
-      sortedTransactions.forEach(t => {
-        if (t.discount && t.discount > 0) {
-          hasDiscount = true;
-          originalTotal += (t.originalPrice || t.price + t.discount);
-          finalTotal += t.price;
-        } else if (t.originalPrice && t.originalPrice > t.price) {
-          hasDiscount = true;
-          originalTotal += t.originalPrice;
-          finalTotal += t.price;
-        } else {
-          originalTotal += t.price;
-          finalTotal += t.price;
-        }
-      });
-      
-      const totalDiscount = originalTotal - finalTotal;
-      
-      groupedTransactions.push({
-        saleId: saleId === 'no-sale-id' ? null : saleId,
-        transactions: sortedTransactions,
-        date: new Date(firstTransaction.date),
-        userName: firstTransaction.userName,
-        totalAmount: finalTotal,
-        originalTotal: hasDiscount ? originalTotal : undefined,
-        discount: hasDiscount ? totalDiscount : undefined,
-        itemCount: sortedTransactions.length
-      });
-    });
+    // First add sales
+    for (const [key, trxs] of groupMap.entries()) {
+      if (key !== 'no-sale-id' && key !== 'monthly-restock' && !key.startsWith('monthly-restock-')) {
+        groupsArray.push({
+          saleId: key,
+          transactions: trxs,
+          isExpanded: expandedGroups[key] || false
+        });
+      }
+    }
     
-    return groupedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
+    // Then add monthly restocks
+    for (const [key, trxs] of groupMap.entries()) {
+      if (key.startsWith('monthly-restock-')) {
+        groupsArray.push({
+          saleId: key,
+          transactions: trxs,
+          isExpanded: expandedGroups[key] || false
+        });
+      }
+    }
+    
+    // Finally add transactions with no sale id
+    if (groupMap.has('no-sale-id')) {
+      groupsArray.push({
+        saleId: 'no-sale-id',
+        transactions: groupMap.get('no-sale-id')!,
+        isExpanded: expandedGroups['no-sale-id'] || false
+      });
+    }
+    
+    setTransactionGroups(groupsArray);
+  }, [transactions, searchQuery, filteredType, expandedGroups]);
+  
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [groupId]: !prev[groupId]
+    }));
   };
   
-  const groupedTransactions = groupTransactions();
+  const getGroupTitle = (group: GroupedTransaction) => {
+    const { saleId, transactions } = group;
+    
+    if (!transactions.length) return 'No Transactions';
+    
+    // For monthly restocks
+    if (saleId?.startsWith('monthly-restock-')) {
+      const restock = transactions.find(t => isParentRestockTransaction(t));
+      if (restock) {
+        return `Monthly Restock - ${formatDate(restock.date)}`;
+      }
+    }
+    
+    // For sales
+    if (saleId && saleId !== 'no-sale-id' && !saleId.startsWith('monthly-restock-')) {
+      const sale = transactions[0]; // All transactions in a sale have the same date
+      if (sale) {
+        return `Sale - ${formatDate(sale.date)}`;
+      }
+    }
+    
+    // For ungrouped transactions
+    if (saleId === 'no-sale-id') {
+      return 'Individual Transactions';
+    }
+    
+    return 'Transactions';
+  };
+  
+  const getGroupIcon = (group: GroupedTransaction) => {
+    const { saleId, transactions } = group;
+    
+    if (saleId?.startsWith('monthly-restock-')) {
+      return <PackageCheck className="h-5 w-5 text-green-600" />;
+    }
+    
+    if (saleId && saleId !== 'no-sale-id' && !saleId.startsWith('monthly-restock-')) {
+      return <ShoppingBag className="h-5 w-5 text-blue-600" />;
+    }
+    
+    return <Clock className="h-5 w-5 text-gray-600" />;
+  };
+  
+  const calculateGroupTotal = (group: GroupedTransaction) => {
+    if (!group.transactions.length) return 0;
+    
+    // For monthly restocks, show the total cost from the parent transaction
+    if (group.saleId?.startsWith('monthly-restock-')) {
+      const restock = group.transactions.find(t => isParentRestockTransaction(t));
+      if (restock) {
+        return restock.price;
+      }
+    }
+    
+    // For sales or other transactions, sum the prices
+    return group.transactions.reduce((sum, t) => sum + t.price, 0);
+  };
+  
+  const getTransactionCount = (group: GroupedTransaction) => {
+    if (group.saleId?.startsWith('monthly-restock-')) {
+      // For monthly restocks, count child transactions
+      return group.transactions.filter(t => !isParentRestockTransaction(t)).length;
+    }
+    return group.transactions.length;
+  };
   
   return (
-    <Card className="bg-white mb-6 flex-shrink-0 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/70 flex flex-col">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-spa-deep">Product Sales Log</CardTitle>
-            <CardDescription>History of all transactions</CardDescription>
-          </div>
-          <Tabs defaultValue="all" onValueChange={setFilterType} className="w-[400px]">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="sale">Sales</TabsTrigger>
-              <TabsTrigger value="restock">Restocks</TabsTrigger>
-              <TabsTrigger value="adjustment">Adjustments</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+    <Card className="my-6 bg-white">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xl">Transaction History</CardTitle>
+        <CardDescription>
+          View recent sales, restocks, and inventory adjustments
+        </CardDescription>
       </CardHeader>
-
-      <CardContent className="flex-grow flex flex-col p-0 overflow-hidden">
-        <div className="rounded-md border border-spa-sand flex flex-col overflow-hidden">
-          <ScrollArea className="flex-grow overflow-auto max-h-[30vh]">
-            <Table>
-              <TableHeader className="bg-white">
-                <TableRow>
-                  <TableHead className="w-[180px]">Date & Time</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {groupedTransactions.length > 0 ? (
-                  groupedTransactions.map((group) => (
-                    <TransactionRowGroup key={group.saleId || `no-sale-${group.date.getTime()}`}>
-                      <TableRow className="bg-gray-50 font-medium">
-                        <TableCell className="text-sm">
-                          <div>
-                            {new Date(group.date).toLocaleDateString()}
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(group.date).toLocaleTimeString()}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {group.saleId ? (
-                            group.transactions[0].type === 'restock' && 
-                            isBulkRestockProduct(group.transactions[0].productId) ? (
-                              <span className="font-medium">Monthly Inventory Restock</span>
-                            ) : (
-                              group.itemCount === 1 ? (
-                                <span className="font-medium">{group.transactions[0].productName}</span>
-                              ) : (
-                                <span className="font-medium">Sale with {group.itemCount} item(s)</span>
-                              )
-                            )
-                          ) : (
-                            <span className="font-medium">{group.transactions[0].productName}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{group.userName}</TableCell>
-                        <TableCell>
-                          {group.discount && group.discount > 0 ? (
-                            <div className="flex flex-col">
-                              <span className="line-through text-sm text-muted-foreground">
-                                {formatCurrency(group.originalTotal || 0)}
-                              </span>
-                              <div className="flex items-center text-red-600">
-                                <Percent className="h-3 w-3 mr-0.5" />
-                                <span>{formatCurrency(group.totalAmount)}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            formatCurrency(group.totalAmount)
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                            <span className="flex items-center">
-                              {getTransactionTypeIcon(
-                                group.transactions[0].type, 
-                                group.transactions[0].productId
-                              )}
-                              {group.transactions[0].type === 'restock' && 
-                               isBulkRestockProduct(group.transactions[0].productId) 
-                                ? 'Monthly Restock' 
-                                : group.transactions[0].type}
-                            </span>
-                          </Badge>
-                          {group.discount && group.discount > 0 && (
-                            <Badge className="ml-2 bg-red-100 text-red-800">
-                              Discount: {formatCurrency(group.discount)}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {group.transactions.length > 1 && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0"
-                              onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
-                              aria-label={openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
-                                "Collapse transaction details" : "Expand transaction details"}
-                            >
-                              {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
-                                <ChevronDown className="h-4 w-4" /> : 
-                                <ChevronRight className="h-4 w-4" />
-                              }
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
+      <CardContent>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2 justify-between items-center">
+            <div className="space-x-1">
+              <Badge 
+                onClick={() => setFilteredType(null)} 
+                className={`cursor-pointer hover:bg-secondary ${!filteredType ? 'bg-primary text-white' : 'bg-secondary'}`}
+              >
+                All
+              </Badge>
+              <Badge 
+                onClick={() => setFilteredType('sale')} 
+                className={`cursor-pointer hover:bg-blue-100 ${filteredType === 'sale' ? 'bg-blue-600 text-white' : 'bg-blue-50 text-blue-600'}`}
+              >
+                Sales
+              </Badge>
+              <Badge 
+                onClick={() => setFilteredType('restock')} 
+                className={`cursor-pointer hover:bg-green-100 ${filteredType === 'restock' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-600'}`}
+              >
+                Restocks
+              </Badge>
+              <Badge 
+                onClick={() => setFilteredType('adjustment')} 
+                className={`cursor-pointer hover:bg-amber-100 ${filteredType === 'adjustment' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-600'}`}
+              >
+                Adjustments
+              </Badge>
+            </div>
+            
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                className="border rounded-md px-3 py-1 text-sm w-full md:w-[250px] outline-none focus:border-primary"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <ScrollArea className="h-[400px]">
+            <div className="space-y-4">
+              {transactionGroups.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  No transactions found matching your criteria
+                </div>
+              ) : (
+                transactionGroups.map((group, index) => (
+                  <div key={group.saleId || index} className="border rounded-md overflow-hidden">
+                    <div 
+                      className="flex items-center justify-between px-4 py-3 bg-gray-50 cursor-pointer"
+                      onClick={() => toggleGroup(group.saleId || 'no-sale-id')}
+                    >
+                      <div className="flex items-center gap-2">
+                        {getGroupIcon(group)}
+                        <span className="font-medium">{getGroupTitle(group)}</span>
+                        <Badge className="bg-secondary">
+                          {getTransactionCount(group)} item{getTransactionCount(group) !== 1 ? 's' : ''}
+                        </Badge>
+                      </div>
                       
-                      {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) &&
-                        group.transactions.map(transaction => (
-                          <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
-                            <TableCell></TableCell>
-                            <TableCell className="py-2 pl-8">
-                              <div className="flex items-center">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
-                                {transaction.productName}
-                              </div>
-                            </TableCell>
-                            <TableCell></TableCell>
-                            <TableCell>
-                              
-                            </TableCell>
-                            <TableCell>
-                              {transaction.discount && transaction.discount > 0 && (
-                                <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
-                                  <Percent className="h-2 w-2 mr-0.5" />
-                                  {formatCurrency(transaction.discount)}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
-                                <div className="flex flex-col items-end">
-                                  <span className="text-xs text-muted-foreground line-through">
-                                    {formatCurrency(transaction.originalPrice)}
-                                  </span>
-                                  <span className="text-red-600">
-                                    {formatCurrency(transaction.price)}
-                                  </span>
-                                </div>
-                              ) : (
-                                formatCurrency(transaction.price)
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      }
-                    </TransactionRowGroup>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                      No transactions found for the selected filter.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      <div className="flex items-center gap-4">
+                        <span className="font-medium">
+                          {group.saleId?.startsWith('monthly-restock-') ? 'Cost: ' : 'Total: '}
+                          {formatCurrency(calculateGroupTotal(group))}
+                        </span>
+                        
+                        {group.saleId?.startsWith('monthly-restock-') && onViewRestockDetails && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-blue-600 hover:text-blue-800 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const restock = group.transactions.find(t => isParentRestockTransaction(t));
+                              if (restock) {
+                                onViewRestockDetails(restock);
+                              }
+                            }}
+                          >
+                            <span className="text-xs mr-1">Details</span>
+                            <ArrowRight className="h-3 w-3" />
+                          </Button>
+                        )}
+                        
+                        {expandedGroups[group.saleId || 'no-sale-id'] ? (
+                          <ChevronUpCircle className="h-5 w-5 text-muted-foreground" />
+                        ) : (
+                          <ChevronDownCircle className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {expandedGroups[group.saleId || 'no-sale-id'] && (
+                      <TransactionRowGroup transactions={group.transactions} />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </ScrollArea>
         </div>
       </CardContent>

@@ -54,9 +54,10 @@ export const recordTransactionInDb = async (transactionData: TransactionInput): 
   const formattedTransaction = {
     ...transactionData,
     date: transactionData.date.toISOString(),
-    // Explicitly handle product_id and sale_id, casting will be done by the RPC function
+    // Explicitly handle product_id, sale_id, and parent_transaction_id
     product_id: transactionData.product_id,
-    sale_id: transactionData.sale_id || null
+    sale_id: transactionData.sale_id || null,
+    parent_transaction_id: transactionData.parent_transaction_id || null
   };
 
   const { data, error } = await supabase
@@ -181,9 +182,92 @@ export const recordMonthlyRestockInDb = async (userData: any, totalCost: number)
       user_name: userData.name || "Unknown User",
     };
     
-    return await recordTransactionInDb(bulkRestockData);
+    // Create parent transaction for the bulk restock
+    const parentTransaction = await recordTransactionInDb(bulkRestockData);
+    return parentTransaction;
   } catch (err) {
     console.error("Exception in recordMonthlyRestockInDb:", err);
+    throw err;
+  }
+};
+
+export const recordChildRestockTransactions = async (
+  parentTransactionId: string, 
+  productUpdates: {productId: string, productName: string, oldQuantity: number, newQuantity: number, costPrice: number}[],
+  userData: any
+) => {
+  try {
+    const now = new Date();
+    const childTransactions: TransactionInput[] = [];
+    
+    // Create child transactions for each restocked product
+    for (const update of productUpdates) {
+      const additionalQuantity = update.newQuantity - update.oldQuantity;
+      
+      // Only create transactions for products that were actually restocked
+      if (additionalQuantity > 0) {
+        childTransactions.push({
+          product_id: update.productId,
+          product_name: update.productName,
+          quantity: additionalQuantity,
+          price: additionalQuantity * update.costPrice,
+          type: "restock",
+          date: now,
+          user_id: userData.id || "unknown",
+          user_name: userData.name || "Unknown User",
+          parent_transaction_id: parentTransactionId
+        });
+      }
+    }
+    
+    // Use the existing bulk transactions function to insert all child transactions
+    if (childTransactions.length > 0) {
+      return await recordBulkTransactionsInDb(childTransactions);
+    }
+    
+    return [];
+  } catch (err) {
+    console.error("Exception in recordChildRestockTransactions:", err);
+    throw err;
+  }
+};
+
+export const getRestockDetails = async (parentTransactionId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('parent_transaction_id', parentTransactionId)
+      .order('date', { ascending: false });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data.map(item => mapTransactionRowToTransaction(item));
+  } catch (err) {
+    console.error("Exception in getRestockDetails:", err);
+    throw err;
+  }
+};
+
+export const getRestockSummaries = async (limit: number = 10) => {
+  try {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('product_id', BULK_RESTOCK_PRODUCT_ID)
+      .eq('type', 'restock')
+      .order('date', { ascending: false })
+      .limit(limit);
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data.map(item => mapTransactionRowToTransaction(item));
+  } catch (err) {
+    console.error("Exception in getRestockSummaries:", err);
     throw err;
   }
 };

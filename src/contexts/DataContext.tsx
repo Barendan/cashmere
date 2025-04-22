@@ -18,11 +18,13 @@ import {
   updateProductRestockDate,
   getLastRestockDate,
   recordMonthlyRestockInDb,
-  updateMultipleProductStocks
+  recordChildRestockTransactions,
+  updateMultipleProductStocks,
+  getRestockDetails
 } from "../services/transactionService";
 import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
-import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct } from "../config/systemProducts";
+import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isParentRestockTransaction } from "../config/systemProducts";
 
 interface ServiceIncome {
   id: string;
@@ -49,6 +51,7 @@ interface DataContextType {
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
   recordMonthlyRestock: (productUpdates: {product: Product, newQuantity: number}[]) => Promise<void>;
+  getRestockDetails: (parentTransactionId: string) => Promise<Transaction[]>;
   recordTransactionInDb: (transactionData: any) => Promise<Transaction>;
   isLoading: boolean;
   getTotalInventoryValue: () => number;
@@ -655,9 +658,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return sum + (additionalQuantity * update.product.costPrice);
       }, 0);
       
-      const newTransaction = await recordMonthlyRestockInDb(
+      const parentTransaction = await recordMonthlyRestockInDb(
         { id: user?.id || 'unknown', name: user?.name || 'Unknown User' }, 
         totalCost
+      );
+      
+      const detailedUpdates = validUpdates.map(update => ({
+        productId: update.product.id,
+        productName: update.product.name,
+        oldQuantity: update.product.stockQuantity,
+        newQuantity: update.newQuantity,
+        costPrice: update.product.costPrice
+      }));
+      
+      const childTransactions = await recordChildRestockTransactions(
+        parentTransaction.id,
+        detailedUpdates,
+        { id: user?.id || 'unknown', name: user?.name || 'Unknown User' }
       );
       
       const dbProductUpdates = validUpdates.map(update => ({
@@ -682,7 +699,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const now = new Date();
       setLastRestockDate(now);
       
-      setTransactions([newTransaction, ...transactions]);
+      setTransactions([parentTransaction, ...childTransactions, ...transactions]);
       
       toast({ 
         title: "Monthly Restock Complete", 
@@ -702,6 +719,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const getProduct = (id: string) => {
     if (isBulkRestockProduct(id)) return undefined;
     return products.find(p => p.id === id);
+  };
+
+  const getRestockDetailsFromContext = async (parentTransactionId: string) => {
+    try {
+      return await getRestockDetails(parentTransactionId);
+    } catch (error) {
+      console.error('Error fetching restock details:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to fetch restock details.", 
+        variant: "destructive" 
+      });
+      return [];
+    }
   };
 
   const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
@@ -724,6 +755,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         undoLastTransaction,
         getProduct,
         recordMonthlyRestock,
+        getRestockDetails: getRestockDetailsFromContext,
         recordTransactionInDb,
         isLoading,
         getTotalInventoryValue: () =>

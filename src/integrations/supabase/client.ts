@@ -28,7 +28,7 @@ export type SaleRow = Tables['sales']['Row']
 export type SaleInsert = Tables['sales']['Insert']
 export type SaleUpdate = Tables['sales']['Update']
 
-// Update TransactionInsert to include sale_id
+// Update TransactionInsert to include parent_transaction_id
 export type ExtendedTransactionInsert = {
   product_id: string;
   product_name: string;
@@ -38,10 +38,11 @@ export type ExtendedTransactionInsert = {
   date?: string;
   user_id: string;
   user_name: string;
-  sale_id?: string;
+  sale_id?: string | null;
   created_at?: string;
   discount?: number;
   original_price?: number;
+  parent_transaction_id?: string | null;
 };
 
 // Define RPC result types for better type safety
@@ -118,7 +119,8 @@ export const mapTransactionRowToTransaction = (row: TransactionRow | RpcTransact
   date: new Date(row.date),
   userId: row.user_id,
   userName: row.user_name,
-  saleId: row.sale_id || undefined
+  saleId: row.sale_id || undefined,
+  parentTransactionId: (row as any).parent_transaction_id || undefined  // Add this line
 });
 
 export const mapSaleRowToSale = (row: SaleRow | RpcSaleResult) => ({

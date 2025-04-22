@@ -6,11 +6,20 @@ import { CartProvider } from "@/contexts/CartContext";
 import ProductList from "@/components/sales/ProductList";
 import SalesCart from "@/components/sales/SalesCart";
 import TransactionsList from "@/components/sales/TransactionsList";
+import RestockDetailDialog from "@/components/sales/RestockDetailDialog";
+import { Transaction } from "@/models/types";
 
 const SalesLog = () => {
   usePageTitle("Sales Log");
   const { products, transactions } = useData();
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isRestockDetailOpen, setIsRestockDetailOpen] = useState<boolean>(false);
+  
+  const handleViewRestockDetails = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsRestockDetailOpen(true);
+  };
   
   return (
     <CartProvider>
@@ -20,7 +29,16 @@ const SalesLog = () => {
           <SalesCart isProcessing={isProcessing} setIsProcessing={setIsProcessing} />
         </div>
         
-        <TransactionsList transactions={transactions} />
+        <TransactionsList 
+          transactions={transactions} 
+          onViewRestockDetails={handleViewRestockDetails}
+        />
+        
+        <RestockDetailDialog 
+          isOpen={isRestockDetailOpen} 
+          onClose={() => setIsRestockDetailOpen(false)} 
+          transaction={selectedTransaction}
+        />
       </div>
     </CartProvider>
   );

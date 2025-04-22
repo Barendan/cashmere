@@ -27,6 +27,7 @@ export interface Transaction {
   saleId?: string;
   discount?: number;           // Added for discount tracking
   originalPrice?: number;      // Added for original price before discount
+  parentTransactionId?: string; // Added for restock parent-child relationship
 }
 
 export interface Sale {
@@ -104,6 +105,7 @@ export interface TransactionInput {
   user_id: string;
   user_name: string;
   sale_id?: string;
-  discount?: number;           // Maintaining consistency with Transaction interface
-  originalPrice?: number;      // Maintaining consistency with Transaction interface
+  discount?: number;
+  originalPrice?: number;
+  parent_transaction_id?: string; // Added for restock parent-child relationship
 }
