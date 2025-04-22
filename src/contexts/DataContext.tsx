@@ -22,6 +22,7 @@ import {
 } from "../services/transactionService";
 import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
+import { MONTHLY_RESTOCK_PRODUCT_ID, isSystemMonthlyRestockProduct } from "../config/systemProducts";
 
 interface ServiceIncome {
   id: string;
@@ -699,19 +700,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getProduct = (id: string) => {
+    if (isSystemMonthlyRestockProduct(id)) return undefined;
     return products.find(p => p.id === id);
   };
-  
-  const getTotalInventoryValue = () => {
-    return products.reduce((total, product) => {
-      return total + (product.costPrice * product.stockQuantity);
-    }, 0);
-  };
+
+  const displayableProducts = products.filter(p => !isSystemMonthlyRestockProduct(p.id));
 
   return (
     <DataContext.Provider
       value={{
-        products,
+        products: displayableProducts,
         transactions,
         sales,
         serviceIncomes,
@@ -728,8 +726,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         recordMonthlyRestock,
         recordTransactionInDb,
         isLoading,
-        getTotalInventoryValue,
-        refreshData
+        getTotalInventoryValue: () =>
+          displayableProducts.reduce((total, product) => {
+            return total + product.costPrice * product.stockQuantity;
+          }, 0),
+        refreshData,
       }}
     >
       {children}

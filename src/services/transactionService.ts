@@ -1,5 +1,6 @@
 import { supabase, mapTransactionRowToTransaction, mapSaleRowToSale } from "../integrations/supabase/client";
 import { Transaction, TransactionInput } from "../models/types";
+import { MONTHLY_RESTOCK_PRODUCT_ID } from "../config/systemProducts";
 
 export const fetchTransactions = async () => {
   const { data: transactionsData, error: transactionsError } = await supabase
@@ -168,16 +169,16 @@ export const recordMonthlyRestockInDb = async (userData: any, totalCost: number)
   try {
     const now = new Date();
     
-    // Create a single monthly restock transaction - using null UUID instead of string
+    // Create a single monthly restock transaction - use SYSTEM PRODUCT ID
     const monthlyRestockData: TransactionInput = {
-      product_id: null as unknown as string, // Use null but cast to match interface
+      product_id: MONTHLY_RESTOCK_PRODUCT_ID,
       product_name: "Monthly Inventory Restock",
       quantity: 0, // Not applicable for this transaction type
       price: totalCost,
-      type: 'monthly-restock',
+      type: "monthly-restock",
       date: now,
-      user_id: userData.id || 'unknown',
-      user_name: userData.name || 'Unknown User'
+      user_id: userData.id || "unknown",
+      user_name: userData.name || "Unknown User",
     };
     
     return await recordTransactionInDb(monthlyRestockData);

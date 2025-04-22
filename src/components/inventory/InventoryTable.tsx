@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Product } from "@/models/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +6,7 @@ import { Edit } from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { SortState } from "./useSortableTable";
+import { isSystemMonthlyRestockProduct } from "@/config/systemProducts";
 
 interface InventoryTableProps {
   products: Product[];
@@ -29,6 +29,8 @@ export default function InventoryTable({
   sortState,
   onSort,
 }: InventoryTableProps) {
+  const visibleProducts = products.filter(p => !isSystemMonthlyRestockProduct(p.id));
+
   return (
     <Table>
       <TableHeader>
@@ -57,8 +59,8 @@ export default function InventoryTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {products.length > 0 ? (
-          products.map((product, index) => (
+        {visibleProducts.length > 0 ? (
+          visibleProducts.map((product, index) => (
             <TableRow
               key={product.id}
               className={
@@ -123,4 +125,3 @@ export default function InventoryTable({
     </Table>
   );
 }
-
