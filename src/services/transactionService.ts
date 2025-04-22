@@ -16,7 +16,6 @@ export const fetchTransactions = async () => {
 };
 
 export const fetchSales = async () => {
-  // Using proper RPC call pattern
   const { data, error } = await supabase
     .rpc('get_sales');
   
@@ -32,7 +31,6 @@ export const fetchSales = async () => {
 };
 
 export const recordSaleInDb = async (saleData: any) => {
-  // Using proper RPC call pattern
   const { data, error } = await supabase
     .rpc('insert_sale', { 
       p_sale: saleData 
@@ -50,11 +48,9 @@ export const recordSaleInDb = async (saleData: any) => {
 };
 
 export const recordTransactionInDb = async (transactionData: TransactionInput): Promise<Transaction> => {
-  // Format the transaction data with proper UUID handling
   const formattedTransaction = {
     ...transactionData,
     date: transactionData.date.toISOString(),
-    // Explicitly handle product_id, sale_id, and parent_transaction_id
     product_id: transactionData.product_id,
     sale_id: transactionData.sale_id || null,
     parent_transaction_id: transactionData.parent_transaction_id || null
@@ -77,28 +73,25 @@ export const recordTransactionInDb = async (transactionData: TransactionInput): 
   return mapTransactionRowToTransaction(data[0]);
 };
 
-export const recordBulkTransactionsInDb = async (transactions: any[]) => {
+export const recordBulkTransactionsInDb = async (transactions: TransactionInput[]) => {
   console.log("Processing transactions for RPC call:", JSON.stringify(transactions));
   
   try {
-    // Format transactions for Supabase RPC function
-    // Remove discount and original_price fields since they are not in the transactions table
     const formattedTransactions = transactions.map(tx => ({
-      product_id: tx.product_id, // Pass UUID as string
+      product_id: tx.product_id,
       product_name: tx.product_name,
       quantity: tx.quantity,
       price: tx.price,
       type: tx.type,
-      date: tx.date,
+      date: tx.date instanceof Date ? tx.date.toISOString() : tx.date,
       user_id: tx.user_id,
       user_name: tx.user_name,
-      sale_id: tx.sale_id // Pass UUID as string
-      // Discount and original_price fields are intentionally omitted
+      sale_id: tx.sale_id,
+      parent_transaction_id: tx.parent_transaction_id
     }));
     
     console.log("Formatted transactions for RPC:", JSON.stringify(formattedTransactions));
     
-    // Use the RPC function designed to bypass RLS
     const { data, error } = await supabase
       .rpc('insert_bulk_transactions', {
         transactions: formattedTransactions
@@ -170,19 +163,17 @@ export const recordMonthlyRestockInDb = async (userData: any, totalCost: number)
   try {
     const now = new Date();
     
-    // Create a single bulk restock transaction - use system product ID but with type "restock"
     const bulkRestockData: TransactionInput = {
       product_id: BULK_RESTOCK_PRODUCT_ID,
       product_name: "Monthly Inventory Restock",
-      quantity: 0, // Not applicable for this transaction type
+      quantity: 0,
       price: totalCost,
-      type: "restock", // Changed from "monthly-restock" to "restock"
+      type: "restock",
       date: now,
       user_id: userData.id || "unknown",
       user_name: userData.name || "Unknown User",
     };
     
-    // Create parent transaction for the bulk restock
     const parentTransaction = await recordTransactionInDb(bulkRestockData);
     return parentTransaction;
   } catch (err) {
@@ -200,11 +191,9 @@ export const recordChildRestockTransactions = async (
     const now = new Date();
     const childTransactions: TransactionInput[] = [];
     
-    // Create child transactions for each restocked product
     for (const update of productUpdates) {
       const additionalQuantity = update.newQuantity - update.oldQuantity;
       
-      // Only create transactions for products that were actually restocked
       if (additionalQuantity > 0) {
         childTransactions.push({
           product_id: update.productId,
@@ -220,7 +209,6 @@ export const recordChildRestockTransactions = async (
       }
     }
     
-    // Use the existing bulk transactions function to insert all child transactions
     if (childTransactions.length > 0) {
       return await recordBulkTransactionsInDb(childTransactions);
     }
@@ -274,7 +262,6 @@ export const getRestockSummaries = async (limit: number = 10) => {
 
 export const updateMultipleProductStocks = async (productUpdates: {productId: string, newQuantity: number}[]) => {
   try {
-    // For each product, create an update operation
     const updatePromises = productUpdates.map(update => 
       supabase
         .from('products')
@@ -286,7 +273,6 @@ export const updateMultipleProductStocks = async (productUpdates: {productId: st
         .eq('id', update.productId)
     );
     
-    // Execute all updates in parallel
     await Promise.all(updatePromises);
     
     return true;

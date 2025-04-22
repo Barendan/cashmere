@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
@@ -27,11 +26,9 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filteredType, setFilteredType] = useState<string | null>(null);
   
-  // Filter and group transactions
   useEffect(() => {
     let filteredTransactions = [...transactions];
     
-    // Apply search filter 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filteredTransactions = filteredTransactions.filter(t => 
@@ -40,12 +37,10 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
       );
     }
     
-    // Apply type filter
     if (filteredType) {
       filteredTransactions = filteredTransactions.filter(t => t.type === filteredType);
     }
     
-    // Group transactions by sale id or bulk restock
     const groupMap = new Map<string, Transaction[]>();
     
     filteredTransactions.forEach(transaction => {
@@ -58,10 +53,8 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
       groupMap.get(key)!.push(transaction);
     });
     
-    // Convert map to array of groups
     const groupsArray: GroupedTransaction[] = [];
     
-    // First add sales
     for (const [key, trxs] of groupMap.entries()) {
       if (key !== 'no-sale-id' && key !== 'monthly-restock' && !key.startsWith('monthly-restock-')) {
         groupsArray.push({
@@ -72,7 +65,6 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
       }
     }
     
-    // Then add monthly restocks
     for (const [key, trxs] of groupMap.entries()) {
       if (key.startsWith('monthly-restock-')) {
         groupsArray.push({
@@ -83,7 +75,6 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
       }
     }
     
-    // Finally add transactions with no sale id
     if (groupMap.has('no-sale-id')) {
       groupsArray.push({
         saleId: 'no-sale-id',
@@ -107,7 +98,6 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
     
     if (!transactions.length) return 'No Transactions';
     
-    // For monthly restocks
     if (saleId?.startsWith('monthly-restock-')) {
       const restock = transactions.find(t => isParentRestockTransaction(t));
       if (restock) {
@@ -115,15 +105,13 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
       }
     }
     
-    // For sales
     if (saleId && saleId !== 'no-sale-id' && !saleId.startsWith('monthly-restock-')) {
-      const sale = transactions[0]; // All transactions in a sale have the same date
+      const sale = transactions[0];
       if (sale) {
         return `Sale - ${formatDate(sale.date)}`;
       }
     }
     
-    // For ungrouped transactions
     if (saleId === 'no-sale-id') {
       return 'Individual Transactions';
     }
@@ -148,7 +136,6 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
   const calculateGroupTotal = (group: GroupedTransaction) => {
     if (!group.transactions.length) return 0;
     
-    // For monthly restocks, show the total cost from the parent transaction
     if (group.saleId?.startsWith('monthly-restock-')) {
       const restock = group.transactions.find(t => isParentRestockTransaction(t));
       if (restock) {
@@ -156,13 +143,11 @@ const TransactionsList = ({ transactions, onViewRestockDetails }: TransactionsLi
       }
     }
     
-    // For sales or other transactions, sum the prices
     return group.transactions.reduce((sum, t) => sum + t.price, 0);
   };
   
   const getTransactionCount = (group: GroupedTransaction) => {
     if (group.saleId?.startsWith('monthly-restock-')) {
-      // For monthly restocks, count child transactions
       return group.transactions.filter(t => !isParentRestockTransaction(t)).length;
     }
     return group.transactions.length;
