@@ -42,7 +42,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     parent: Transaction | null;
     children: Transaction[];
   }>({ open: false, parent: null, children: [] });
-  
+
   const toggleGroup = async (groupId: string, isParentRestock: boolean) => {
     if (openGroup === groupId) {
       setOpenGroup(null);
@@ -65,7 +65,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       }
     }
   };
-  
+
   const getTransactionTypeColor = (type: string) => {
     switch (type) {
       case "sale":
@@ -78,7 +78,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         return "bg-gray-100 text-gray-800";
     }
   };
-  
+
   const getTransactionTypeIcon = (type: string, productId: string): JSX.Element | null => {
     if (type === "restock" && isBulkRestockProduct(productId)) {
       return <CalendarDays className="h-3 w-3 mr-1" />;
@@ -86,6 +86,24 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       return <Package className="h-3 w-3 mr-1" />;
     }
     return null;
+  };
+
+  const filterIsAdjustment = filterType === 'adjustment';
+
+  const renderQuantityBadge = (quantity: number) => {
+    const isIncrease = quantity > 0;
+    const badgeClass = isIncrease
+      ? "bg-[#F2FCE2] text-green-700 border border-green-200"
+      : "bg-[#ea384c]/10 text-red-700 border border-red-200";
+    const sign = isIncrease ? "+" : "";
+    return (
+      <span
+        className={`${badgeClass} px-3 py-0.5 rounded-full font-semibold text-sm inline-block min-w-[3.2rem] text-center animate-fade-in`}
+        data-testid="adjustment-quantity-badge"
+      >
+        {sign}{quantity}
+      </span>
+    );
   };
 
   const groupTransactions = (): GroupedTransaction[] => {
@@ -175,7 +193,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     
     return groupedTransactions.sort((a, b) => b.date.getTime() - a.date.getTime());
   };
-  
+
   const handleRestockClick = async (parentTransactionId: string, parentTx: Transaction) => {
     setLoadingDetails({...loadingDetails, [parentTransactionId]: true});
     try {
@@ -193,7 +211,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
   };
 
   const groupedTransactions = groupTransactions();
-  
+
   return (
     <Card className="bg-white mb-6 flex-shrink-0 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/70 flex flex-col">
       <CardHeader>
@@ -222,9 +240,13 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                   <TableHead className="w-[180px]">Date & Time</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>User</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead>
+                    {filterIsAdjustment ? 'Qty Diff' : 'Total'}
+                  </TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {!filterIsAdjustment && (
+                    <TableHead className="text-right">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,8 +256,40 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                     const hasDetails = group.transactions.length > 1 || 
                                       (group.isParentRestock && (childTransactionsMap[group.parentTransactionId!]?.length > 0 || 
                                       !childTransactionsMap[group.parentTransactionId!]));
-                    
                     const isRestockParent = group.isParentRestock;
+
+                    if (filterIsAdjustment) {
+                      const transaction = group.transactions[0];
+                      return (
+                        <TableRow
+                          key={transaction.id}
+                          className="bg-gray-50 font-medium"
+                        >
+                          <TableCell className="text-sm">
+                            <div>
+                              {new Date(group.date).toLocaleDateString()}
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(group.date).toLocaleTimeString()}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{transaction.productName}</span>
+                          </TableCell>
+                          <TableCell>
+                            {group.userName}
+                          </TableCell>
+                          <TableCell>
+                            {renderQuantityBadge(transaction.quantity)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getTransactionTypeColor(transaction.type)}>
+                              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
 
                     if (isRestockParent) {
                       return (
@@ -421,7 +475,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={filterIsAdjustment ? 5 : 6} className="text-center py-6 text-muted-foreground">
                       No transactions found for the selected filter.
                     </TableCell>
                   </TableRow>
