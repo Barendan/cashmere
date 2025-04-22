@@ -21,6 +21,19 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Trash } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 const categoryColors: Record<string, string> = {
   supplies: "bg-blue-100 text-blue-800 border-blue-200",
@@ -45,6 +58,10 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
   const [expenses, setExpenses] = useState<FinanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
+
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchExpenses = async () => {
@@ -106,6 +123,35 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     );
   };
 
+  const handleDeleteExpense = async () => {
+    if (!selectedExpenseId) return;
+    setOpenDeleteDialog(false);
+    try {
+      const { error } = await supabase
+        .from("finances")
+        .delete()
+        .eq("id", selectedExpenseId);
+
+      if (error) throw error;
+
+      setExpenses((prev) => prev.filter(e => e.id !== selectedExpenseId));
+      toast({
+        title: "Expense deleted",
+        description: "The expense record has been deleted.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete expense. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSelectedExpenseId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -156,41 +202,74 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
   }
 
   return (
-    <div className="border rounded-md overflow-hidden">
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-spa-cream">
-              <TableHead>Date</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {expenses.map((expense) => (
-              <TableRow key={expense.id} className="hover:bg-rose-50">
-                <TableCell>{format(expense.date, "PP")}</TableCell>
-                <TableCell>{expense.vendor || "Unknown"}</TableCell>
-                <TableCell>
-                  <Badge 
-                    variant="outline"
-                    className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
-                  >
-                    {expense.category || "Other"}
-                  </Badge>
-                </TableCell>
-                <TableCell className="truncate max-w-xs">
-                  {renderDescription(expense.description)}
-                </TableCell>
-                <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
+    <>
+      <AlertDialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this expense record? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteExpense}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="border rounded-md overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-spa-cream">
+                <TableHead>Date</TableHead>
+                <TableHead>Vendor</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                {isAdmin && <TableHead className="w-12 text-center">Actions</TableHead>}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {expenses.map((expense) => (
+                <TableRow key={expense.id} className="hover:bg-rose-50">
+                  <TableCell>{format(expense.date, "PP")}</TableCell>
+                  <TableCell>{expense.vendor || "Unknown"}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant="outline"
+                      className={`capitalize ${categoryColors[expense.category?.toLowerCase() || 'other'] || categoryColors.other}`}
+                    >
+                      {expense.category || "Other"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="truncate max-w-xs">
+                    {renderDescription(expense.description)}
+                  </TableCell>
+                  <TableCell className="text-right font-medium text-rose-600">${expense.amount.toFixed(2)}</TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-center">
+                      <button
+                        onClick={() => {
+                          setSelectedExpenseId(expense.id);
+                          setOpenDeleteDialog(true);
+                        }}
+                        className="p-1 rounded hover:bg-rose-100 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash size={18} className="text-rose-500" />
+                        <span className="sr-only">Delete</span>
+                      </button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

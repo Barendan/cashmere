@@ -41,7 +41,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       name: "Metrics",
       path: "/metrics",
       icon: <BarChart3 size={20} />,
-      adminOnly: false,
+      adminOnly: true, // Only visible to admin now
     },
   ];
 
@@ -125,3 +125,4 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 };
 
 export default Layout;
+
