@@ -218,7 +218,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const adjustmentAmount = updates.stockQuantity! - oldProduct.stockQuantity;
         if (adjustmentAmount !== 0) {
           const now = new Date();
-          const adjustmentTransaction = {
+          const adjustmentTransaction: TransactionInput = {
             product_id: oldProduct.id,
             product_name: oldProduct.name,
             quantity: adjustmentAmount,
