@@ -655,9 +655,23 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return sum + (additionalQuantity * update.product.costPrice);
       }, 0);
       
-      const newTransaction = await recordMonthlyRestockInDb(
+      const parentTransaction = await recordMonthlyRestockInDb(
         { id: user?.id || 'unknown', name: user?.name || 'Unknown User' }, 
         totalCost
+      );
+      
+      const detailedUpdates = validUpdates.map(update => ({
+        productId: update.product.id,
+        productName: update.product.name,
+        oldQuantity: update.product.stockQuantity,
+        newQuantity: update.newQuantity,
+        costPrice: update.product.costPrice
+      }));
+      
+      const childTransactions = await recordChildRestockTransactions(
+        parentTransaction.id,
+        detailedUpdates,
+        { id: user?.id || 'unknown', name: user?.name || 'Unknown User' }
       );
       
       const dbProductUpdates = validUpdates.map(update => ({
@@ -682,7 +696,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const now = new Date();
       setLastRestockDate(now);
       
-      setTransactions([newTransaction, ...transactions]);
+      setTransactions([parentTransaction, ...childTransactions, ...transactions]);
       
       toast({ 
         title: "Monthly Restock Complete", 

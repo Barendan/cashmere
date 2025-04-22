@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,16 +10,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatCurrency } from '@/lib/format';
 import TransactionRowGroup from './TransactionRowGroup';
 import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isSystemMonthlyRestockProduct } from "@/config/systemProducts";
+import { getRestockDetails } from '@/services/transactionService';
 
 interface GroupedTransaction {
   saleId: string | null;
+  parentTransactionId: string | null;
   transactions: Transaction[];
+  childTransactions: Transaction[];
   date: Date;
   userName: string;
   totalAmount: number;
   originalTotal: number | undefined;
   discount: number | undefined;
   itemCount: number;
+  isParentRestock: boolean;
 }
 
 interface TransactionsListProps {
@@ -28,14 +32,31 @@ interface TransactionsListProps {
 
 const TransactionsList = ({ transactions }: TransactionsListProps) => {
   const [filterType, setFilterType] = useState<string>("all");
-  const [openSale, setOpenSale] = useState<string | null>(null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [childTransactionsMap, setChildTransactionsMap] = useState<Record<string, Transaction[]>>({});
+  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   
-  const toggleSale = (saleId: string | null) => {
-    if (openSale === saleId) {
-      setOpenSale(null);
+  const toggleGroup = async (groupId: string, isParentRestock: boolean) => {
+    if (openGroup === groupId) {
+      setOpenGroup(null);
     } else {
-      setOpenSale(saleId);
+      setOpenGroup(groupId);
+      
+      if (isParentRestock && !childTransactionsMap[groupId]) {
+        try {
+          setLoadingDetails({...loadingDetails, [groupId]: true});
+          const childTransactions = await getRestockDetails(groupId);
+          setChildTransactionsMap({
+            ...childTransactionsMap,
+            [groupId]: childTransactions
+          });
+        } catch (error) {
+          console.error("Error loading restock details:", error);
+        } finally {
+          setLoadingDetails({...loadingDetails, [groupId]: false});
+        }
+      }
     }
   };
   
@@ -81,12 +102,18 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       return true;
     });
 
+    const parentOnlyTransactions = filteredTransactions.filter(t => 
+      !t.parentTransactionId || 
+      !filteredTransactions.some(parent => parent.id === t.parentTransactionId)
+    );
+
     const groupMap = new Map<string, Transaction[]>();
     
-    filteredTransactions.forEach(transaction => {
+    parentOnlyTransactions.forEach(transaction => {
       const key = transaction.saleId || 
                  (transaction.type === 'restock' && isBulkRestockProduct(transaction.productId) ? 
-                  `monthly-restock-${transaction.id}` : 'no-sale-id');
+                  `monthly-restock-${transaction.id}` : transaction.id);
+      
       if (!groupMap.has(key)) {
         groupMap.set(key, []);
       }
@@ -95,12 +122,14 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     
     const groupedTransactions: GroupedTransaction[] = [];
     
-    groupMap.forEach((transactions, saleId) => {
+    groupMap.forEach((transactions, groupKey) => {
       const sortedTransactions = [...transactions].sort((a, b) => 
         new Date(b.date).getTime() - new Date(a.date).getTime()
       );
       
       const firstTransaction = sortedTransactions[0];
+      const isParentRestock = firstTransaction.type === 'restock' && 
+                             isBulkRestockProduct(firstTransaction.productId);
       
       let originalTotal = 0;
       let finalTotal = 0;
@@ -124,14 +153,17 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       const totalDiscount = originalTotal - finalTotal;
       
       groupedTransactions.push({
-        saleId: saleId === 'no-sale-id' ? null : saleId,
+        saleId: firstTransaction.saleId || null,
+        parentTransactionId: isParentRestock ? firstTransaction.id : null,
         transactions: sortedTransactions,
+        childTransactions: childTransactionsMap[firstTransaction.id] || [],
         date: new Date(firstTransaction.date),
         userName: firstTransaction.userName,
         totalAmount: finalTotal,
         originalTotal: hasDiscount ? originalTotal : undefined,
         discount: hasDiscount ? totalDiscount : undefined,
-        itemCount: sortedTransactions.length
+        itemCount: sortedTransactions.length,
+        isParentRestock
       });
     });
     
@@ -175,128 +207,142 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
               </TableHeader>
               <TableBody>
                 {groupedTransactions.length > 0 ? (
-                  groupedTransactions.map((group) => (
-                    <TransactionRowGroup key={group.saleId || `no-sale-${group.date.getTime()}`}>
-                      <TableRow className="bg-gray-50 font-medium">
-                        <TableCell className="text-sm">
-                          <div>
-                            {new Date(group.date).toLocaleDateString()}
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(group.date).toLocaleTimeString()}
+                  groupedTransactions.map((group) => {
+                    const groupId = group.parentTransactionId || group.saleId || `group-${group.date.getTime()}`;
+                    const hasDetails = group.transactions.length > 1 || 
+                                      (group.isParentRestock && (childTransactionsMap[group.parentTransactionId!]?.length > 0 || 
+                                      !childTransactionsMap[group.parentTransactionId!]));
+                    
+                    return (
+                      <TransactionRowGroup 
+                        key={groupId}
+                        hasDetails={hasDetails}
+                        detailsExpanded={openGroup === groupId}
+                        onToggleDetails={() => toggleGroup(groupId, group.isParentRestock)}
+                        childTransactions={group.isParentRestock ? childTransactionsMap[group.parentTransactionId!] || [] : []}
+                      >
+                        <TableRow className="bg-gray-50 font-medium">
+                          <TableCell className="text-sm">
+                            <div>
+                              {new Date(group.date).toLocaleDateString()}
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(group.date).toLocaleTimeString()}
+                              </div>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {group.saleId ? (
-                            group.transactions[0].type === 'restock' && 
-                            isBulkRestockProduct(group.transactions[0].productId) ? (
-                              <span className="font-medium">Monthly Inventory Restock</span>
-                            ) : (
-                              group.itemCount === 1 ? (
-                                <span className="font-medium">{group.transactions[0].productName}</span>
+                          </TableCell>
+                          <TableCell>
+                            {group.saleId ? (
+                              group.transactions[0].type === 'restock' && 
+                              isBulkRestockProduct(group.transactions[0].productId) ? (
+                                <span className="font-medium">Monthly Inventory Restock</span>
                               ) : (
-                                <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                                group.itemCount === 1 ? (
+                                  <span className="font-medium">{group.transactions[0].productName}</span>
+                                ) : (
+                                  <span className="font-medium">Sale with {group.itemCount} item(s)</span>
+                                )
                               )
-                            )
-                          ) : (
-                            <span className="font-medium">{group.transactions[0].productName}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{group.userName}</TableCell>
-                        <TableCell>
-                          {group.discount && group.discount > 0 ? (
-                            <div className="flex flex-col">
-                              <span className="line-through text-sm text-muted-foreground">
-                                {formatCurrency(group.originalTotal || 0)}
-                              </span>
-                              <div className="flex items-center text-red-600">
-                                <Percent className="h-3 w-3 mr-0.5" />
-                                <span>{formatCurrency(group.totalAmount)}</span>
-                              </div>
-                            </div>
-                          ) : (
-                            formatCurrency(group.totalAmount)
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                            <span className="flex items-center">
-                              {getTransactionTypeIcon(
-                                group.transactions[0].type, 
-                                group.transactions[0].productId
-                              )}
-                              {group.transactions[0].type === 'restock' && 
-                               isBulkRestockProduct(group.transactions[0].productId) 
-                                ? 'Monthly Restock' 
-                                : group.transactions[0].type}
-                            </span>
-                          </Badge>
-                          {group.discount && group.discount > 0 && (
-                            <Badge className="ml-2 bg-red-100 text-red-800">
-                              Discount: {formatCurrency(group.discount)}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {group.transactions.length > 1 && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0"
-                              onClick={() => toggleSale(group.saleId || `no-sale-${group.date.getTime()}`)}
-                              aria-label={openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
-                                "Collapse transaction details" : "Expand transaction details"}
-                            >
-                              {openSale === (group.saleId || `no-sale-${group.date.getTime()}`) ? 
-                                <ChevronDown className="h-4 w-4" /> : 
-                                <ChevronRight className="h-4 w-4" />
-                              }
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      
-                      {group.transactions.length > 1 && openSale === (group.saleId || `no-sale-${group.date.getTime()}`) &&
-                        group.transactions.map(transaction => (
-                          <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
-                            <TableCell></TableCell>
-                            <TableCell className="py-2 pl-8">
-                              <div className="flex items-center">
-                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
-                                {transaction.productName}
-                              </div>
-                            </TableCell>
-                            <TableCell></TableCell>
-                            <TableCell>
-                              
-                            </TableCell>
-                            <TableCell>
-                              {transaction.discount && transaction.discount > 0 && (
-                                <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
-                                  <Percent className="h-2 w-2 mr-0.5" />
-                                  {formatCurrency(transaction.discount)}
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
-                                <div className="flex flex-col items-end">
-                                  <span className="text-xs text-muted-foreground line-through">
-                                    {formatCurrency(transaction.originalPrice)}
-                                  </span>
-                                  <span className="text-red-600">
-                                    {formatCurrency(transaction.price)}
-                                  </span>
+                            ) : (
+                              <span className="font-medium">{group.transactions[0].productName}</span>
+                            )}
+                            {loadingDetails[groupId] && <span className="ml-2 text-xs text-muted-foreground">(Loading details...)</span>}
+                          </TableCell>
+                          <TableCell>{group.userName}</TableCell>
+                          <TableCell>
+                            {group.discount && group.discount > 0 ? (
+                              <div className="flex flex-col">
+                                <span className="line-through text-sm text-muted-foreground">
+                                  {formatCurrency(group.originalTotal || 0)}
+                                </span>
+                                <div className="flex items-center text-red-600">
+                                  <Percent className="h-3 w-3 mr-0.5" />
+                                  <span>{formatCurrency(group.totalAmount)}</span>
                                 </div>
-                              ) : (
-                                formatCurrency(transaction.price)
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      }
-                    </TransactionRowGroup>
-                  ))
+                              </div>
+                            ) : (
+                              formatCurrency(group.totalAmount)
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
+                              <span className="flex items-center">
+                                {getTransactionTypeIcon(
+                                  group.transactions[0].type, 
+                                  group.transactions[0].productId
+                                )}
+                                {group.transactions[0].type === 'restock' && 
+                                isBulkRestockProduct(group.transactions[0].productId) 
+                                  ? 'Monthly Restock' 
+                                  : group.transactions[0].type}
+                              </span>
+                            </Badge>
+                            {group.discount && group.discount > 0 && (
+                              <Badge className="ml-2 bg-red-100 text-red-800">
+                                Discount: {formatCurrency(group.discount)}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {hasDetails && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={() => toggleGroup(groupId, group.isParentRestock)}
+                                aria-label={openGroup === groupId ? 
+                                  "Collapse transaction details" : "Expand transaction details"}
+                              >
+                                {openGroup === groupId ? 
+                                  <ChevronDown className="h-4 w-4" /> : 
+                                  <ChevronRight className="h-4 w-4" />
+                                }
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        
+                        {group.transactions.length > 1 && openGroup === groupId && !group.isParentRestock &&
+                          group.transactions.map(transaction => (
+                            <TableRow key={transaction.id} className="bg-white border-t border-dashed border-gray-200">
+                              <TableCell></TableCell>
+                              <TableCell className="py-2 pl-8">
+                                <div className="flex items-center">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 mr-2"></span>
+                                  {transaction.productName}
+                                </div>
+                              </TableCell>
+                              <TableCell></TableCell>
+                              <TableCell>
+                                
+                              </TableCell>
+                              <TableCell>
+                                {transaction.discount && transaction.discount > 0 && (
+                                  <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
+                                    <Percent className="h-2 w-2 mr-0.5" />
+                                    {formatCurrency(transaction.discount)}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
+                                  <div className="flex flex-col items-end">
+                                    <span className="text-xs text-muted-foreground line-through">
+                                      {formatCurrency(transaction.originalPrice)}
+                                    </span>
+                                    <span className="text-red-600">
+                                      {formatCurrency(transaction.price)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  formatCurrency(transaction.price)
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        }
+                      </TransactionRowGroup>
+                    );
+                  })
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">

@@ -10,8 +10,7 @@ export function isBulkRestockProduct(productId: string): boolean {
   return productId === BULK_RESTOCK_PRODUCT_ID;
 }
 
-// Renamed from isSystemMonthlyRestockProduct to match the existing function
+// For backwards compatibility
 export function isSystemMonthlyRestockProduct(productId: string): boolean {
   return isBulkRestockProduct(productId);
 }
-
