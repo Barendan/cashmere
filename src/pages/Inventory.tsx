@@ -17,6 +17,9 @@ import usePageTitle from "@/hooks/usePageTitle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatCurrency } from "@/lib/format";
 import { HoverFillButton } from "@/components/ui/hover-fill-button";
+import { ArrowUp, ArrowDown } from "lucide-react";
+import InventoryTable from "@/components/inventory/InventoryTable";
+import { useSortableTable } from "@/components/inventory/useSortableTable";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
@@ -209,7 +212,9 @@ const InventoryPage = () => {
   const filteredProducts = products.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
+  const { sortedData: sortedProducts, sortState, sortData } = useSortableTable(filteredProducts);
+
   const totalInventoryValue = getTotalInventoryValue();
   const lowStockCount = products.filter(p => p.stockQuantity <= p.lowStockThreshold).length;
   const totalProductCount = products.length;
@@ -325,89 +330,12 @@ const InventoryPage = () => {
           
           <ScrollArea className="h-[500px] pr-4">
             <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-white">
-                    <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                    <TableHead className="text-right">Price</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.length > 0 ? (
-                    filteredProducts.map((product, index) => (
-                      <TableRow 
-                        key={product.id}
-                        className={
-                          product.stockQuantity === 0 
-                            ? "bg-red-50 hover:bg-red-100" 
-                            : index % 2 === 0 
-                              ? "bg-white hover:bg-gray-100" 
-                              : "bg-gray-50 hover:bg-gray-100"
-                        }
-                      >
-                        <TableCell className="font-medium">
-                          <div>
-                            {product.name}
-                            {product.stockQuantity <= product.lowStockThreshold && product.stockQuantity > 0 && (
-                              <Badge 
-                                variant="outline" 
-                                className="bg-amber-50 text-amber-800 border-amber-200 ml-2"
-                              >
-                                Low Stock
-                              </Badge>
-                            )}
-                            {product.stockQuantity === 0 && (
-                              <Badge 
-                                variant="outline" 
-                                className="bg-red-50 text-red-800 border-red-200 ml-2"
-                              >
-                                Out of Stock
-                              </Badge>
-                            )}
-                          </div>
-                          {product.description && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {product.description}
-                            </div>
-                          )}
-                        </TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell className="text-right">
-                          {product.stockQuantity}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${product.costPrice.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          ${product.sellPrice.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => openEditModal(product)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Edit
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                        {searchQuery ? "No products found matching your search." : "No products have been added yet."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <InventoryTable
+                products={sortedProducts}
+                onEdit={openEditModal}
+                sortState={sortState}
+                onSort={sortData}
+              />
             </div>
           </ScrollArea>
         </CardContent>
