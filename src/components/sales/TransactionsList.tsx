@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDate, formatCurrency } from '@/lib/format';
 import TransactionRowGroup from './TransactionRowGroup';
-import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct } from "@/config/systemProducts";
+import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isSystemMonthlyRestockProduct } from "@/config/systemProducts";
 
 interface GroupedTransaction {
   saleId: string | null;
@@ -85,7 +85,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     
     filteredTransactions.forEach(transaction => {
       const key = transaction.saleId || 
-                 (transaction.type === 'monthly-restock' ? 
+                 (transaction.type === 'restock' && isBulkRestockProduct(transaction.productId) ? 
                   `monthly-restock-${transaction.id}` : 'no-sale-id');
       if (!groupMap.has(key)) {
         groupMap.set(key, []);
