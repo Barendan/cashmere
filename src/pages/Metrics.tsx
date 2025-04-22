@@ -47,10 +47,8 @@ const Metrics = () => {
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 7);
-  
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
-
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
   const salesTransactions = useMemo(() => {
@@ -382,7 +380,6 @@ const Metrics = () => {
           <h1 className="text-2xl font-bold text-spa-deep mb-1">Business Metrics</h1>
           <p className="text-muted-foreground">Analyze your business performance</p>
         </div>
-        
         <Tabs defaultValue="products" value={metricView} onValueChange={(v) => setMetricView(v as "products" | "services")}>
           <TabsList>
             <TabsTrigger value="products" className="flex items-center gap-1">
@@ -396,7 +393,6 @@ const Metrics = () => {
           </TabsList>
         </Tabs>
       </div>
-
       {metricView === "products" ? (
         <ProductMetrics 
           totalRevenue={totalRevenue}
@@ -410,7 +406,16 @@ const Metrics = () => {
           exportCSV={exportCSV}
         />
       ) : (
-        <h1>Coming Soon</h1>
+        <ServiceMetrics
+          totalServiceRevenue={totalServiceRevenue}
+          totalUniqueCustomers={totalUniqueCustomers}
+          totalServicesProvided={totalServicesProvided}
+          servicesData={servicesData}
+          serviceTypeData={serviceTypeData}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          exportCSV={exportCSV}
+        />
       )}
     </div>
   );
