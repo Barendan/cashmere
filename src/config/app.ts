@@ -1,5 +1,5 @@
 
 export const APP_CONFIG = {
-  companyName: "Esperanza Management",
+  companyName: "Esperanza Wellness",
   copyrightYear: new Date().getFullYear(),
 }

@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { APP_CONFIG } from "@/config/app";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -111,7 +112,7 @@ const Login = () => {
             <div className="flex justify-center mb-2">
               <Leaf className="h-10 w-10 text-spa-sage" />
             </div>
-            <CardTitle className="text-2xl text-spa-deep">Serenity Spa</CardTitle>
+            <CardTitle className="text-2xl text-spa-deep">{APP_CONFIG.companyName}</CardTitle>
             <CardDescription>Inventory Management System</CardDescription>
           </CardHeader>
           
