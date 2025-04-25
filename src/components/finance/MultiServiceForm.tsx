@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X, ChevronsUpDown, BadgePercent } from "lucide-react";
+import { CalendarIcon, Plus, X, BadgePercent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -30,17 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 
 const serviceFormSchema = z.object({
   date: z.date({
@@ -74,6 +65,8 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [dateOpen, setDateOpen] = useState(false);
+  const [localDiscount, setLocalDiscount] = useState('0');
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof serviceFormSchema>>({
@@ -241,9 +234,10 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="grid grid-cols-1 md:grid-cols-12 gap-6"
+        className="flex flex-col gap-6"
       >
-        <div className="md:col-span-7 flex flex-col space-y-4">
+        {/* Customer details at the top in the middle */}
+        <div className="w-full max-w-4xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -262,14 +256,14 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                 </FormItem>
               )}
             />
-
+  
             <FormField
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Date</FormLabel>
-                  <Popover>
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -292,7 +286,10 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={ (date) => {
+                          field.onChange(date);
+                          setDateOpen(false);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -302,8 +299,8 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
               )}
             />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <FormField
               control={form.control}
               name="paymentMethod"
@@ -332,7 +329,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                 </FormItem>
               )}
             />
-
+  
             <FormField
               control={form.control}
               name="discount"
@@ -345,15 +342,16 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
+                        step="1"
                         placeholder="0.00"
                         className="pl-10"
+                        value={localDiscount}
                         {...field}
                         onChange={(e) => {
-                          const value = e.target.value === '' ? '0' : e.target.value;
-                          field.onChange(parseFloat(value));
+                          const inputValue = e.target.value;
+                          setLocalDiscount(inputValue);
+                          field.onChange(inputValue === '' ? 0 : parseFloat(inputValue));
                         }}
-                        value={field.value.toString()}
                       />
                     </div>
                   </FormControl>
@@ -362,27 +360,87 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
               )}
             />
           </div>
+  
+          <div className="mt-4">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notes (Optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Add any additional notes"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-          <FormField
-            control={form.control}
-            name="description"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notes (Optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="Add any additional notes"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="mt-2 space-y-2">
-            <FormLabel>Selected Services</FormLabel>
-            <div className="border rounded-md h-[220px] flex flex-col">
+        </div>
+        <hr/>
+  
+        {/* Two columns below for services */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
+          {/* Left column: Available Services */}
+          <div className="flex flex-col">
+            <FormLabel className="mb-2">Available Services</FormLabel>
+            <div className="border rounded-md flex-grow h-[400px]">
+              <ScrollArea className="h-full">
+                {isLoading ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Loading services...
+                  </div>
+                ) : availableServices.length > 0 ? (
+                  <div className="p-2 grid grid-cols-1 gap-2">
+                    {availableServices.map((service) => (
+                      <div
+                        key={service.id}
+                        className="flex items-center justify-between border rounded-md p-2 hover:bg-accent/50 cursor-pointer"
+                        onClick={() => addService(service)}
+                      >
+                        <div>
+                          <span className="font-medium">
+                            {service.name}
+                          </span>
+                          {service.description && (
+                            <p className="text-xs text-muted-foreground">
+                              {service.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm">
+                            ${service.price.toFixed(2)}
+                          </span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No services available
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+  
+          {/* Right column: Selected Services */}
+          <div className="flex flex-col">
+            <FormLabel className="mb-2">Selected Services</FormLabel>
+            <div className="border rounded-md h-[400px] flex flex-col">
               <ScrollArea className="flex-grow h-full">
                 {fields.length > 0 ? (
                   <div className="space-y-2 p-3">
@@ -446,62 +504,11 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
             )}
           </div>
         </div>
-
-        <div className="md:col-span-5 flex flex-col">
-          <FormLabel className="mb-2">Available Services</FormLabel>
-          <div className="border rounded-md flex-grow h-[400px]">
-            <ScrollArea className="h-full">
-              {isLoading ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Loading services...
-                </div>
-              ) : availableServices.length > 0 ? (
-                <div className="p-2 grid grid-cols-1 gap-2">
-                  {availableServices.map((service) => (
-                    <div
-                      key={service.id}
-                      className="flex items-center justify-between border rounded-md p-2 hover:bg-accent/50 cursor-pointer"
-                      onClick={() => addService(service)}
-                    >
-                      <div>
-                        <span className="font-medium">
-                          {service.name}
-                        </span>
-                        {service.description && (
-                          <p className="text-xs text-muted-foreground">
-                            {service.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm">
-                          ${service.price.toFixed(2)}
-                        </span>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  No services available
-                </div>
-              )}
-            </ScrollArea>
-          </div>
-        </div>
-
+  
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full md:col-span-12 mt-2"
+          className="w-full max-w-3xl mx-auto mt-2"
         >
           {isSubmitting ? "Recording..." : "Record Income"}
         </Button>

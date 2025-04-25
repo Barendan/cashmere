@@ -234,20 +234,15 @@ const InventoryPage = () => {
               <DollarSign className="h-4 w-4 mr-2" />
               Inventory Value
             </CardTitle>
-            <CardDescription>Total value of current inventory</CardDescription>
+            <CardDescription>Total value of current inventory:</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalInventoryValue)}</div>
+            <div className="text-2xl font-bold my-2">{formatCurrency(totalInventoryValue)}</div>
             <div className="flex flex-wrap items-center gap-2 mt-1">
               <p className="text-muted-foreground text-sm">Based on cost price</p>
               <Badge variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
                 {totalProductCount} Products
               </Badge>
-              {outOfStockCount > 0 && (
-                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
-                  {outOfStockCount} Out of Stock
-                </Badge>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -258,10 +253,14 @@ const InventoryPage = () => {
               <CalendarDays className="h-4 w-4 mr-2" />
               Low Stock Threshold
             </CardTitle>
-            <CardDescription>Set minimum stock level for all products</CardDescription>
+            <CardDescription>Set minimum stock level for all products
+              <p className="text-xs text-muted-foreground">
+                Products below this quantity will be marked as low stock
+              </p>
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 mt-1">
               <div className="flex items-center gap-4">
                 <div className="flex-grow">
                   <Input
@@ -276,9 +275,6 @@ const InventoryPage = () => {
                   Apply
                 </HoverFillButton>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Products below this quantity will be marked as low stock
-              </p>
             </div>
           </CardContent>
         </Card>
@@ -292,18 +288,21 @@ const InventoryPage = () => {
             <CardDescription>Update inventory levels for all products</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Inventory Status</Label>
+                {/* <Label>Inventory Status</Label> */}
                 <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
                   {lowStockCount} Low Stock Items
                 </Badge>
+                {outOfStockCount > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200">
+                  {outOfStockCount} Out of Stock
+                </Badge>
+              )}
               </div>
               <HoverFillButton variant="primary" onClick={openMonthlyRestockModal} className="w-full">
                 <CalendarDays className="h-4 w-4 mr-2" />
                 Perform Monthly Restock
               </HoverFillButton>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -581,8 +580,7 @@ const InventoryPage = () => {
               </div>
             </div>
             
-            <ScrollArea className="flex-grow pr-4">
-              <div className="rounded-md border">
+            <ScrollArea className="flex-grow overflow-scroll overflow-x-hidden pr-4">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -595,6 +593,7 @@ const InventoryPage = () => {
                   </TableHeader>
                   <TableBody>
                     {productUpdates.map((item, index) => {
+                      // console.log('produceeee', productUpdates)
                       const isLowStock = item.product.stockQuantity <= item.product.lowStockThreshold;
                       const isOutOfStock = item.product.stockQuantity === 0;
                       const isIncreasing = item.newQuantity > item.product.stockQuantity;
@@ -665,7 +664,6 @@ const InventoryPage = () => {
                     })}
                   </TableBody>
                 </Table>
-              </div>
             </ScrollArea>
           </div>
           

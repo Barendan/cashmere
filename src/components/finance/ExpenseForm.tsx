@@ -132,7 +132,7 @@ const ExpenseForm = ({ onExpenseAdded }) => {
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem className="flex flex-col">
+            <FormItem className="">
               <FormLabel>Date</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
@@ -272,7 +272,7 @@ const ExpenseForm = ({ onExpenseAdded }) => {
           control={form.control}
           name="description"
           render={({ field }) => (
-            <FormItem className="md:col-span-2">
+            <FormItem className="md:col-span-1">
               <FormLabel>Description (Optional)</FormLabel>
               <FormControl>
                 <Textarea
@@ -290,7 +290,7 @@ const ExpenseForm = ({ onExpenseAdded }) => {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full md:col-span-2 mt-2"
+          className="h-10 text-base md:col-span-2 mx-10 mt-2"
         >
           {isSubmitting ? "Recording..." : "Record Expense"}
         </Button>

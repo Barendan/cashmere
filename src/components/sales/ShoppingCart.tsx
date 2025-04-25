@@ -35,19 +35,12 @@ const ShoppingCart = ({
   isProcessing,
   undoLastTransaction
 }: ShoppingCartProps) => {
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
   const totalDiscount = items.reduce((sum, item) => sum + item.discount, 0);
   const finalTotal = Math.max(0, subtotal - totalDiscount);
   
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b border-spa-sand/50">
-        <h3 className="font-medium">
-          Shopping Cart
-        </h3>
-        <span className="text-sm text-muted-foreground">{totalItems > 0 ? `${totalItems} items` : 'Empty'}</span>
-      </div>
       
       {items.length === 0 ? (
         <div className="flex-grow flex items-center justify-center text-muted-foreground p-4">
@@ -104,7 +97,7 @@ const ShoppingCart = ({
               {isProcessing ? "Processing..." : "Complete Sale"}
             </HoverFillButton>
             
-            <div className="grid grid-cols-2 gap-3 mt-3">
+            {/* <div className="grid grid-cols-2 gap-3 mt-3">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -123,7 +116,7 @@ const ShoppingCart = ({
                 <Undo2 size={16} className="mr-2" />
                 Undo Action
               </Button>
-            </div>
+            </div> */}
           </div>
         </>
       )}

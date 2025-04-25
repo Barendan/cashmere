@@ -15,6 +15,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
   const { items, updateQuantity, updateDiscount, removeItem, clearCart } = useCart();
   const { recordBulkSale, undoLastTransaction } = useData();
   const { toast } = useToast();
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   
   const handleCompleteSale = async () => {
     if (items.length === 0) return;
@@ -38,9 +39,11 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
   
   return (
     <Card className="lg:col-span-2 flex flex-col overflow-hidden h-full">
-      <CardHeader className="flex-shrink-0">
+      <CardHeader className="flex-shrink-0 pb-4">
         <CardTitle className="text-spa-deep">Shopping Cart</CardTitle>
-        <CardDescription>Review and complete sale</CardDescription>
+        <CardDescription className="flex justify-between">Review and complete sale
+          <span className="text-sm text-muted-foreground items-end">{totalItems > 0 ? `${totalItems} items` : 'Empty'}</span>
+        </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex flex-col p-6 pt-0 overflow-hidden h-[calc(100%-85px)]">
         <div className="flex-grow flex flex-col h-full">

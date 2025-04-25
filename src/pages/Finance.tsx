@@ -10,7 +10,6 @@ import ExpenseForm from "@/components/finance/ExpenseForm";
 import ExpenseList from "@/components/finance/ExpenseList";
 import FinanceSummary from "@/components/finance/FinanceSummary";
 import usePageTitle from "@/hooks/usePageTitle";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, TrendingUp, TrendingDown, PieChart, DollarSign, Receipt, CreditCard, ArrowRight } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
@@ -28,7 +27,6 @@ const Finance = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Add the missing handler functions for income and expense additions
   const handleIncomeAdded = (income) => {
     setNewIncome(income);
   };
@@ -267,20 +265,16 @@ const Finance = () => {
                 </TabsContent>
 
                 <TabsContent value="income" className="m-0 space-y-6">
-                  <div className="bg-white rounded-lg border border-emerald-100 shadow-sm">
-                    <div className="border-b border-emerald-100 p-5">
+                    <div className="p-5 border-b border-green-100">
                       <h3 className="font-medium text-gray-900 flex items-center">
                         <DollarSign className="h-5 w-5 mr-2 text-emerald-500" />
                         Record Income
                       </h3>
                     </div>
-                    <div className="p-5">
-                      <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
-                    </div>
-                  </div>
+                    <MultiServiceForm onIncomeAdded={handleIncomeAdded} />
                   
                   <Card className="border-0 shadow-sm overflow-hidden">
-                    <CardHeader className="border-b border-emerald-100 pb-4">
+                    <CardHeader>
                       <CardTitle className="text-lg text-gray-900 flex items-center">
                         <Receipt className="h-5 w-5 mr-2 text-emerald-600" />
                         Income Records
@@ -296,7 +290,7 @@ const Finance = () => {
                 </TabsContent>
 
                 <TabsContent value="expenses" className="m-0 space-y-6">
-                  <div className="bg-white rounded-lg border border-rose-100 shadow-sm">
+                  <div className="shadow-sm">
                     <div className="border-b border-rose-100 p-5">
                       <h3 className="font-medium text-gray-900 flex items-center">
                         <CreditCard className="h-5 w-5 mr-2 text-rose-500" />
@@ -309,7 +303,7 @@ const Finance = () => {
                   </div>
                   
                   <Card className="border-0 shadow-sm overflow-hidden">
-                    <CardHeader className="border-b border-rose-100 pb-4">
+                    <CardHeader className="pb-4">
                       <CardTitle className="text-lg text-gray-900 flex items-center">
                         <CreditCard className="h-5 w-5 mr-2 text-rose-600" />
                         Expense Records
