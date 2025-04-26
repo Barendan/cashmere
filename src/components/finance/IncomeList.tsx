@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +37,7 @@ interface ServiceIncome extends FinanceRecord {
   servicesList?: Array<{ id: string, name: string, price: number }>;
   discount?: number;
   originalTotal?: number;
+  tipAmount?: number;
 }
 
 interface IncomeListProps {
@@ -76,10 +76,10 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
           const formattedData: ServiceIncome[] = data.map((record) => {
             const financeRecord = mapFinanceRowToFinanceRecord(record);
             
-            // Check if this record has multiple services stored in the category field
             let servicesList = undefined;
             let discount = 0;
             let originalTotal = 0;
+            let tipAmount = 0;
             
             if (record.category) {
               try {
@@ -92,14 +92,16 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                   }));
                 }
                 
-                // Extract discount information if available
                 if (parsedCategory.discount !== undefined) {
                   discount = parsedCategory.discount;
                 }
                 
-                // Extract original total if available
                 if (parsedCategory.originalTotal !== undefined) {
                   originalTotal = parsedCategory.originalTotal;
+                }
+
+                if (parsedCategory.tipAmount !== undefined) {
+                  tipAmount = parsedCategory.tipAmount;
                 }
               } catch (e) {
                 console.error("Error parsing service details:", e);
@@ -111,7 +113,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
               serviceName: record.services?.name || "Multiple Services",
               servicesList,
               discount,
-              originalTotal
+              originalTotal,
+              tipAmount
             };
           });
 
@@ -132,17 +135,15 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
     fetchIncomeRecords();
   }, [toast, limit]);
 
-  // When a new income record is added, update the list
   useEffect(() => {
     if (newIncome) {
       const financeRecord = mapFinanceRowToFinanceRecord(newIncome);
       
-      // Check if the new income has multiple services
       let servicesList = newIncome.servicesList;
       let discount = newIncome.discount || 0;
       let originalTotal = newIncome.originalTotal || 0;
+      let tipAmount = newIncome.tipAmount || 0;
       
-      // If no servicesList is provided directly but category has the data
       if (!servicesList && newIncome.category) {
         try {
           const parsedCategory = JSON.parse(newIncome.category);
@@ -154,13 +155,16 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
             }));
           }
           
-          // Extract discount and original total if available
           if (parsedCategory.discount !== undefined) {
             discount = parsedCategory.discount;
           }
           
           if (parsedCategory.originalTotal !== undefined) {
             originalTotal = parsedCategory.originalTotal;
+          }
+
+          if (parsedCategory.tipAmount !== undefined) {
+            tipAmount = parsedCategory.tipAmount;
           }
         } catch (e) {
           console.error("Error parsing service details for new income:", e);
@@ -174,7 +178,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
           : newIncome.services?.name || "Unknown Service",
         servicesList,
         discount,
-        originalTotal
+        originalTotal,
+        tipAmount
       };
       
       setIncomeRecords(prev => [newIncomeRecord, ...prev].slice(0, limit));
@@ -192,7 +197,6 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
         
       if (error) throw error;
       
-      // Remove the deleted record from the state
       setIncomeRecords(prev => prev.filter(record => record.id !== incomeToDelete));
       
       toast({
@@ -226,7 +230,6 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
       return record.servicesList[0].name;
     }
     
-    // For multiple services
     return (
       <TooltipProvider>
         <Tooltip>
@@ -245,6 +248,12 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                 <div className="flex justify-between gap-2 text-rose-600 pt-1 border-t">
                   <span>Discount:</span>
                   <span className="font-medium">-${record.discount.toFixed(2)}</span>
+                </div>
+              )}
+              {record.tipAmount > 0 && (
+                <div className="flex justify-between gap-2 text-emerald-600 pt-1 border-t">
+                  <span>Tip:</span>
+                  <span className="font-medium">+${record.tipAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="border-t pt-1 mt-1 flex justify-between font-medium">

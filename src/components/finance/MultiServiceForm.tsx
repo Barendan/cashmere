@@ -149,7 +149,8 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
       .services.reduce((total, service) => total + service.price, 0);
     
     const discount = form.getValues().discount || 0;
-    return Math.max(0, serviceTotal - discount);
+    const tip = form.getValues().tip || 0;
+    return Math.max(0, serviceTotal - discount + tip);
   };
 
   const calculateDiscount = () => {
@@ -186,6 +187,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         payment_method: data.paymentMethod,
         service_id: data.services.length === 1 ? data.services[0].id : null,
         category: JSON.stringify(serviceDetails),
+        tip_amount: tipAmount
       };
 
       const { data: newIncome, error } = await supabase
@@ -489,6 +491,12 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                     <div className="flex justify-between text-rose-600">
                       <span className="text-sm">Discount:</span>
                       <span className="text-sm">-${calculateDiscount().toFixed(2)}</span>
+                    </div>
+                  )}
+                  {form.watch('tip') > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span className="text-sm">Tip:</span>
+                      <span className="text-sm">+${form.watch('tip').toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-1 border-t mt-1">
