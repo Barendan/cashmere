@@ -69,6 +69,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [dateOpen, setDateOpen] = useState(false);
   const [localDiscount, setLocalDiscount] = useState('0');
+  const [localTip, setLocalTip] = useState('0');
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof serviceFormSchema>>({
@@ -148,8 +149,8 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
       .getValues()
       .services.reduce((total, service) => total + service.price, 0);
     
-    const discount = form.getValues().discount || 0;
-    const tip = form.getValues().tip || 0;
+      const discount = Number(form.getValues().discount || 0);
+      const tip = Number(form.getValues().tip || 0);
     return Math.max(0, serviceTotal - discount + tip);
   };
 
@@ -316,6 +317,68 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <FormField
               control={form.control}
+              name="tip"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tip ($)</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0.00"
+                        className="pl-10"
+                        value={localTip}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          setLocalTip(inputValue);
+                          field.onChange(inputValue === '' ? null : parseFloat(inputValue));
+                        }}
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>Optional tip amount</FormDescription>
+                </FormItem>
+              )}
+            />
+  
+            <FormField
+              control={form.control}
+              name="discount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Discount ($)</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0.00"
+                        className="pl-10"
+                        value={localDiscount}
+                        {...field}
+                        onChange={(e) => {
+                          const inputValue = e.target.value;
+                          setLocalDiscount(inputValue);
+                          field.onChange(inputValue === '' ? null : parseFloat(inputValue));
+                        }}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <FormField
+              control={form.control}
               name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
@@ -342,39 +405,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                 </FormItem>
               )}
             />
-  
-            <FormField
-              control={form.control}
-              name="discount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Discount ($)</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <BadgePercent className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="0.00"
-                        className="pl-10"
-                        value={localDiscount}
-                        {...field}
-                        onChange={(e) => {
-                          const inputValue = e.target.value;
-                          setLocalDiscount(inputValue);
-                          field.onChange(inputValue === '' ? 0 : parseFloat(inputValue));
-                        }}
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-  
-          <div className="mt-4">
+
             <FormField
               control={form.control}
               name="description"
@@ -520,30 +551,6 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
             )}
           </div>
         </div>
-  
-        <FormField
-          control={form.control}
-          name="tip"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tip ($)</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    className="pl-10"
-                    {...field}
-                  />
-                </div>
-              </FormControl>
-              <FormDescription>Optional tip amount</FormDescription>
-            </FormItem>
-          )}
-        />
 
         <Button
           type="submit"

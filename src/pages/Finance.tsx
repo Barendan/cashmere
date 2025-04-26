@@ -18,9 +18,15 @@ const Finance = () => {
   usePageTitle("Finance");
   const { isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("summary");
   const [newIncome, setNewIncome] = useState(null);
   const [newExpense, setNewExpense] = useState(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('financeActiveTab') || 'summary';
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('financeActiveTab', activeTab);
+  }, [activeTab]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 500);

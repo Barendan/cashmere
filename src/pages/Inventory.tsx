@@ -29,7 +29,8 @@ const InventoryPage = () => {
     updateProduct, 
     deleteProduct, 
     getTotalInventoryValue, 
-    recordMonthlyRestock, 
+    recordMonthlyRestock,
+    lastRestockDate,
     refreshData
   } = useData();
   const { isAdmin, user } = useAuth();
@@ -308,9 +309,17 @@ const InventoryPage = () => {
       </div>
       
       <Card className="w-full mb-8 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/60">
-        <CardHeader>
-          <CardTitle>Inventory Management</CardTitle>
-          <CardDescription>View and modify your product inventory</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle>Inventory Management</CardTitle>
+            <CardDescription>View and modify your product inventory</CardDescription>
+          </div>
+          {lastRestockDate && (
+            <div className="text-right">
+              <span className="text-xs text-muted-foreground">Last Restock:</span>
+              <span className="ml-2 text-sm font-medium">{new Date(lastRestockDate).toLocaleDateString()}</span>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="mb-4 flex items-center justify-between gap-4">

@@ -40,113 +40,24 @@ const AUTH_TIMEOUT = 15000;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({ status: 'unauthenticated' });
+  const [skipNextAuthCheck, setSkipNextAuthCheck] = useState(false);
   
-  // Use a ref to track timeouts - prevents stale closure issues
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Clear any active timeout
-  const clearAllTimeouts = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-      console.log("Auth timeout cleared");
-    }
-  };
-
-  // Set a new timeout and track it with the ref
-  const setAuthTimeout = (callback: () => void, duration: number) => {
-    // Always clear existing timeout first
-    clearAllTimeouts();
-    
-    console.log(`Setting new auth timeout for ${duration}ms`);
-    timeoutRef.current = setTimeout(callback, duration);
-  };
-
-  // Combined function to fetch user and profile data
-  const fetchCompleteUserData = async (session: Session): Promise<AuthUser | null> => {
-    try {
-      // Fetch user profile from database
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (error) {
-        console.warn("Error fetching profile:", error.message);
-        throw new Error("Failed to load user profile");
-      }
-
-      // Return the complete user data
-      return {
-        id: session.user.id,
-        name: profile.name || session.user.email?.split('@')[0] || 'Unknown User',
-        email: profile.email || session.user.email || '',
-        role: profile.role as UserRole || 'employee',
-      };
-    } catch (err) {
-      console.error("Failed to fetch complete user data:", err);
-      throw err;
-    }
-  };
-
-  // Retry authentication after an error
-  const retryAuth = async () => {
-    try {
-      setAuthState({ status: 'authenticating' });
-      
-      // Set timeout for auth process - will be cleared on success
-      setAuthTimeout(() => {
-        console.warn("Authentication retry timed out");
-        setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
-      }, AUTH_TIMEOUT);
-
-      const { data } = await supabase.auth.getSession();
-      
-      if (data.session) {
-        try {
-          const user = await fetchCompleteUserData(data.session);
-          
-          // Clear timeout on success
-          clearAllTimeouts();
-          
-          if (user) {
-            setAuthState({ 
-              status: 'authenticated', 
-              session: data.session, 
-              user 
-            });
-            console.log("Authentication retry successful");
-          } else {
-            setAuthState({ status: 'error', error: "Failed to load user profile" });
-          }
-        } catch (err: any) {
-          clearAllTimeouts();
-          setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
-        }
-      } else {
-        clearAllTimeouts();
-        setAuthState({ status: 'unauthenticated' });
-      }
-    } catch (err: any) {
-      clearAllTimeouts();
-      console.error("Error during retry authentication:", err);
-      setAuthState({ status: 'error', error: err.message || "Authentication failed" });
-    }
-  };
-
   // Set up auth state listeners
   useEffect(() => {
-    // Keep track of mounted state to prevent state updates after unmount
     let isMounted = true;
     console.log("Setting up auth state listeners");
     
-    // Set up auth state change listener FIRST - without setting a timeout
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state change event:", event);
 
         if (!isMounted) return;
+
+        if (skipNextAuthCheck && event === 'INITIAL_SESSION') {
+          console.log("Skipping auth recheck after tab focus");
+          setSkipNextAuthCheck(false);
+          return;
+        }
 
         try {
           if (session) {
@@ -281,6 +192,119 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   }, []);
 
+  useEffect(() => {
+    let pageWasHidden = false;
+  
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        pageWasHidden = true;
+      } else if (pageWasHidden) {
+        pageWasHidden = false;
+        setSkipNextAuthCheck(true);
+      }
+    };
+  
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Use a ref to track timeouts - prevents stale closure issues
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Clear any active timeout
+  const clearAllTimeouts = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+      console.log("Auth timeout cleared");
+    }
+  };
+
+  // Set a new timeout and track it with the ref
+  const setAuthTimeout = (callback: () => void, duration: number) => {
+    // Always clear existing timeout first
+    clearAllTimeouts();
+    
+    console.log(`Setting new auth timeout for ${duration}ms`);
+    timeoutRef.current = setTimeout(callback, duration);
+  };
+
+  // Combined function to fetch user and profile data
+  const fetchCompleteUserData = async (session: Session): Promise<AuthUser | null> => {
+    try {
+      // Fetch user profile from database
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        console.warn("Error fetching profile:", error.message);
+        throw new Error("Failed to load user profile");
+      }
+
+      // Return the complete user data
+      return {
+        id: session.user.id,
+        name: profile.name || session.user.email?.split('@')[0] || 'Unknown User',
+        email: profile.email || session.user.email || '',
+        role: profile.role as UserRole || 'employee',
+      };
+    } catch (err) {
+      console.error("Failed to fetch complete user data:", err);
+      throw err;
+    }
+  };
+
+  // Retry authentication after an error
+  const retryAuth = async () => {
+    try {
+      setAuthState({ status: 'authenticating' });
+      
+      // Set timeout for auth process - will be cleared on success
+      setAuthTimeout(() => {
+        console.warn("Authentication retry timed out");
+        setAuthState({ status: 'error', error: "Authentication timed out. Please try again." });
+      }, AUTH_TIMEOUT);
+
+      const { data } = await supabase.auth.getSession();
+      
+      if (data.session) {
+        try {
+          const user = await fetchCompleteUserData(data.session);
+          
+          // Clear timeout on success
+          clearAllTimeouts();
+          
+          if (user) {
+            setAuthState({ 
+              status: 'authenticated', 
+              session: data.session, 
+              user 
+            });
+            console.log("Authentication retry successful");
+          } else {
+            setAuthState({ status: 'error', error: "Failed to load user profile" });
+          }
+        } catch (err: any) {
+          clearAllTimeouts();
+          setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
+        }
+      } else {
+        clearAllTimeouts();
+        setAuthState({ status: 'unauthenticated' });
+      }
+    } catch (err: any) {
+      clearAllTimeouts();
+      console.error("Error during retry authentication:", err);
+      setAuthState({ status: 'error', error: err.message || "Authentication failed" });
+    }
+  };
+
   const login = async (email: string, password: string) => {
     try {
       setAuthState({ status: 'authenticating' });
@@ -382,19 +406,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     retryAuth
   };
 
-  // Show a minimalist loading screen only during authentication
-  if (authState.status === 'authenticating') {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-spa-cream">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-spa-sage"></div>
-          <p className="text-spa-deep">Authenticating...</p>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {authState.status === 'authenticating' && (
+        <div className="fixed inset-0 bg-black/10 z-50 flex items-center justify-center">
+          <div className="bg-white p-4 rounded-md shadow-lg">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-spa-sage mx-auto"></div>
+            <p className="text-spa-deep mt-2">Verifying session...</p>
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+      )}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
