@@ -239,6 +239,11 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
     }
   };
 
+  const safeToFixed = (value, decimals = 2) => {
+    const numValue = Number(value);
+    return !isNaN(numValue) ? numValue.toFixed(decimals) : "0.00";
+  };
+
   return (
     <Form {...form}>
       <form
@@ -496,7 +501,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                   {form.watch('tip') > 0 && (
                     <div className="flex justify-between text-emerald-600">
                       <span className="text-sm">Tip:</span>
-                      <span className="text-sm">+${form.watch('tip').toFixed(2)}</span>
+                      <span className="text-sm">+${safeToFixed(form.watch('tip'))}</span>
                     </div>
                   )}
                   <div className="flex justify-between pt-1 border-t mt-1">
