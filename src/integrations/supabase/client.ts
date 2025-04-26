@@ -105,7 +105,8 @@ export const mapFinanceRowToFinanceRecord = (row: FinanceRow) => ({
   serviceId: row.service_id || undefined,
   paymentMethod: row.payment_method || undefined,
   vendor: row.vendor || undefined,
-  category: row.category || undefined
+  category: row.category || undefined,
+  tipAmount: row.tip_amount || 0
 });
 
 export const mapTransactionRowToTransaction = (row: TransactionRow | RpcTransactionResult) => ({

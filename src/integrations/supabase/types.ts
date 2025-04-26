@@ -20,6 +20,7 @@ export type Database = {
           id: string
           payment_method: string | null
           service_id: string | null
+          tip_amount: number | null
           type: string
           updated_at: string
           vendor: string | null
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           payment_method?: string | null
           service_id?: string | null
+          tip_amount?: number | null
           type: string
           updated_at?: string
           vendor?: string | null
@@ -48,6 +50,7 @@ export type Database = {
           id?: string
           payment_method?: string | null
           service_id?: string | null
+          tip_amount?: number | null
           type?: string
           updated_at?: string
           vendor?: string | null

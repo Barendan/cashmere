@@ -88,6 +88,7 @@ export interface FinanceRecord {
   customerName?: string;
   serviceId?: string;
   paymentMethod?: string;
+  tipAmount?: number;  // New field for tips
   
   // Expense specific fields
   vendor?: string;

@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X, BadgePercent } from "lucide-react";
+import { CalendarIcon, Plus, X, BadgePercent, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Popover,
@@ -50,6 +51,7 @@ const serviceFormSchema = z.object({
   paymentMethod: z.string().min(1, "Payment method is required"),
   description: z.string().optional(),
   discount: z.coerce.number().default(0),
+  tip: z.coerce.number().min(0).default(0)
 });
 
 const PAYMENT_METHODS = [
@@ -78,6 +80,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
       paymentMethod: "",
       description: "",
       discount: 0,
+      tip: 0,
     },
   });
 
@@ -162,14 +165,16 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         0
       );
       const discountAmount = data.discount || 0;
-      const totalAmount = Math.max(0, servicesTotal - discountAmount);
+      const tipAmount = data.tip || 0;
+      const totalAmount = Math.max(0, servicesTotal - discountAmount + tipAmount);
 
       const serviceDetails = {
         serviceIds: data.services.map((service) => service.id),
         serviceNames: data.services.map((service) => service.name),
         servicePrices: data.services.map((service) => service.price),
         discount: discountAmount,
-        originalTotal: servicesTotal
+        originalTotal: servicesTotal,
+        tipAmount: tipAmount
       };
 
       const incomeData = {
@@ -203,6 +208,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         paymentMethod: "",
         description: "",
         discount: 0,
+        tip: 0,
       });
 
       if (onIncomeAdded) {
@@ -214,7 +220,8 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
             price: service.price
           })),
           discount: discountAmount,
-          originalTotal: servicesTotal
+          originalTotal: servicesTotal,
+          tipAmount: tipAmount
         };
         onIncomeAdded(incomeWithServices);
       }
@@ -236,7 +243,6 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         onSubmit={form.handleSubmit(onSubmit)}
         className="flex flex-col gap-6"
       >
-        {/* Customer details at the top in the middle */}
         <div className="w-full max-w-4xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
@@ -383,9 +389,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         </div>
         <hr/>
   
-        {/* Two columns below for services */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mx-auto">
-          {/* Left column: Available Services */}
           <div className="flex flex-col">
             <FormLabel className="mb-2">Available Services</FormLabel>
             <div className="border rounded-md flex-grow h-[400px]">
@@ -437,7 +441,6 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
             </div>
           </div>
   
-          {/* Right column: Selected Services */}
           <div className="flex flex-col">
             <FormLabel className="mb-2">Selected Services</FormLabel>
             <div className="border rounded-md h-[400px] flex flex-col">
@@ -505,6 +508,30 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
           </div>
         </div>
   
+        <FormField
+          control={form.control}
+          name="tip"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tip ($)</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    className="pl-10"
+                    {...field}
+                  />
+                </div>
+              </FormControl>
+              <FormDescription>Optional tip amount</FormDescription>
+            </FormItem>
+          )}
+        />
+
         <Button
           type="submit"
           disabled={isSubmitting}
