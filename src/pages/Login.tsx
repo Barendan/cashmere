@@ -30,12 +30,13 @@ const Login = () => {
     }
   }, [authState, navigate]);
 
-  // Show auth errors from context
+  // Clear local errors when auth state changes
   useEffect(() => {
-    if (authError) {
-      setLocalError(authError);
+    // If system is in error state, we'll show the retry UI instead of local errors
+    if (authState.status === 'error') {
+      setLocalError("");
     }
-  }, [authError]);
+  }, [authState.status]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,8 +54,9 @@ const Login = () => {
       await login(email, password);
       // Navigate is handled by the useEffect
     } catch (error: any) {
-      // Error is already handled in the auth context
+      // Show login errors in local state for better UX
       console.error("Login form error:", error);
+      setLocalError(error.message || "Failed to log in");
     } finally {
       setIsProcessing(false);
     }
@@ -120,7 +122,7 @@ const Login = () => {
             <div className="px-6 pb-4">
               <Alert variant="destructive" className="mb-2">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>Authentication system error. Please try again.</AlertDescription>
+                <AlertDescription>{authError || "Authentication system error. Please try again."}</AlertDescription>
               </Alert>
               <Button 
                 variant="outline" 
@@ -141,7 +143,7 @@ const Login = () => {
             
             <TabsContent value="login">
               <CardContent>
-                {localError && (
+                {!showRetryOption && localError && (
                   <Alert variant="destructive" className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{localError}</AlertDescription>
@@ -188,7 +190,7 @@ const Login = () => {
 
             <TabsContent value="register">
               <CardContent>
-                {localError && (
+                {!showRetryOption && localError && (
                   <Alert variant={localError.includes("check your email") ? "default" : "destructive"} className="mb-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{localError}</AlertDescription>

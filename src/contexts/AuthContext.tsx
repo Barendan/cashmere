@@ -352,13 +352,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Set a temporary loading state
       setAuthState({ status: 'authenticating' });
 
-      const { error } = await supabase.auth.signOut();
+      // Check if there's a current session before attempting to sign out
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
       
-      if (error) throw error;
+      // Only attempt to sign out if there's an active session
+      if (currentSession) {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      } else {
+        console.log("No active session found during logout, setting unauthenticated state directly");
+      }
       
       // Clear any active timeout
       clearAllTimeouts();
       
+      // Always set to unauthenticated regardless of whether there was an active session
       setAuthState({ status: 'unauthenticated' });
       
       toast.info("You have been logged out");
@@ -368,9 +376,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Clear any active timeout
       clearAllTimeouts();
       
-      setAuthState({ status: 'error', error: error.message || "Failed to log out" });
-      toast.error("Error signing out");
-      throw error;
+      // Even if there's an error, we should set the state to unauthenticated
+      // This ensures users can still log in again
+      setAuthState({ status: 'unauthenticated' });
+      
+      toast.error("Error signing out, but you've been logged out of this application");
     }
   };
 
