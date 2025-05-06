@@ -69,44 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               
               // Use setTimeout to avoid potential Supabase deadlock
               setTimeout(() => {
-                fetchCompleteUserData(session)
-                  .then(user => {
-                    if (isMounted) {
-                      // Clear any lingering timeouts
-                      clearAllTimeouts();
-                      
-                      setAuthState({ 
-                        status: 'authenticated', 
-                        session, 
-                        user 
-                      });
-                    }
-                  })
-                  .catch(err => {
-                    if (isMounted) {
-                      // Clear any lingering timeouts
-                      clearAllTimeouts();
-                      
-                      console.error("Profile fetch error:", err.message);
-                      
-                      // Fallback to creating a basic user if profile fetch fails
-                      const fallbackUser: AuthUser = {
-                        id: session.user.id,
-                        name: session.user.email?.split('@')[0] || 'User',
-                        email: session.user.email || '',
-                        role: 'employee' // Default role
-                      };
-                      
-                      setAuthState({ 
-                        status: 'authenticated', 
-                        session, 
-                        user: fallbackUser
-                      });
-                      
-                      // Notify user about profile issue
-                      toast.warning("Profile data couldn't be loaded. Some features may be limited.");
-                    }
-                  });
+                processSessionLogin(session, isMounted);
               }, 0);
             }
           } else {
@@ -150,60 +113,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (data.session) {
           console.log("Existing session found");
           
-          try {
-            // Use setTimeout to avoid potential Supabase deadlock
-            setTimeout(async () => {
-              try {
-                // Fetch the complete user data
-                const user = await fetchCompleteUserData(data.session);
-                
-                // Clear timeout after successful authentication
-                clearAllTimeouts();
-                
-                if (isMounted) {
-                  setAuthState({ 
-                    status: 'authenticated', 
-                    session: data.session, 
-                    user 
-                  });
-                }
-              } catch (err: any) {
-                console.error("Profile fetch error in checkExistingSession:", err.message);
-                
-                // Fallback to creating a basic user if profile fetch fails
-                const fallbackUser: AuthUser = {
-                  id: data.session.user.id,
-                  name: data.session.user.email?.split('@')[0] || 'User',
-                  email: data.session.user.email || '',
-                  role: 'employee' // Default role
-                };
-                
-                // Clear timeout on error
-                clearAllTimeouts();
-                
-                if (isMounted) {
-                  setAuthState({ 
-                    status: 'authenticated', 
-                    session: data.session, 
-                    user: fallbackUser
-                  });
-                  
-                  // Notify user about profile issue
-                  toast.warning("Profile data couldn't be loaded. Some features may be limited.");
-                }
-              }
-            }, 0);
-          } catch (err: any) {
-            // Clear timeout on error
-            clearAllTimeouts();
-            
-            if (isMounted) {
-              setAuthState({ 
-                status: 'error', 
-                error: err.message || "Failed to load user profile" 
-              });
-            }
-          }
+          // Use setTimeout to avoid potential Supabase deadlock
+          setTimeout(() => {
+            processSessionLogin(data.session, isMounted);
+          }, 0);
         } else {
           console.log("No existing session found");
           
@@ -236,6 +149,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       subscription.unsubscribe();
     };
   }, []);
+
+  // Handle processing a session login - extracted to reduce duplicate code
+  const processSessionLogin = (session: Session, isMounted: boolean) => {
+    fetchCompleteUserData(session)
+      .then(user => {
+        if (isMounted) {
+          // Clear any lingering timeouts
+          clearAllTimeouts();
+          
+          setAuthState({ 
+            status: 'authenticated', 
+            session, 
+            user 
+          });
+        }
+      })
+      .catch(err => {
+        if (isMounted) {
+          console.error("Profile fetch error:", err.message);
+          
+          // Create a fallback user with basic info from the session
+          const fallbackUser: AuthUser = createFallbackUser(session);
+          
+          // Clear any lingering timeouts
+          clearAllTimeouts();
+          
+          setAuthState({ 
+            status: 'authenticated', 
+            session, 
+            user: fallbackUser
+          });
+          
+          // Notify user about profile issue
+          toast.warning("Profile data couldn't be loaded completely. Using basic user information.");
+        }
+      });
+  };
+
+  // Create a fallback user from session data
+  const createFallbackUser = (session: Session): AuthUser => {
+    return {
+      id: session.user.id,
+      name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+      email: session.user.email || '',
+      // Default to employee role for security (least privilege)
+      role: (session.user.user_metadata?.role as UserRole) || 'employee'
+    };
+  };
 
   useEffect(() => {
     let pageWasHidden = false;
@@ -279,48 +240,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Combined function to fetch user and profile data
   const fetchCompleteUserData = async (session: Session): Promise<AuthUser> => {
+    // First, extract basic user info from the session - this will be our fallback
+    const basicUserInfo = {
+      id: session.user.id,
+      name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+      email: session.user.email || '',
+      role: (session.user.user_metadata?.role as UserRole) || 'employee'
+    };
+
     try {
-      // Fetch user profile from database with retry logic
-      const fetchProfile = async (retries = 2): Promise<any> => {
-        try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (error) {
-            console.warn("Error fetching profile:", error.message);
-            
-            if (retries > 0 && error.message.includes("infinite recursion")) {
-              // Wait a moment before retrying in case RLS is still updating
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              return fetchProfile(retries - 1);
-            }
-            
-            throw error;
-          }
-
-          return profile;
-        } catch (err: any) {
-          console.error("Error in fetchProfile:", err.message);
-          throw new Error("Failed to load user profile");
-        }
-      };
-
       // Try to get the profile
-      const profile = await fetchProfile();
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('name, email, role')
+        .eq('id', session.user.id)
+        .maybeSingle();
 
-      // Return the complete user data
-      return {
-        id: session.user.id,
-        name: profile.name || session.user.email?.split('@')[0] || 'Unknown User',
-        email: profile.email || session.user.email || '',
-        role: profile.role as UserRole || 'employee',
-      };
+      if (error) {
+        console.warn("Error fetching profile:", error.message);
+        throw error;
+      }
+
+      // If profile exists, use that data, otherwise use basic info
+      if (profile) {
+        return {
+          id: session.user.id,
+          name: profile.name || basicUserInfo.name,
+          email: profile.email || basicUserInfo.email,
+          role: (profile.role as UserRole) || basicUserInfo.role,
+        };
+      } else {
+        console.log("No profile found, using basic user info");
+        return basicUserInfo;
+      }
     } catch (err) {
       console.error("Failed to fetch complete user data:", err);
-      throw err;
+      
+      // Return the basic info we extracted from the session
+      return basicUserInfo;
     }
   };
 
@@ -338,46 +295,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data } = await supabase.auth.getSession();
       
       if (data.session) {
-        try {
-          // Use setTimeout to avoid potential deadlock
-          setTimeout(async () => {
-            try {
-              const user = await fetchCompleteUserData(data.session);
-              
-              // Clear timeout on success
-              clearAllTimeouts();
-              
-              setAuthState({ 
-                status: 'authenticated', 
-                session: data.session, 
-                user 
-              });
-              console.log("Authentication retry successful");
-            } catch (err: any) {
-              clearAllTimeouts();
-              
-              // Fallback to basic user if profile fails
-              const fallbackUser: AuthUser = {
-                id: data.session.user.id,
-                name: data.session.user.email?.split('@')[0] || 'User',
-                email: data.session.user.email || '',
-                role: 'employee' // Default role
-              };
-              
-              setAuthState({ 
-                status: 'authenticated', 
-                session: data.session, 
-                user: fallbackUser  
-              });
-              
-              // Notify user about profile issue
-              toast.warning("Profile data couldn't be loaded. Some features may be limited.");
-            }
-          }, 0);
-        } catch (err: any) {
-          clearAllTimeouts();
-          setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
-        }
+        // Use setTimeout to avoid potential deadlock
+        setTimeout(() => {
+          processSessionLogin(data.session, true);
+        }, 0);
       } else {
         clearAllTimeouts();
         setAuthState({ status: 'unauthenticated' });
@@ -408,45 +329,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (data.session) {
         // Use setTimeout to avoid potential deadlock
-        setTimeout(async () => {
-          try {
-            // Fetch the complete user data
-            const user = await fetchCompleteUserData(data.session);
-            
-            // Clear the timeout after successful authentication
-            clearAllTimeouts();
-            
-            setAuthState({ 
-              status: 'authenticated', 
-              session: data.session, 
-              user 
-            });
-            
-            toast.success("Successfully logged in!");
-          } catch (err: any) {
-            console.error("Profile fetch error in login:", err.message);
-            
-            // Fallback to creating a basic user if profile fetch fails
-            const fallbackUser: AuthUser = {
-              id: data.session.user.id,
-              name: data.session.user.email?.split('@')[0] || 'User',
-              email: data.session.user.email || '',
-              role: 'employee' // Default role
-            };
-            
-            // Clear timeout on error
-            clearAllTimeouts();
-            
-            setAuthState({ 
-              status: 'authenticated', 
-              session: data.session, 
-              user: fallbackUser
-            });
-            
-            // Notify user about profile issue
-            toast.warning("Profile data couldn't be loaded. Some features may be limited.");
-          }
+        setTimeout(() => {
+          processSessionLogin(data.session, true);
         }, 0);
+        
+        toast.success("Successfully logged in!");
       }
     } catch (error: any) {
       console.error("Login error:", error);
