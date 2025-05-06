@@ -67,31 +67,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             if (authState.status !== 'authenticated') {
               setAuthState({ status: 'authenticating' });
               
-              // Fetch the complete user data without setting additional timeouts
-              fetchCompleteUserData(session)
-                .then(user => {
-                  if (isMounted) {
-                    // Clear any lingering timeouts
-                    clearAllTimeouts();
-                    
-                    setAuthState({ 
-                      status: 'authenticated', 
-                      session, 
-                      user 
-                    });
-                  }
-                })
-                .catch(err => {
-                  if (isMounted) {
-                    // Clear any lingering timeouts
-                    clearAllTimeouts();
-                    
-                    setAuthState({ 
-                      status: 'error', 
-                      error: err.message || "Failed to load user data" 
-                    });
-                  }
-                });
+              // Use setTimeout to avoid potential Supabase deadlock
+              setTimeout(() => {
+                fetchCompleteUserData(session)
+                  .then(user => {
+                    if (isMounted) {
+                      // Clear any lingering timeouts
+                      clearAllTimeouts();
+                      
+                      setAuthState({ 
+                        status: 'authenticated', 
+                        session, 
+                        user 
+                      });
+                    }
+                  })
+                  .catch(err => {
+                    if (isMounted) {
+                      // Clear any lingering timeouts
+                      clearAllTimeouts();
+                      
+                      console.error("Profile fetch error:", err.message);
+                      
+                      // Fallback to creating a basic user if profile fetch fails
+                      const fallbackUser: AuthUser = {
+                        id: session.user.id,
+                        name: session.user.email?.split('@')[0] || 'User',
+                        email: session.user.email || '',
+                        role: 'employee' // Default role
+                      };
+                      
+                      setAuthState({ 
+                        status: 'authenticated', 
+                        session, 
+                        user: fallbackUser
+                      });
+                      
+                      // Notify user about profile issue
+                      toast.warning("Profile data couldn't be loaded. Some features may be limited.");
+                    }
+                  });
+              }, 0);
             }
           } else {
             console.log("Auth state change - user not authenticated");
@@ -135,19 +151,48 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log("Existing session found");
           
           try {
-            // Fetch the complete user data
-            const user = await fetchCompleteUserData(data.session);
-            
-            // Clear timeout after successful authentication
-            clearAllTimeouts();
-            
-            if (isMounted) {
-              setAuthState({ 
-                status: 'authenticated', 
-                session: data.session, 
-                user 
-              });
-            }
+            // Use setTimeout to avoid potential Supabase deadlock
+            setTimeout(async () => {
+              try {
+                // Fetch the complete user data
+                const user = await fetchCompleteUserData(data.session);
+                
+                // Clear timeout after successful authentication
+                clearAllTimeouts();
+                
+                if (isMounted) {
+                  setAuthState({ 
+                    status: 'authenticated', 
+                    session: data.session, 
+                    user 
+                  });
+                }
+              } catch (err: any) {
+                console.error("Profile fetch error in checkExistingSession:", err.message);
+                
+                // Fallback to creating a basic user if profile fetch fails
+                const fallbackUser: AuthUser = {
+                  id: data.session.user.id,
+                  name: data.session.user.email?.split('@')[0] || 'User',
+                  email: data.session.user.email || '',
+                  role: 'employee' // Default role
+                };
+                
+                // Clear timeout on error
+                clearAllTimeouts();
+                
+                if (isMounted) {
+                  setAuthState({ 
+                    status: 'authenticated', 
+                    session: data.session, 
+                    user: fallbackUser
+                  });
+                  
+                  // Notify user about profile issue
+                  toast.warning("Profile data couldn't be loaded. Some features may be limited.");
+                }
+              }
+            }, 0);
           } catch (err: any) {
             // Clear timeout on error
             clearAllTimeouts();
@@ -233,19 +278,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Combined function to fetch user and profile data
-  const fetchCompleteUserData = async (session: Session): Promise<AuthUser | null> => {
+  const fetchCompleteUserData = async (session: Session): Promise<AuthUser> => {
     try {
-      // Fetch user profile from database
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      // Fetch user profile from database with retry logic
+      const fetchProfile = async (retries = 2): Promise<any> => {
+        try {
+          const { data: profile, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-      if (error) {
-        console.warn("Error fetching profile:", error.message);
-        throw new Error("Failed to load user profile");
-      }
+          if (error) {
+            console.warn("Error fetching profile:", error.message);
+            
+            if (retries > 0 && error.message.includes("infinite recursion")) {
+              // Wait a moment before retrying in case RLS is still updating
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return fetchProfile(retries - 1);
+            }
+            
+            throw error;
+          }
+
+          return profile;
+        } catch (err: any) {
+          console.error("Error in fetchProfile:", err.message);
+          throw new Error("Failed to load user profile");
+        }
+      };
+
+      // Try to get the profile
+      const profile = await fetchProfile();
 
       // Return the complete user data
       return {
@@ -275,21 +339,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (data.session) {
         try {
-          const user = await fetchCompleteUserData(data.session);
-          
-          // Clear timeout on success
-          clearAllTimeouts();
-          
-          if (user) {
-            setAuthState({ 
-              status: 'authenticated', 
-              session: data.session, 
-              user 
-            });
-            console.log("Authentication retry successful");
-          } else {
-            setAuthState({ status: 'error', error: "Failed to load user profile" });
-          }
+          // Use setTimeout to avoid potential deadlock
+          setTimeout(async () => {
+            try {
+              const user = await fetchCompleteUserData(data.session);
+              
+              // Clear timeout on success
+              clearAllTimeouts();
+              
+              setAuthState({ 
+                status: 'authenticated', 
+                session: data.session, 
+                user 
+              });
+              console.log("Authentication retry successful");
+            } catch (err: any) {
+              clearAllTimeouts();
+              
+              // Fallback to basic user if profile fails
+              const fallbackUser: AuthUser = {
+                id: data.session.user.id,
+                name: data.session.user.email?.split('@')[0] || 'User',
+                email: data.session.user.email || '',
+                role: 'employee' // Default role
+              };
+              
+              setAuthState({ 
+                status: 'authenticated', 
+                session: data.session, 
+                user: fallbackUser  
+              });
+              
+              // Notify user about profile issue
+              toast.warning("Profile data couldn't be loaded. Some features may be limited.");
+            }
+          }, 0);
         } catch (err: any) {
           clearAllTimeouts();
           setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
@@ -323,28 +407,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
       
       if (data.session) {
-        try {
-          // Fetch the complete user data
-          const user = await fetchCompleteUserData(data.session);
-          
-          // Clear the timeout after successful authentication
-          clearAllTimeouts();
-          
-          setAuthState({ 
-            status: 'authenticated', 
-            session: data.session, 
-            user 
-          });
-          
-          toast.success("Successfully logged in!");
-        } catch (err: any) {
-          // Clear timeout on error
-          clearAllTimeouts();
-          
-          setAuthState({ status: 'error', error: err.message || "Failed to load user profile" });
-          toast.error(err.message || "Failed to load user profile");
-          throw err;
-        }
+        // Use setTimeout to avoid potential deadlock
+        setTimeout(async () => {
+          try {
+            // Fetch the complete user data
+            const user = await fetchCompleteUserData(data.session);
+            
+            // Clear the timeout after successful authentication
+            clearAllTimeouts();
+            
+            setAuthState({ 
+              status: 'authenticated', 
+              session: data.session, 
+              user 
+            });
+            
+            toast.success("Successfully logged in!");
+          } catch (err: any) {
+            console.error("Profile fetch error in login:", err.message);
+            
+            // Fallback to creating a basic user if profile fetch fails
+            const fallbackUser: AuthUser = {
+              id: data.session.user.id,
+              name: data.session.user.email?.split('@')[0] || 'User',
+              email: data.session.user.email || '',
+              role: 'employee' // Default role
+            };
+            
+            // Clear timeout on error
+            clearAllTimeouts();
+            
+            setAuthState({ 
+              status: 'authenticated', 
+              session: data.session, 
+              user: fallbackUser
+            });
+            
+            // Notify user about profile issue
+            toast.warning("Profile data couldn't be loaded. Some features may be limited.");
+          }
+        }, 0);
       }
     } catch (error: any) {
       console.error("Login error:", error);
