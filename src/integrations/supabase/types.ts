@@ -269,10 +269,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       get_sales: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -285,6 +281,10 @@ export type Database = {
           user_id: string
           user_name: string
         }[]
+      }
+      get_user_role: {
+        Args: { user_id?: string }
+        Returns: string
       }
       insert_bulk_transactions: {
         Args: { transactions: Json[] }

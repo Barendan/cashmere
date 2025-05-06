@@ -350,5 +350,57 @@ export const updateMultipleProductStocks = async (productUpdates: {productId: st
   }
 };
 
+// Add new function to delete a transaction
+export const deleteTransactionById = async (id: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting transaction:', error);
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deleteTransactionById:', error);
+    throw error;
+  }
+};
+
+// Add new function to delete a sale and its related transactions
+export const deleteSaleAndTransactions = async (saleId: string): Promise<boolean> => {
+  try {
+    // First delete all transactions associated with this sale
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('sale_id', saleId);
+    
+    if (transactionError) {
+      console.error('Error deleting sale transactions:', transactionError);
+      throw transactionError;
+    }
+    
+    // Then delete the sale itself
+    const { error: saleError } = await supabase
+      .from('sales')
+      .delete()
+      .eq('id', saleId);
+    
+    if (saleError) {
+      console.error('Error deleting sale:', saleError);
+      throw saleError;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in deleteSaleAndTransactions:', error);
+    throw error;
+  }
+};
+
 // Export the mapping functions so they can be used elsewhere
 export { mapTransactionRowToTransaction, mapSaleRowToSale };

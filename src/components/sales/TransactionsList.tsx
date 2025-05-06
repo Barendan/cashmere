@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronRight, Package, CalendarDays, Percent } from 'lucide-react';
+import { ChevronDown, ChevronRight, Package, CalendarDays, Percent, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +12,19 @@ import TransactionRowGroup from './TransactionRowGroup';
 import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct, isSystemMonthlyRestockProduct } from "@/config/systemProducts";
 import { getRestockDetails } from '@/services/transactionService';
 import RestockDetailsModal from "./RestockDetailsModal";
+import { useData } from '@/contexts/DataContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GroupedTransaction {
   saleId: string | null;
@@ -42,6 +55,16 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     parent: Transaction | null;
     children: Transaction[];
   }>({ open: false, parent: null, children: [] });
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    transaction: Transaction | null;
+    isSale: boolean;
+    saleId: string | null;
+  }>({ open: false, transaction: null, isSale: false, saleId: null });
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const { deleteTransaction, deleteSale } = useData();
+  const { toast } = useToast();
+  const { isAdmin } = useAuth();
 
   const toggleGroup = async (groupId: string, isParentRestock: boolean) => {
     if (openGroup === groupId) {
@@ -63,6 +86,36 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
           setLoadingDetails({...loadingDetails, [groupId]: false});
         }
       }
+    }
+  };
+
+  const handleDeleteClick = (transaction: Transaction | null, isSale: boolean = false, saleId: string | null = null) => {
+    setDeleteDialog({
+      open: true,
+      transaction,
+      isSale,
+      saleId
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    setIsDeleting(true);
+    try {
+      if (deleteDialog.isSale && deleteDialog.saleId) {
+        await deleteSale(deleteDialog.saleId);
+      } else if (deleteDialog.transaction) {
+        await deleteTransaction(deleteDialog.transaction);
+      }
+    } catch (error) {
+      console.error("Error during delete operation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the item.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteDialog({ open: false, transaction: null, isSale: false, saleId: null });
+      setIsDeleting(false);
     }
   };
 
@@ -244,9 +297,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                     {filterIsAdjustment ? 'Qty Diff' : 'Total'}
                   </TableHead>
                   <TableHead>Type</TableHead>
-                  {!filterIsAdjustment && (
-                    <TableHead className="text-right">Actions</TableHead>
-                  )}
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -287,6 +338,18 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-right">
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteClick(transaction)}
+                                className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     }
@@ -325,18 +388,33 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0"
-                                onClick={e => { 
-                                  e.stopPropagation();
-                                  handleRestockClick(group.parentTransactionId!, group.transactions[0]);
-                                }}
-                                aria-label="Show restock details"
-                              >
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center justify-end space-x-1">
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick(group.transactions[0]);
+                                    }}
+                                    className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-8 w-8 p-0"
+                                  onClick={e => { 
+                                    e.stopPropagation();
+                                    handleRestockClick(group.parentTransactionId!, group.transactions[0]);
+                                  }}
+                                  aria-label="Show restock details"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         </React.Fragment>
@@ -413,21 +491,43 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                             )}
                           </TableCell>
                           <TableCell className="text-right">
-                            {hasDetails && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0"
-                                onClick={() => toggleGroup(groupId, group.isParentRestock)}
-                                aria-label={openGroup === groupId ? 
-                                  "Collapse transaction details" : "Expand transaction details"}
-                              >
-                                {openGroup === groupId ? 
-                                  <ChevronDown className="h-4 w-4" /> : 
-                                  <ChevronRight className="h-4 w-4" />
-                                }
-                              </Button>
-                            )}
+                            <div className="flex items-center justify-end space-x-1">
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (group.saleId) {
+                                      handleDeleteClick(null, true, group.saleId);
+                                    } else {
+                                      handleDeleteClick(group.transactions[0]);
+                                    }
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {hasDetails && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleGroup(groupId, group.isParentRestock);
+                                  }}
+                                  aria-label={openGroup === groupId ? 
+                                    "Collapse transaction details" : "Expand transaction details"}
+                                >
+                                  {openGroup === groupId ? 
+                                    <ChevronDown className="h-4 w-4" /> : 
+                                    <ChevronRight className="h-4 w-4" />
+                                  }
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                         
@@ -491,6 +591,30 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
           />
         </div>
       </CardContent>
+
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog(prev => ({ ...prev, open }))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteDialog.isSale 
+                ? "Are you sure you want to delete this sale and all its related transactions?" 
+                : "Are you sure you want to delete this transaction?"} 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

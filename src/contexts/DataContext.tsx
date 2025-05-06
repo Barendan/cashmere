@@ -20,7 +20,9 @@ import {
   recordMonthlyRestockInDb,
   recordChildRestockTransactions,
   getRestockDetails,
-  updateMultipleProductStocks
+  updateMultipleProductStocks,
+  deleteTransactionById,
+  deleteSaleAndTransactions
 } from "../services/transactionService";
 import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
@@ -55,6 +57,8 @@ interface DataContextType {
   isLoading: boolean;
   getTotalInventoryValue: () => number;
   refreshData: () => Promise<void>;
+  deleteTransaction: (transaction: Transaction) => Promise<boolean>;
+  deleteSale: (saleId: string) => Promise<boolean>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -779,6 +783,95 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
 
+  // Add the delete transaction function
+  const deleteTransaction = async (transaction: Transaction): Promise<boolean> => {
+    try {
+      // If this is a sale, we need to update the product stock
+      if (transaction.type === 'sale') {
+        const product = products.find(p => p.id === transaction.productId);
+        if (product) {
+          await updateProductStock(transaction.productId, product.stockQuantity + transaction.quantity);
+        }
+      } else if (transaction.type === 'restock') {
+        const product = products.find(p => p.id === transaction.productId);
+        if (product) {
+          // Don't let stock go below zero
+          const newQuantity = Math.max(0, product.stockQuantity - transaction.quantity);
+          await updateProductStock(transaction.productId, newQuantity);
+        }
+      }
+      
+      await deleteTransactionById(transaction.id);
+      
+      // Update the local state to remove the deleted transaction
+      setTransactions(prevTransactions => 
+        prevTransactions.filter(t => t.id !== transaction.id)
+      );
+      
+      toast({
+        title: "Transaction Deleted",
+        description: `${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} transaction has been deleted.`
+      });
+      
+      await refreshData();
+      return true;
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete transaction.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // Add the delete sale function
+  const deleteSale = async (saleId: string): Promise<boolean> => {
+    try {
+      // Find all transactions associated with this sale
+      const saleTransactions = transactions.filter(t => t.saleId === saleId);
+      
+      // Update product stock for each transaction
+      for (const transaction of saleTransactions) {
+        if (transaction.type === 'sale') {
+          const product = products.find(p => p.id === transaction.productId);
+          if (product) {
+            await updateProductStock(transaction.productId, product.stockQuantity + transaction.quantity);
+          }
+        }
+      }
+      
+      // Delete the sale and all its transactions
+      await deleteSaleAndTransactions(saleId);
+      
+      // Update the local state
+      setTransactions(prevTransactions => 
+        prevTransactions.filter(t => t.saleId !== saleId)
+      );
+      
+      setSales(prevSales =>
+        prevSales.filter(s => s.id !== saleId)
+      );
+      
+      toast({
+        title: "Sale Deleted",
+        description: "Sale and all associated transactions have been deleted."
+      });
+      
+      await refreshData();
+      return true;
+    } catch (error) {
+      console.error('Error deleting sale:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete sale.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -804,6 +897,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return total + product.costPrice * product.stockQuantity;
           }, 0),
         refreshData,
+        deleteTransaction,
+        deleteSale
       }}
     >
       {children}
