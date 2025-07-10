@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Product } from '@/models/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/format';
 import { Undo2 } from 'lucide-react';
 
@@ -20,10 +21,22 @@ interface ShoppingCartProps {
   updateDiscount: (productId: string, discount: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
-  recordSale: () => void;
+  recordSale: (paymentMethod?: string) => void;
   isProcessing: boolean;
   undoLastTransaction?: () => void;
 }
+
+const PAYMENT_METHODS = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'card', label: 'Card' },
+  { value: 'venmo', label: 'Venmo' },
+  { value: 'zelle', label: 'Zelle' },
+  { value: 'cashapp', label: 'CashApp' },
+  { value: 'paypal', label: 'PayPal' },
+  { value: 'applepay', label: 'Apple Pay' },
+  { value: 'googlepay', label: 'Google Pay' },
+  { value: 'other', label: 'Other' }
+];
 
 const ShoppingCart = ({
   items,
@@ -35,9 +48,18 @@ const ShoppingCart = ({
   isProcessing,
   undoLastTransaction
 }: ShoppingCartProps) => {
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  
   const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
   const totalDiscount = items.reduce((sum, item) => sum + item.discount, 0);
   const finalTotal = Math.max(0, subtotal - totalDiscount);
+  
+  const handleCompleteSale = () => {
+    if (!paymentMethod) {
+      return; // Don't proceed without payment method
+    }
+    recordSale(paymentMethod);
+  };
   
   return (
     <div className="h-full flex flex-col">
@@ -89,13 +111,33 @@ const ShoppingCart = ({
               <span>{formatCurrency(finalTotal)}</span>
             </div>
             
-            <HoverFillButton 
-              className="w-full" 
-              onClick={recordSale}
-              disabled={isProcessing || items.length === 0}
-            >
-              {isProcessing ? "Processing..." : "Complete Sale"}
-            </HoverFillButton>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Payment Method <span className="text-red-500">*</span>
+                </label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((method) => (
+                      <SelectItem key={method.value} value={method.value}>
+                        {method.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <HoverFillButton 
+                className="w-full" 
+                onClick={handleCompleteSale}
+                disabled={isProcessing || items.length === 0 || !paymentMethod}
+              >
+                {isProcessing ? "Processing..." : "Complete Sale"}
+              </HoverFillButton>
+            </div>
             
             {/* <div className="grid grid-cols-2 gap-3 mt-3">
               <Button 

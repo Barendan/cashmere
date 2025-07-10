@@ -17,13 +17,13 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
   const { toast } = useToast();
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   
-  const handleCompleteSale = async () => {
+  const handleCompleteSale = async (paymentMethod?: string) => {
     if (items.length === 0) return;
     
     setIsProcessing(true);
     
     try {
-      await recordBulkSale(items);
+      await recordBulkSale(items, 0, paymentMethod);
       clearCart();
     } catch (error) {
       console.error("Error processing sale:", error);

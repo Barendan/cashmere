@@ -375,8 +375,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     }
   };
-  
-  const recordBulkSale = async (items: {product: Product, quantity: number, discount: number}[], discount: number = 0) => {
+
+  const recordBulkSale = async (items: {product: Product, quantity: number, discount: number}[], discount: number = 0, paymentMethod?: string) => {
     if (items.length === 0) return;
     
     for (const item of items) {
@@ -412,7 +412,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_name: user?.name || 'Unknown User',
         discount: totalDiscount > 0 ? totalDiscount : null,
         original_total: totalDiscount > 0 ? subtotal : null,
-        notes: totalDiscount > 0 ? `Discount: $${totalDiscount.toFixed(2)}` : null
+        notes: totalDiscount > 0 ? `Discount: $${totalDiscount.toFixed(2)}` : null,
+        payment_method: paymentMethod || null
       };
       
       console.log("Creating sale record with total:", finalTotal, "total discount:", totalDiscount);
@@ -462,7 +463,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           ...newSale,
           items: newLocalTransactions,
           discount: totalDiscount > 0 ? totalDiscount : undefined,
-          originalTotal: totalDiscount > 0 ? subtotal : undefined
+          originalTotal: totalDiscount > 0 ? subtotal : undefined,
+          paymentMethod: paymentMethod || undefined
         };
         
         setSales([saleWithItems, ...sales]);
