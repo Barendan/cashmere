@@ -13,6 +13,11 @@ export const useProductMetricsCalculation = (
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
   const { startOfMonth, sevenDaysAgo, thirtyDaysAgo } = dateRanges;
   
+  // Filter out internal-use products from metrics calculations
+  const sellableProducts = useMemo(() => {
+    return products.filter(product => product.forSale);
+  }, [products]);
+  
   // Log date ranges for debugging
   console.log("Date ranges:", {
     startOfMonth: startOfMonth.toISOString(),
@@ -23,9 +28,14 @@ export const useProductMetricsCalculation = (
 
   const salesTransactions = useMemo(() => {
     const filtered = metricsUtils.filterTransactionsByType(transactions, "sale");
-    console.log(`Filtered ${filtered.length} sales transactions from ${transactions.length} total`);
-    return filtered;
-  }, [transactions]);
+    // Filter out transactions for internal-use products
+    const sellableTransactions = filtered.filter(transaction => {
+      const product = sellableProducts.find(p => p.id === transaction.productId);
+      return product !== undefined;
+    });
+    console.log(`Filtered ${sellableTransactions.length} sellable sales transactions from ${filtered.length} total sales transactions`);
+    return sellableTransactions;
+  }, [transactions, sellableProducts]);
   
   const currentMonthTransactions = useMemo(() => {
     const filtered = metricsUtils.filterTransactionsByDateRange(salesTransactions, startOfMonth);
@@ -34,10 +44,10 @@ export const useProductMetricsCalculation = (
   }, [salesTransactions, startOfMonth]);
 
   const productPerformance = useMemo(() => {
-    const performance = metricsUtils.calculateProductPerformance(salesTransactions, products);
-    console.log(`Calculated performance for ${performance.length} products`);
+    const performance = metricsUtils.calculateProductPerformance(salesTransactions, sellableProducts);
+    console.log(`Calculated performance for ${performance.length} sellable products`);
     return performance;
-  }, [salesTransactions, products]);
+  }, [salesTransactions, sellableProducts]);
 
   const salesData = useMemo(() => {
     const data = metricsUtils.calculateSalesData(sales, timeRange, { sevenDaysAgo, thirtyDaysAgo });
@@ -46,16 +56,16 @@ export const useProductMetricsCalculation = (
   }, [sales, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
   const categoryData = useMemo(() => {
-    const data = metricsUtils.calculateProductCategories(salesTransactions, products);
-    console.log(`Found ${data.length} product categories`);
+    const data = metricsUtils.calculateProductCategories(salesTransactions, sellableProducts);
+    console.log(`Found ${data.length} product categories for sellable products`);
     return data;
-  }, [salesTransactions, products]);
+  }, [salesTransactions, sellableProducts]);
 
   const { totalRevenue, totalItemsSold, totalProfit } = useMemo(() => {
-    const metrics = metricsUtils.calculateTotalMetrics(currentMonthTransactions, products);
-    console.log("Product totals:", metrics);
+    const metrics = metricsUtils.calculateTotalMetrics(currentMonthTransactions, sellableProducts);
+    console.log("Product totals (sellable only):", metrics);
     return metrics;
-  }, [currentMonthTransactions, products]);
+  }, [currentMonthTransactions, sellableProducts]);
 
   return {
     productPerformance,

@@ -378,6 +378,18 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
                             {filterIsSale && <TableCell></TableCell>}
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end space-x-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  className="h-8 w-8 p-0"
+                                  onClick={e => { 
+                                    e.stopPropagation();
+                                    handleRestockClick(group.parentTransactionId!, group.transactions[0]);
+                                  }}
+                                  aria-label="Show restock details"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </Button>
                                 {isAdmin && (
                                   <Button
                                     variant="ghost"
@@ -391,18 +403,6 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
                                     <Trash2 className="h-4 w-4" />
                                   </Button>
                                 )}
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  className="h-8 w-8 p-0"
-                                  onClick={e => { 
-                                    e.stopPropagation();
-                                    handleRestockClick(group.parentTransactionId!, group.transactions[0]);
-                                  }}
-                                  aria-label="Show restock details"
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -467,23 +467,6 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
                           )}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end space-x-1">
-                              {isAdmin && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (group.saleId) {
-                                      handleDeleteClick(null, true, group.saleId);
-                                    } else {
-                                      handleDeleteClick(group.transactions[0]);
-                                    }
-                                  }}
-                                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
                               {hasDetails && (
                                 <Button 
                                   variant="ghost" 
@@ -500,6 +483,23 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
                                     <ChevronDown className="h-4 w-4" /> : 
                                     <ChevronRight className="h-4 w-4" />
                                   }
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (group.saleId) {
+                                      handleDeleteClick(null, true, group.saleId);
+                                    } else {
+                                      handleDeleteClick(group.transactions[0]);
+                                    }
+                                  }}
+                                  className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600"
+                                >
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               )}
                             </div>
