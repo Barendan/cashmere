@@ -8,7 +8,7 @@ import TransactionsList from "@/components/sales/TransactionsList";
 
 const SalesLog = () => {
   usePageTitle("Sales Log");
-  const { products, transactions } = useData();
+  const { products, transactions, sales } = useData();
   const [isProcessing, setIsProcessing] = useState(false);
   
   return (
@@ -21,7 +21,7 @@ const SalesLog = () => {
         />
       </div>
       
-      <TransactionsList transactions={transactions} />
+      <TransactionsList transactions={transactions} sales={sales} />
     </div>
   );
 };

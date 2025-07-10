@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Transaction } from '@/models/types';
+import { Transaction, Sale } from '@/models/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronRight, Package, CalendarDays, Percent, Trash2 } from 'lucide-react';
@@ -38,13 +39,15 @@ interface GroupedTransaction {
   discount: number | undefined;
   itemCount: number;
   isParentRestock: boolean;
+  paymentMethod?: string | null;
 }
 
 interface TransactionsListProps {
   transactions: Transaction[];
+  sales: Sale[];
 }
 
-const TransactionsList = ({ transactions }: TransactionsListProps) => {
+const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
   const [filterType, setFilterType] = useState<string>("all");
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -65,6 +68,15 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
   const { deleteTransaction, deleteSale } = useData();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
+
+  // Create a lookup map for sales by ID to get payment method
+  const salesMap = React.useMemo(() => {
+    const map = new Map<string, Sale>();
+    sales.forEach(sale => {
+      map.set(sale.id, sale);
+    });
+    return map;
+  }, [sales]);
 
   const toggleGroup = async (groupId: string, isParentRestock: boolean) => {
     if (openGroup === groupId) {
@@ -119,19 +131,6 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
     }
   };
 
-  const getTransactionTypeColor = (type: string) => {
-    switch (type) {
-      case "sale":
-        return "bg-green-100 text-green-800";
-      case "restock":
-        return "bg-blue-100 text-blue-800";
-      case "return":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const getTransactionTypeIcon = (type: string, productId: string): JSX.Element | null => {
     if (type === "restock" && isBulkRestockProduct(productId)) {
       return <CalendarDays className="h-3 w-3 mr-1" />;
@@ -142,6 +141,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
   };
 
   const filterIsAdjustment = filterType === 'adjustment';
+  const filterIsSale = filterType === 'sale';
 
   const renderQuantityBadge = (quantity: number) => {
     const isIncrease = quantity > 0;
@@ -229,6 +229,10 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
       
       const totalDiscount = originalTotal - finalTotal;
       
+      // Get payment method from sales data if this is a sale
+      const paymentMethod = firstTransaction.saleId ? 
+        salesMap.get(firstTransaction.saleId)?.paymentMethod : null;
+      
       groupedTransactions.push({
         saleId: firstTransaction.saleId || null,
         parentTransactionId: isParentRestock ? firstTransaction.id : null,
@@ -240,7 +244,8 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         originalTotal: hasDiscount ? originalTotal : undefined,
         discount: hasDiscount ? totalDiscount : undefined,
         itemCount: sortedTransactions.length,
-        isParentRestock
+        isParentRestock,
+        paymentMethod
       });
     });
     
@@ -296,7 +301,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                   <TableHead>
                     {filterIsAdjustment ? 'Qty Diff' : 'Total'}
                   </TableHead>
-                  <TableHead>Type</TableHead>
+                  {filterIsSale && <TableHead>Payment</TableHead>}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -332,11 +337,6 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                           </TableCell>
                           <TableCell>
                             {renderQuantityBadge(transaction.quantity)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getTransactionTypeColor(transaction.type)}>
-                              {transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)}
-                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             {isAdmin && (
@@ -375,18 +375,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                             </TableCell>
                             <TableCell>{group.userName}</TableCell>
                             <TableCell>{formatCurrency(group.totalAmount)}</TableCell>
-                            <TableCell>
-                              <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                                <span className="flex items-center">
-                                  Restock
-                                </span>
-                              </Badge>
-                              {group.discount && group.discount > 0 && (
-                                <Badge className="ml-2 bg-red-100 text-red-800">
-                                  Discount: {formatCurrency(group.discount)}
-                                </Badge>
-                              )}
-                            </TableCell>
+                            {filterIsSale && <TableCell></TableCell>}
                             <TableCell className="text-right">
                               <div className="flex items-center justify-end space-x-1">
                                 {isAdmin && (
@@ -471,25 +460,11 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               formatCurrency(group.totalAmount)
                             )}
                           </TableCell>
-                          <TableCell>
-                            <Badge className={getTransactionTypeColor(group.transactions[0].type)}>
-                              <span className="flex items-center">
-                                {getTransactionTypeIcon(
-                                  group.transactions[0].type, 
-                                  group.transactions[0].productId
-                                )}
-                                {group.transactions[0].type === 'restock' && 
-                                isBulkRestockProduct(group.transactions[0].productId) 
-                                  ? 'Monthly Restock' 
-                                  : group.transactions[0].type}
-                              </span>
-                            </Badge>
-                            {group.discount && group.discount > 0 && (
-                              <Badge className="ml-2 bg-red-100 text-red-800">
-                                Discount: {formatCurrency(group.discount)}
-                              </Badge>
-                            )}
-                          </TableCell>
+                          {filterIsSale && (
+                            <TableCell>
+                              {group.paymentMethod || '-'}
+                            </TableCell>
+                          )}
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end space-x-1">
                               {isAdmin && (
@@ -545,14 +520,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                               <TableCell>
                                 {transaction.quantity} × {formatCurrency(transaction.price / transaction.quantity)}
                               </TableCell>
-                              <TableCell>
-                                {transaction.discount && transaction.discount > 0 && (
-                                  <Badge className="mr-2 text-[0.65rem] py-0 px-1 bg-red-100 text-red-800 flex items-center">
-                                    <Percent className="h-2 w-2 mr-0.5" />
-                                    {formatCurrency(transaction.discount)}
-                                  </Badge>
-                                )}
-                              </TableCell>
+                              {filterIsSale && <TableCell></TableCell>}
                               <TableCell className="text-right">
                                 {transaction.originalPrice && transaction.originalPrice > transaction.price ? (
                                   <div className="flex flex-col items-end">
@@ -575,7 +543,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={filterIsAdjustment ? 5 : 6} className="text-center py-6 text-muted-foreground">
+                    <TableCell colSpan={filterIsSale ? 6 : (filterIsAdjustment ? 5 : 5)} className="text-center py-6 text-muted-foreground">
                       No transactions found for the selected filter.
                     </TableCell>
                   </TableRow>

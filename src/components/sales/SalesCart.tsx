@@ -23,7 +23,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
     setIsProcessing(true);
     
     try {
-      await recordBulkSale(items, 0, paymentMethod);
+      await recordBulkSale(items, paymentMethod);
       clearCart();
     } catch (error) {
       console.error("Error processing sale:", error);
