@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ShoppingCart from './ShoppingCart';
@@ -22,7 +23,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
     setIsProcessing(true);
     
     try {
-      await recordBulkSale(items, paymentMethod);
+      await recordBulkSale(items, 0, paymentMethod);
       clearCart();
     } catch (error) {
       console.error("Error processing sale:", error);
