@@ -34,7 +34,7 @@ import {
 
 interface ServiceIncome extends FinanceRecord {
   serviceName: string;
-  servicesList?: Array<{ id: string, name: string, price: number }>;
+  servicesList?: Array<{ id: string, name: string, price: number, quantity?: number }>;
   discount?: number;
   originalTotal?: number;
   tipAmount?: number;
@@ -88,7 +88,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                   servicesList = parsedCategory.serviceNames.map((name: string, index: number) => ({
                     id: parsedCategory.serviceIds[index],
                     name,
-                    price: parsedCategory.servicePrices[index]
+                    price: parsedCategory.servicePrices[index],
+                    quantity: parsedCategory.serviceQuantities ? parsedCategory.serviceQuantities[index] : 1
                   }));
                 }
                 
@@ -151,7 +152,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
             servicesList = parsedCategory.serviceNames.map((name: string, index: number) => ({
               id: parsedCategory.serviceIds[index],
               name,
-              price: parsedCategory.servicePrices[index]
+              price: parsedCategory.servicePrices[index],
+              quantity: parsedCategory.serviceQuantities ? parsedCategory.serviceQuantities[index] : 1
             }));
           }
           
@@ -227,23 +229,34 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
     }
     
     if (record.servicesList.length === 1) {
-      return record.servicesList[0].name;
+      const service = record.servicesList[0];
+      const quantity = service.quantity || 1;
+      return quantity > 1 ? `${service.name} × ${quantity}` : service.name;
     }
+    
+    const totalQuantity = record.servicesList.reduce((sum, service) => sum + (service.quantity || 1), 0);
     
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger className="text-left underline decoration-dotted">
-            Multiple Services ({record.servicesList.length})
+            Multiple Services ({totalQuantity} items)
           </TooltipTrigger>
           <TooltipContent className="bg-white p-2 border rounded shadow-md max-w-xs">
             <div className="space-y-1 text-xs">
-              {record.servicesList.map((service, idx) => (
-                <div key={idx} className="flex justify-between gap-2">
-                  <span>{service.name}:</span>
-                  <span className="font-medium">${service.price.toFixed(2)}</span>
-                </div>
-              ))}
+              {record.servicesList.map((service, idx) => {
+                const quantity = service.quantity || 1;
+                const lineTotal = service.price * quantity;
+                return (
+                  <div key={idx} className="flex justify-between gap-2">
+                    <span>
+                      {service.name}
+                      {quantity > 1 && <span className="text-muted-foreground"> × {quantity}</span>}:
+                    </span>
+                    <span className="font-medium">${lineTotal.toFixed(2)}</span>
+                  </div>
+                );
+              })}
               {record.discount > 0 && (
                 <div className="flex justify-between gap-2 text-rose-600 pt-1 border-t">
                   <span>Discount:</span>

@@ -1,4 +1,3 @@
-
 export interface Product {
   id: string;
   name: string;
@@ -77,6 +76,7 @@ export interface Service {
   description: string;
   price: number;
   active?: boolean; // Added active property for soft delete functionality
+  quantity?: number; // Added for service quantity support
 }
 
 export interface FinanceRecord {

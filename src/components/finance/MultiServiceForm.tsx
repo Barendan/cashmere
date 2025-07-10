@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X, BadgePercent, DollarSign } from "lucide-react";
+import { CalendarIcon, Plus, X, BadgePercent, DollarSign, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ const serviceFormSchema = z.object({
         id: z.string().min(1, "Service is required"),
         name: z.string(),
         price: z.number(),
+        quantity: z.number().min(1, "Quantity must be at least 1"),
       })
     )
     .min(1, "At least one service is required"),
@@ -85,7 +86,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, update } = useFieldArray({
     control: form.control,
     name: "services",
   });
@@ -127,31 +128,49 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
   }, [toast]);
 
   const addService = (service: Service) => {
-    const isAlreadyAdded = form.getValues().services.some(
+    const existingServiceIndex = form.getValues().services.findIndex(
       (s) => s.id === service.id
     );
 
-    if (!isAlreadyAdded) {
+    if (existingServiceIndex !== -1) {
+      // Service already exists, increase quantity
+      const existingService = form.getValues().services[existingServiceIndex];
+      update(existingServiceIndex, {
+        ...existingService,
+        quantity: existingService.quantity + 1,
+      });
+      toast({
+        title: "Quantity increased",
+        description: `${service.name} quantity increased to ${existingService.quantity + 1}`,
+      });
+    } else {
+      // New service, add with quantity 1
       append({
         id: service.id,
         name: service.name,
         price: service.price,
-      });
-    } else {
-      toast({
-        title: "Service already added",
-        description: `${service.name} is already in the list`,
+        quantity: 1,
       });
     }
+  };
+
+  const updateServiceQuantity = (index: number, newQuantity: number) => {
+    if (newQuantity < 1) return;
+    
+    const service = form.getValues().services[index];
+    update(index, {
+      ...service,
+      quantity: newQuantity,
+    });
   };
 
   const calculateTotal = () => {
     const serviceTotal = form
       .getValues()
-      .services.reduce((total, service) => total + service.price, 0);
+      .services.reduce((total, service) => total + (service.price * service.quantity), 0);
     
-      const discount = Number(form.getValues().discount || 0);
-      const tip = Number(form.getValues().tip || 0);
+    const discount = Number(form.getValues().discount || 0);
+    const tip = Number(form.getValues().tip || 0);
     return Math.max(0, serviceTotal - discount + tip);
   };
 
@@ -164,7 +183,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
 
     try {
       const servicesTotal = data.services.reduce(
-        (sum, service) => sum + service.price,
+        (sum, service) => sum + (service.price * service.quantity),
         0
       );
       const discountAmount = data.discount || 0;
@@ -175,6 +194,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         serviceIds: data.services.map((service) => service.id),
         serviceNames: data.services.map((service) => service.name),
         servicePrices: data.services.map((service) => service.price),
+        serviceQuantities: data.services.map((service) => service.quantity),
         discount: discountAmount,
         originalTotal: servicesTotal,
         tipAmount: tipAmount
@@ -221,7 +241,8 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
           servicesList: data.services.map(service => ({
             id: service.id,
             name: service.name,
-            price: service.price
+            price: service.price,
+            quantity: service.quantity
           })),
           discount: discountAmount,
           originalTotal: servicesTotal,
@@ -491,22 +512,58 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                         key={field.id}
                         className="flex items-center justify-between bg-accent/50 rounded-md p-2"
                       >
-                        <div>
-                          <span className="font-medium">
-                            {field.name}
-                          </span>
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            ${field.price.toFixed(2)}
-                          </span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              {field.name}
+                            </span>
+                            {field.quantity > 1 && (
+                              <span className="text-sm text-muted-foreground">
+                                × {field.quantity}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {field.quantity} × ${field.price.toFixed(2)} = ${(field.price * field.quantity).toFixed(2)}
+                          </div>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => remove(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateServiceQuantity(index, field.quantity - 1)}
+                            disabled={field.quantity <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={field.quantity}
+                            onChange={(e) => updateServiceQuantity(index, parseInt(e.target.value) || 1)}
+                            className="w-12 h-6 text-xs text-center p-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => updateServiceQuantity(index, field.quantity + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => remove(index)}
+                            className="h-6 w-6 ml-1"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -521,7 +578,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Subtotal:</span>
                     <span className="text-sm">
-                      ${fields.reduce((sum, field) => sum + field.price, 0).toFixed(2)}
+                      ${fields.reduce((sum, field) => sum + (field.price * field.quantity), 0).toFixed(2)}
                     </span>
                   </div>
                   {calculateDiscount() > 0 && (
