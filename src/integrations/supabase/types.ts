@@ -76,6 +76,7 @@ export type Database = {
           cost_price: number
           created_at: string
           description: string | null
+          for_sale: boolean
           id: string
           ingredients: string | null
           last_restocked: string | null
@@ -92,6 +93,7 @@ export type Database = {
           cost_price: number
           created_at?: string
           description?: string | null
+          for_sale?: boolean
           id?: string
           ingredients?: string | null
           last_restocked?: string | null
@@ -108,6 +110,7 @@ export type Database = {
           cost_price?: number
           created_at?: string
           description?: string | null
+          for_sale?: boolean
           id?: string
           ingredients?: string | null
           last_restocked?: string | null

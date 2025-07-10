@@ -31,6 +31,7 @@ export const addProductToDb = async (product: Omit<Product, "id">) => {
     size: product.size,
     ingredients: product.ingredients,
     skin_concerns: product.skinConcerns,
+    for_sale: product.forSale ?? true, // Default to true if not specified
   };
   
   if (product.lastRestocked) {
@@ -68,6 +69,7 @@ export const updateProductInDb = async (id: string, updates: Partial<Product>) =
   if (updates.size !== undefined) supabaseUpdates.size = updates.size;
   if (updates.ingredients !== undefined) supabaseUpdates.ingredients = updates.ingredients;
   if (updates.skinConcerns !== undefined) supabaseUpdates.skin_concerns = updates.skinConcerns;
+  if (updates.forSale !== undefined) supabaseUpdates.for_sale = updates.forSale;
   supabaseUpdates.updated_at = new Date().toISOString();
   
   const { error } = await supabase

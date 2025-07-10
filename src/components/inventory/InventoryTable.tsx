@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Product } from "@/models/types";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -74,6 +75,14 @@ export default function InventoryTable({
               <TableCell className="font-medium">
                 <div>
                   {product.name}
+                  {product.forSale === false && (
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-800 border-blue-200 ml-2"
+                    >
+                      Internal Use
+                    </Badge>
+                  )}
                   {product.stockQuantity <= product.lowStockThreshold && product.stockQuantity > 0 && (
                     <Badge
                       variant="outline"

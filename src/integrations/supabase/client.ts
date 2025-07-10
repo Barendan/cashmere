@@ -84,7 +84,8 @@ export const mapProductRowToProduct = (row: ProductRow) => ({
   lastRestocked: row.last_restocked ? new Date(row.last_restocked) : undefined,
   size: row.size ?? undefined,
   ingredients: row.ingredients ?? undefined,
-  skinConcerns: row.skin_concerns ?? undefined
+  skinConcerns: row.skin_concerns ?? undefined,
+  forSale: row.for_sale ?? true // Default to true if not specified
 });
 
 // Add mapping helpers for the new Service and Finance types

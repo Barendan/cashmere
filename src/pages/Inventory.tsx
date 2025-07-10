@@ -49,6 +49,7 @@ const InventoryPage = () => {
     sellPrice: 0,
     stockQuantity: 0,
     lowStockThreshold: 5,
+    forSale: true,
   });
   const [productUpdates, setProductUpdates] = useState<{product: Product, newQuantity: number}[]>([]);
   const [thresholdValue, setThresholdValue] = useState(5);
@@ -74,7 +75,19 @@ const InventoryPage = () => {
   }, [isMonthlyRestockModalOpen, products]);
 
   const openAddModal = () => setIsAddModalOpen(true);
-  const closeAddModal = () => setIsAddModalOpen(false);
+  const closeAddModal = () => {
+    setIsAddModalOpen(false);
+    setNewProduct({
+      name: "",
+      description: "",
+      category: "Skincare",
+      costPrice: 0,
+      sellPrice: 0,
+      stockQuantity: 0,
+      lowStockThreshold: 5,
+      forSale: true,
+    });
+  };
   const openEditModal = (product: Product) => {
     setSelectedProduct(product);
     setIsEditModalOpen(true);
@@ -290,7 +303,6 @@ const InventoryPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                {/* <Label>Inventory Status</Label> */}
                 <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-200">
                   {lowStockCount} Low Stock Items
                 </Badge>
@@ -380,6 +392,20 @@ const InventoryPage = () => {
                   <SelectItem value="Makeup">Makeup</SelectItem>
                   <SelectItem value="Haircare">Haircare</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="productType" className="text-right">
+                Product Type
+              </Label>
+              <Select onValueChange={(value) => setNewProduct(prev => ({ ...prev, forSale: value === 'sellable' }))}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select product type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sellable">For Sale to Customers</SelectItem>
+                  <SelectItem value="internal">Internal Use Only</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -500,6 +526,25 @@ const InventoryPage = () => {
                 </Select>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="productType" className="text-right">
+                  Product Type
+                </Label>
+                <Select
+                  onValueChange={(value) =>
+                    setSelectedProduct({ ...selectedProduct, forSale: value === 'sellable' })
+                  }
+                  defaultValue={selectedProduct.forSale === false ? 'internal' : 'sellable'}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select product type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sellable">For Sale to Customers</SelectItem>
+                    <SelectItem value="internal">Internal Use Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="costPrice" className="text-right">
                   Cost Price
                 </Label>
@@ -602,7 +647,6 @@ const InventoryPage = () => {
                   </TableHeader>
                   <TableBody>
                     {productUpdates.map((item, index) => {
-                      // console.log('produceeee', productUpdates)
                       const isLowStock = item.product.stockQuantity <= item.product.lowStockThreshold;
                       const isOutOfStock = item.product.stockQuantity === 0;
                       const isIncreasing = item.newQuantity > item.product.stockQuantity;
@@ -624,6 +668,14 @@ const InventoryPage = () => {
                         >
                           <TableCell className="font-medium">
                             {item.product.name}
+                            {item.product.forSale === false && (
+                              <Badge 
+                                variant="outline" 
+                                className="bg-blue-50 text-blue-800 border-blue-200 ml-2"
+                              >
+                                Internal Use
+                              </Badge>
+                            )}
                             {isOutOfStock && (
                               <Badge 
                                 variant="outline" 

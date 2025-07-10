@@ -17,8 +17,13 @@ const ProductList = ({ products }: ProductListProps) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const { addItem, removeItem, isProductInCart } = useCart();
   
+  // Filter products to only show those available for sale, with stock, and not bulk restock products
   const availableProducts = products
-    .filter((product) => product.stockQuantity > 0 && !isBulkRestockProduct(product.id))
+    .filter((product) => 
+      product.stockQuantity > 0 && 
+      !isBulkRestockProduct(product.id) &&
+      product.forSale !== false // Only show products that are for sale (true or undefined defaults to true)
+    )
     .sort((a, b) => a.name.localeCompare(b.name));
   
   const filteredProducts = availableProducts.filter(product => {

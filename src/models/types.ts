@@ -12,6 +12,7 @@ export interface Product {
   size?: string;
   ingredients?: string;
   skinConcerns?: string;
+  forSale?: boolean;
 }
 
 export interface Transaction {
