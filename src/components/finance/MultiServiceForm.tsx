@@ -96,6 +96,7 @@ const MultiServiceForm = ({ onIncomeAdded }) => {
         const { data, error } = await supabase
           .from("services")
           .select("*")
+          .eq('active', true) // Filter by active services only
           .order("name", { ascending: true });
 
         if (error) throw error;

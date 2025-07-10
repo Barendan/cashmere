@@ -71,7 +71,8 @@ const IncomeForm = ({ onIncomeAdded }) => {
       try {
         const { data, error } = await supabase
           .from("services")
-          .select("*");
+          .select("*")
+          .eq('active', true); // Filter by active services only
           
         if (error) throw error;
         

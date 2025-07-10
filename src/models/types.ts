@@ -1,3 +1,4 @@
+
 export interface Product {
   id: string;
   name: string;
@@ -75,6 +76,7 @@ export interface Service {
   name: string;
   description: string;
   price: number;
+  active?: boolean; // Added active property for soft delete functionality
 }
 
 export interface FinanceRecord {
