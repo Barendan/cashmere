@@ -17,7 +17,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
   const { toast } = useToast();
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   
-  const handleCompleteSale = async (paymentMethod?: string) => {
+  const handleCompleteSale = async (paymentMethod: string) => {
     if (items.length === 0) return;
     
     setIsProcessing(true);
