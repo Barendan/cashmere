@@ -47,7 +47,7 @@ interface DataContextType {
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
-  recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number) => Promise<void>;
+  recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number, paymentMethod?: string) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -785,10 +785,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
 
-  // Add the delete transaction function
   const deleteTransaction = async (transaction: Transaction): Promise<boolean> => {
     try {
-      // If this is a sale, we need to update the product stock
       if (transaction.type === 'sale') {
         const product = products.find(p => p.id === transaction.productId);
         if (product) {
@@ -797,7 +795,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else if (transaction.type === 'restock') {
         const product = products.find(p => p.id === transaction.productId);
         if (product) {
-          // Don't let stock go below zero
           const newQuantity = Math.max(0, product.stockQuantity - transaction.quantity);
           await updateProductStock(transaction.productId, newQuantity);
         }
@@ -805,7 +802,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       await deleteTransactionById(transaction.id);
       
-      // Update the local state to remove the deleted transaction
       setTransactions(prevTransactions => 
         prevTransactions.filter(t => t.id !== transaction.id)
       );
@@ -828,13 +824,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Add the delete sale function
   const deleteSale = async (saleId: string): Promise<boolean> => {
     try {
-      // Find all transactions associated with this sale
       const saleTransactions = transactions.filter(t => t.saleId === saleId);
       
-      // Update product stock for each transaction
       for (const transaction of saleTransactions) {
         if (transaction.type === 'sale') {
           const product = products.find(p => p.id === transaction.productId);
@@ -844,10 +837,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
-      // Delete the sale and all its transactions
       await deleteSaleAndTransactions(saleId);
       
-      // Update the local state
       setTransactions(prevTransactions => 
         prevTransactions.filter(t => t.saleId !== saleId)
       );
