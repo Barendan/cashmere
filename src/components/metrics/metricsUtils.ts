@@ -1,8 +1,9 @@
+
 import { Transaction, Product } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
 
 export const getDateRanges = () => {
-  // Use EST timezone for all date calculations
+  // Use consistent UTC timezone for all date calculations
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 7);
@@ -10,27 +11,28 @@ export const getDateRanges = () => {
   thirtyDaysAgo.setDate(today.getDate() - 30);
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   
-  // Create EST-aware dates for today and yesterday
-  const estOffset = -5; // EST is UTC-5 (or UTC-4 during DST, but we'll use -5 for consistency)
-  const nowEST = new Date(today.getTime() + (estOffset * 60 * 60 * 1000));
+  // Create UTC-aware dates for today and yesterday
+  const nowUTC = new Date();
   
-  // Start of today in EST
-  const startOfToday = new Date(nowEST.getFullYear(), nowEST.getMonth(), nowEST.getDate());
+  // Start of today in UTC
+  const startOfToday = new Date(nowUTC.getFullYear(), nowUTC.getMonth(), nowUTC.getDate());
   
-  // Start and end of yesterday in EST
-  const startOfYesterday = new Date(nowEST);
-  startOfYesterday.setDate(nowEST.getDate() - 1);
+  // Start and end of yesterday in UTC
+  const startOfYesterday = new Date(nowUTC);
+  startOfYesterday.setDate(nowUTC.getDate() - 1);
   startOfYesterday.setHours(0, 0, 0, 0);
   
-  const endOfYesterday = new Date(nowEST);
-  endOfYesterday.setDate(nowEST.getDate() - 1);
+  const endOfYesterday = new Date(nowUTC);
+  endOfYesterday.setDate(nowUTC.getDate() - 1);
   endOfYesterday.setHours(23, 59, 59, 999);
 
-  console.log("EST Date ranges:", {
+  console.log("UTC Date ranges:", {
     startOfToday: startOfToday.toISOString(),
     startOfYesterday: startOfYesterday.toISOString(),
     endOfYesterday: endOfYesterday.toISOString(),
-    nowEST: nowEST.toISOString()
+    sevenDaysAgo: sevenDaysAgo.toISOString(),
+    thirtyDaysAgo: thirtyDaysAgo.toISOString(),
+    nowUTC: nowUTC.toISOString()
   });
 
   return {
@@ -124,7 +126,7 @@ export const calculateSalesDataFromTransactions = (
     thirtyDaysAgo: dateRanges.thirtyDaysAgo.toISOString()
   });
 
-  // Filter transactions based on time range
+  // Filter transactions based on time range - compare UTC dates directly
   const filteredTransactions = salesTransactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
     
@@ -146,16 +148,21 @@ export const calculateSalesDataFromTransactions = (
   
   console.log(`Filtered to ${filteredTransactions.length} transactions after applying timeRange filter`);
   
-  // If no transaction data, return empty array with debug info
+  // If no transaction data, return empty array but log for debugging
   if (filteredTransactions.length === 0) {
     console.warn("No transaction data found for the selected time range");
+    console.warn("Available transactions sample:", salesTransactions.slice(0, 3).map(t => ({
+      id: t.id,
+      date: t.date,
+      dateISO: new Date(t.date).toISOString()
+    })));
     return [];
   }
   
   const salesByDate = new Map();
   
   filteredTransactions.forEach(transaction => {
-    // Ensure consistent date formatting in EST
+    // Ensure consistent date formatting in UTC
     const transactionDate = new Date(transaction.date);
     const dateStr = transactionDate.toISOString().split('T')[0];
     

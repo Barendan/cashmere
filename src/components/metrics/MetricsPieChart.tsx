@@ -25,7 +25,7 @@ const MetricsPieChart = ({
   tooltipLabel = "Value",
   colors = COLORS,
   height = "100%",
-  outerRadius = 70  // Reduced further to make room for labels with lines
+  outerRadius = 60  // Reduced further to make more room for labels
 }: MetricsPieChartProps) => {
   
   const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
@@ -45,15 +45,15 @@ const MetricsPieChart = ({
     );
   };
 
-  // Render custom label with smaller font and truncation
+  // Render custom label with optimized positioning and smaller font
   const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, name, percent }: any) => {
     const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 30; // Position labels further out
+    const radius = outerRadius + 35; // Position labels further out for better spacing
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
     
-    // Truncate long names
-    const maxLength = 10;
+    // More aggressive truncation for better fit
+    const maxLength = 8;
     const truncatedName = name.length > maxLength ? `${name.substring(0, maxLength)}...` : name;
     const labelText = `${truncatedName}: ${(percent * 100).toFixed(0)}%`;
 
@@ -64,7 +64,7 @@ const MetricsPieChart = ({
         fill="#374151"
         textAnchor={x > cx ? 'start' : 'end'} 
         dominantBaseline="central"
-        fontSize="11"
+        fontSize="10"
         fontWeight="500"
       >
         {labelText}
@@ -74,7 +74,7 @@ const MetricsPieChart = ({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <PieChart margin={{ top: 20, right: 30, bottom: 20, left: 30 }}>
+      <PieChart margin={{ top: 25, right: 40, bottom: 25, left: 40 }}>
         <Pie
           data={data}
           dataKey="value"

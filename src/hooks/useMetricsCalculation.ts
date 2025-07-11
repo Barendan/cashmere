@@ -1,3 +1,4 @@
+
 import { useMemo } from "react";
 import { Transaction, Product } from "@/models/types";
 import { TimeRangeType, ServiceIncomeWithCategory } from "@/components/metrics/types";
@@ -36,6 +37,13 @@ export const useProductMetricsCalculation = (
       return product !== undefined;
     });
     console.log(`Filtered ${sellableTransactions.length} sellable sales transactions from ${filtered.length} total sales transactions`);
+    console.log("Sample sales transactions:", sellableTransactions.slice(0, 3).map(t => ({
+      id: t.id,
+      date: t.date,
+      dateISO: new Date(t.date).toISOString(),
+      price: t.price,
+      productName: t.productName
+    })));
     return sellableTransactions;
   }, [transactions, sellableProducts]);
   
@@ -59,10 +67,30 @@ export const useProductMetricsCalculation = (
     return performance;
   }, [salesTransactions, sellableProducts]);
 
-  // Fix: Calculate sales data from transactions instead of sales table
+  // Calculate sales data from transactions with proper debugging
   const salesData = useMemo(() => {
+    console.log(`Calculating sales data with timeRange: ${timeRange}`);
+    console.log(`Input data - salesTransactions: ${salesTransactions.length}, timeRange: ${timeRange}`);
+    
     const data = metricsUtils.calculateSalesDataFromTransactions(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-    console.log(`Generated sales data with ${data.length} data points from transactions`);
+    console.log(`Generated sales data with ${data.length} data points:`, data);
+    
+    // If no data, provide additional debugging
+    if (data.length === 0) {
+      console.warn("DEBUGGING: Sales data is empty");
+      console.warn("Available sales transactions:", salesTransactions.slice(0, 5).map(t => ({
+        id: t.id,
+        date: t.date,
+        dateISO: new Date(t.date).toISOString(),
+        price: t.price
+      })));
+      console.warn("Date filters:", {
+        sevenDaysAgo: sevenDaysAgo.toISOString(),
+        thirtyDaysAgo: thirtyDaysAgo.toISOString(),
+        timeRange
+      });
+    }
+    
     return data;
   }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
