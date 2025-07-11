@@ -1,4 +1,3 @@
-
 import { Transaction, Product } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
 
@@ -9,12 +8,24 @@ export const getDateRanges = () => {
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 30);
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  // Add daily date ranges
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfYesterday = new Date(today);
+  startOfYesterday.setDate(today.getDate() - 1);
+  startOfYesterday.setHours(0, 0, 0, 0);
+  const endOfYesterday = new Date(today);
+  endOfYesterday.setDate(today.getDate() - 1);
+  endOfYesterday.setHours(23, 59, 59, 999);
 
   return {
     today,
     sevenDaysAgo,
     thirtyDaysAgo,
-    startOfMonth
+    startOfMonth,
+    startOfToday,
+    startOfYesterday,
+    endOfYesterday
   };
 };
 
@@ -27,11 +38,26 @@ export const filterTransactionsByType = (
 
 export const filterTransactionsByDateRange = (
   transactions: Transaction[],
-  startDate: Date
+  startDate: Date,
+  endDate?: Date
 ): Transaction[] => {
   return transactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
+    if (endDate) {
+      return transactionDate >= startDate && transactionDate <= endDate;
+    }
     return transactionDate >= startDate;
+  });
+};
+
+export const filterTransactionsByDayRange = (
+  transactions: Transaction[],
+  startDate: Date,
+  endDate: Date
+): Transaction[] => {
+  return transactions.filter(transaction => {
+    const transactionDate = new Date(transaction.date);
+    return transactionDate >= startDate && transactionDate <= endDate;
   });
 };
 
@@ -130,6 +156,17 @@ export const calculateProductCategories = (
   });
   
   return Array.from(categories.values());
+};
+
+export const filterServiceIncomesByDayRange = (
+  serviceIncomes: ServiceIncomeWithCategory[],
+  startDate: Date,
+  endDate: Date
+): ServiceIncomeWithCategory[] => {
+  return serviceIncomes.filter(income => {
+    const incomeDate = new Date(income.date);
+    return incomeDate >= startDate && incomeDate <= endDate;
+  });
 };
 
 export const calculateServicesData = (

@@ -11,7 +11,6 @@ import { Navigate } from "react-router-dom";
 import { TimeRangeType } from "@/components/metrics/types";
 import { useProductMetricsCalculation, useServiceMetricsCalculation } from "@/hooks/useMetricsCalculation";
 import useMetricsExport from "@/hooks/useMetricsExport";
-import TimeRangeSelector from "@/components/metrics/TimeRangeSelector";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
@@ -25,23 +24,29 @@ const Metrics = () => {
     productPerformance,
     salesData,
     categoryData,
-    totalRevenue,
-    totalItemsSold,
-    totalProfit
+    todayRevenue,
+    todayItemsSold,
+    todayProfit,
+    yesterdayRevenue,
+    yesterdayItemsSold,
+    yesterdayProfit
   } = useProductMetricsCalculation(products, transactions, sales, timeRange);
 
   const {
     servicesData,
     serviceTypeData,
-    totalServiceRevenue,
-    totalServicesProvided,
-    totalUniqueCustomers
+    todayServiceRevenue,
+    todayServicesProvided,
+    todayUniqueCustomers,
+    yesterdayServiceRevenue,
+    yesterdayServicesProvided,
+    yesterdayUniqueCustomers
   } = useServiceMetricsCalculation(serviceIncomes, timeRange);
 
   // Output service metrics data for debugging
   console.log(`Service Metrics Data: ${servicesData.length} services, ${serviceIncomes.length} income records`);
   console.log(`Service Type Data: ${serviceTypeData.length} service types`);
-  console.log(`Service Metrics Totals: Revenue: ${totalServiceRevenue}, Services: ${totalServicesProvided}, Customers: ${totalUniqueCustomers}`);
+  console.log(`Service Metrics Totals: Today Revenue: ${todayServiceRevenue}, Services: ${todayServicesProvided}, Customers: ${todayUniqueCustomers}`);
 
   // Setup metrics export
   const { exportData: exportProductsData, isExporting: isExportingProducts } = useMetricsExport({
@@ -100,9 +105,12 @@ const Metrics = () => {
       </div>
       {metricView === "products" ? (
         <ProductMetrics
-          totalRevenue={totalRevenue}
-          totalProfit={totalProfit}
-          totalItemsSold={totalItemsSold}
+          todayRevenue={todayRevenue}
+          todayProfit={todayProfit}
+          todayItemsSold={todayItemsSold}
+          yesterdayRevenue={yesterdayRevenue}
+          yesterdayProfit={yesterdayProfit}
+          yesterdayItemsSold={yesterdayItemsSold}
           salesData={salesData}
           productPerformance={productPerformance}
           categoryData={categoryData}
@@ -113,9 +121,12 @@ const Metrics = () => {
         />
       ) : (
         <ServiceMetrics
-          totalServiceRevenue={totalServiceRevenue}
-          totalUniqueCustomers={totalUniqueCustomers}
-          totalServicesProvided={totalServicesProvided}
+          todayServiceRevenue={todayServiceRevenue}
+          todayUniqueCustomers={todayUniqueCustomers}
+          todayServicesProvided={todayServicesProvided}
+          yesterdayServiceRevenue={yesterdayServiceRevenue}
+          yesterdayUniqueCustomers={yesterdayUniqueCustomers}
+          yesterdayServicesProvided={yesterdayServicesProvided}
           servicesData={servicesData}
           serviceTypeData={serviceTypeData}
           timeRange={timeRange}

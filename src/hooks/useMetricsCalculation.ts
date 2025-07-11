@@ -11,7 +11,7 @@ export const useProductMetricsCalculation = (
   timeRange: TimeRangeType
 ) => {
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
-  const { startOfMonth, sevenDaysAgo, thirtyDaysAgo } = dateRanges;
+  const { startOfMonth, sevenDaysAgo, thirtyDaysAgo, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
   
   // Filter out internal-use products from metrics calculations
   const sellableProducts = useMemo(() => {
@@ -23,6 +23,9 @@ export const useProductMetricsCalculation = (
     startOfMonth: startOfMonth.toISOString(),
     sevenDaysAgo: sevenDaysAgo.toISOString(),
     thirtyDaysAgo: thirtyDaysAgo.toISOString(),
+    startOfToday: startOfToday.toISOString(),
+    startOfYesterday: startOfYesterday.toISOString(),
+    endOfYesterday: endOfYesterday.toISOString(),
     timeRange
   });
 
@@ -37,11 +40,19 @@ export const useProductMetricsCalculation = (
     return sellableTransactions;
   }, [transactions, sellableProducts]);
   
-  const currentMonthTransactions = useMemo(() => {
-    const filtered = metricsUtils.filterTransactionsByDateRange(salesTransactions, startOfMonth);
-    console.log(`Found ${filtered.length} transactions in current month`);
+  // Today's transactions
+  const todayTransactions = useMemo(() => {
+    const filtered = metricsUtils.filterTransactionsByDateRange(salesTransactions, startOfToday);
+    console.log(`Found ${filtered.length} transactions for today`);
     return filtered;
-  }, [salesTransactions, startOfMonth]);
+  }, [salesTransactions, startOfToday]);
+
+  // Yesterday's transactions
+  const yesterdayTransactions = useMemo(() => {
+    const filtered = metricsUtils.filterTransactionsByDayRange(salesTransactions, startOfYesterday, endOfYesterday);
+    console.log(`Found ${filtered.length} transactions for yesterday`);
+    return filtered;
+  }, [salesTransactions, startOfYesterday, endOfYesterday]);
 
   const productPerformance = useMemo(() => {
     const performance = metricsUtils.calculateProductPerformance(salesTransactions, sellableProducts);
@@ -61,19 +72,30 @@ export const useProductMetricsCalculation = (
     return data;
   }, [salesTransactions, sellableProducts]);
 
-  const { totalRevenue, totalItemsSold, totalProfit } = useMemo(() => {
-    const metrics = metricsUtils.calculateTotalMetrics(currentMonthTransactions, sellableProducts);
-    console.log("Product totals (sellable only):", metrics);
+  // Today's metrics
+  const { totalRevenue: todayRevenue, totalItemsSold: todayItemsSold, totalProfit: todayProfit } = useMemo(() => {
+    const metrics = metricsUtils.calculateTotalMetrics(todayTransactions, sellableProducts);
+    console.log("Today's product totals (sellable only):", metrics);
     return metrics;
-  }, [currentMonthTransactions, sellableProducts]);
+  }, [todayTransactions, sellableProducts]);
+
+  // Yesterday's metrics
+  const { totalRevenue: yesterdayRevenue, totalItemsSold: yesterdayItemsSold, totalProfit: yesterdayProfit } = useMemo(() => {
+    const metrics = metricsUtils.calculateTotalMetrics(yesterdayTransactions, sellableProducts);
+    console.log("Yesterday's product totals (sellable only):", metrics);
+    return metrics;
+  }, [yesterdayTransactions, sellableProducts]);
 
   return {
     productPerformance,
     salesData,
     categoryData,
-    totalRevenue,
-    totalItemsSold,
-    totalProfit
+    todayRevenue,
+    todayItemsSold,
+    todayProfit,
+    yesterdayRevenue,
+    yesterdayItemsSold,
+    yesterdayProfit
   };
 };
 
@@ -82,10 +104,24 @@ export const useServiceMetricsCalculation = (
   timeRange: TimeRangeType
 ) => {
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
-  const { sevenDaysAgo, thirtyDaysAgo, startOfMonth } = dateRanges;
+  const { sevenDaysAgo, thirtyDaysAgo, startOfMonth, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
 
   // Log service income data for debugging
   console.log(`Processing ${serviceIncomes.length} service income records for metrics`);
+
+  // Today's service incomes
+  const todayServiceIncomes = useMemo(() => {
+    const filtered = metricsUtils.filterServiceIncomesByDayRange(serviceIncomes, startOfToday, new Date());
+    console.log(`Found ${filtered.length} service incomes for today`);
+    return filtered;
+  }, [serviceIncomes, startOfToday]);
+
+  // Yesterday's service incomes
+  const yesterdayServiceIncomes = useMemo(() => {
+    const filtered = metricsUtils.filterServiceIncomesByDayRange(serviceIncomes, startOfYesterday, endOfYesterday);
+    console.log(`Found ${filtered.length} service incomes for yesterday`);
+    return filtered;
+  }, [serviceIncomes, startOfYesterday, endOfYesterday]);
 
   const servicesData = useMemo(() => {
     const data = metricsUtils.calculateServicesData(serviceIncomes, timeRange, { sevenDaysAgo, thirtyDaysAgo });
@@ -99,33 +135,69 @@ export const useServiceMetricsCalculation = (
     return data;
   }, [servicesData]);
 
-  const totalServiceRevenue = useMemo(() => {
-    const total = servicesData.reduce((sum, s) => sum + s.totalRevenue, 0);
-    console.log("Total service revenue:", total);
+  // Today's service metrics
+  const todayServicesData = useMemo(() => {
+    const data = metricsUtils.calculateServicesData(todayServiceIncomes, "daily", { sevenDaysAgo, thirtyDaysAgo });
+    return data;
+  }, [todayServiceIncomes, sevenDaysAgo, thirtyDaysAgo]);
+
+  const todayServiceRevenue = useMemo(() => {
+    const total = todayServicesData.reduce((sum, s) => sum + s.totalRevenue, 0);
+    console.log("Today's service revenue:", total);
     return total;
-  }, [servicesData]);
+  }, [todayServicesData]);
   
-  const totalServicesProvided = useMemo(() => {
-    const total = servicesData.reduce((sum, s) => sum + s.totalSold, 0);
-    console.log("Total services provided:", total);
+  const todayServicesProvided = useMemo(() => {
+    const total = todayServicesData.reduce((sum, s) => sum + s.totalSold, 0);
+    console.log("Today's services provided:", total);
     return total;
-  }, [servicesData]);
+  }, [todayServicesData]);
   
-  const totalUniqueCustomers = useMemo(() => {
+  const todayUniqueCustomers = useMemo(() => {
     const customers = new Set();
-    servicesData.forEach(service => {
+    todayServicesData.forEach(service => {
       service.customers?.forEach((c: string) => customers.add(c));
     });
-    console.log("Total unique customers:", customers.size);
+    console.log("Today's unique customers:", customers.size);
     return customers.size;
-  }, [servicesData]);
+  }, [todayServicesData]);
+
+  // Yesterday's service metrics
+  const yesterdayServicesData = useMemo(() => {
+    const data = metricsUtils.calculateServicesData(yesterdayServiceIncomes, "daily", { sevenDaysAgo, thirtyDaysAgo });
+    return data;
+  }, [yesterdayServiceIncomes, sevenDaysAgo, thirtyDaysAgo]);
+
+  const yesterdayServiceRevenue = useMemo(() => {
+    const total = yesterdayServicesData.reduce((sum, s) => sum + s.totalRevenue, 0);
+    console.log("Yesterday's service revenue:", total);
+    return total;
+  }, [yesterdayServicesData]);
+  
+  const yesterdayServicesProvided = useMemo(() => {
+    const total = yesterdayServicesData.reduce((sum, s) => sum + s.totalSold, 0);
+    console.log("Yesterday's services provided:", total);
+    return total;
+  }, [yesterdayServicesData]);
+  
+  const yesterdayUniqueCustomers = useMemo(() => {
+    const customers = new Set();
+    yesterdayServicesData.forEach(service => {
+      service.customers?.forEach((c: string) => customers.add(c));
+    });
+    console.log("Yesterday's unique customers:", customers.size);
+    return customers.size;
+  }, [yesterdayServicesData]);
 
   return {
     servicesData,
     serviceTypeData,
-    totalServiceRevenue,
-    totalServicesProvided,
-    totalUniqueCustomers
+    todayServiceRevenue,
+    todayServicesProvided,
+    todayUniqueCustomers,
+    yesterdayServiceRevenue,
+    yesterdayServicesProvided,
+    yesterdayUniqueCustomers
   };
 };
 

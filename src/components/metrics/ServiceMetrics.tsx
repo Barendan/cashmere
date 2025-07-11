@@ -10,17 +10,29 @@ import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
 import { ServiceMetricsProps } from "./types";
 
+interface DailyServiceMetricsProps extends Omit<ServiceMetricsProps, 'totalServiceRevenue' | 'totalUniqueCustomers' | 'totalServicesProvided'> {
+  todayServiceRevenue: number;
+  todayUniqueCustomers: number;
+  todayServicesProvided: number;
+  yesterdayServiceRevenue: number;
+  yesterdayUniqueCustomers: number;
+  yesterdayServicesProvided: number;
+}
+
 const ServiceMetrics = ({
-  totalServiceRevenue,
-  totalUniqueCustomers,
-  totalServicesProvided,
+  todayServiceRevenue,
+  todayUniqueCustomers,
+  todayServicesProvided,
+  yesterdayServiceRevenue,
+  yesterdayUniqueCustomers,
+  yesterdayServicesProvided,
   servicesData,
   serviceTypeData,
   timeRange,
   setTimeRange,
   exportCSV,
   isExporting = false
-}: ServiceMetricsProps) => {
+}: DailyServiceMetricsProps) => {
   const serviceColumns = [
     { key: "name", header: "Service Name", className: "font-medium" },
     { 
@@ -47,21 +59,24 @@ const ServiceMetrics = ({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <MetricsCard 
-          title="Service Revenue" 
-          value={formatCurrency(totalServiceRevenue)}
+          title="Today's Service Revenue" 
+          value={formatCurrency(todayServiceRevenue)}
+          secondaryValue={formatCurrency(yesterdayServiceRevenue)}
           icon={<DollarSign className="h-6 w-6 text-spa-deep" />}
         />
         
         <MetricsCard 
-          title="Unique Customers" 
-          value={totalUniqueCustomers}
+          title="Unique Customers Today" 
+          value={todayUniqueCustomers}
+          secondaryValue={yesterdayUniqueCustomers}
           icon={<Users className="h-6 w-6 text-spa-deep" />}
           iconBgClass="bg-spa-water/20"
         />
         
         <MetricsCard 
-          title="Services Provided" 
-          value={totalServicesProvided}
+          title="Services Provided Today" 
+          value={todayServicesProvided}
+          secondaryValue={yesterdayServicesProvided}
           icon={<Award className="h-6 w-6 text-spa-deep" />}
           iconBgClass="bg-spa-stone/20"
         />
