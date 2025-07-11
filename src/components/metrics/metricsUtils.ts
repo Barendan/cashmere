@@ -113,6 +113,69 @@ export const calculateProductPerformance = (
     .sort((a: ProductMetric, b: ProductMetric) => b.profit - a.profit);
 };
 
+export const calculateSalesDataFromTransactions = (
+  salesTransactions: Transaction[],
+  timeRange: string,
+  dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
+): SalesDataPoint[] => {
+  console.log(`Processing ${salesTransactions.length} sales transactions for timeRange: ${timeRange}`);
+  console.log("Date range filters:", {
+    sevenDaysAgo: dateRanges.sevenDaysAgo.toISOString(),
+    thirtyDaysAgo: dateRanges.thirtyDaysAgo.toISOString()
+  });
+
+  // Filter transactions based on time range
+  const filteredTransactions = salesTransactions.filter(transaction => {
+    const transactionDate = new Date(transaction.date);
+    
+    switch(timeRange) {
+      case "7days":
+        const isIn7Days = transactionDate >= dateRanges.sevenDaysAgo;
+        console.log(`Transaction ${transaction.id} date: ${transactionDate.toISOString()}, in 7 days: ${isIn7Days}`);
+        return isIn7Days;
+      case "30days":
+        const isIn30Days = transactionDate >= dateRanges.thirtyDaysAgo;
+        console.log(`Transaction ${transaction.id} date: ${transactionDate.toISOString()}, in 30 days: ${isIn30Days}`);
+        return isIn30Days;
+      case "monthly":
+        return true;
+      default:
+        return true;
+    }
+  });
+  
+  console.log(`Filtered to ${filteredTransactions.length} transactions after applying timeRange filter`);
+  
+  // If no transaction data, return empty array with debug info
+  if (filteredTransactions.length === 0) {
+    console.warn("No transaction data found for the selected time range");
+    return [];
+  }
+  
+  const salesByDate = new Map();
+  
+  filteredTransactions.forEach(transaction => {
+    // Ensure consistent date formatting in EST
+    const transactionDate = new Date(transaction.date);
+    const dateStr = transactionDate.toISOString().split('T')[0];
+    
+    if (!salesByDate.has(dateStr)) {
+      salesByDate.set(dateStr, {
+        date: dateStr,
+        revenue: 0
+      });
+    }
+    
+    salesByDate.get(dateStr).revenue += transaction.price;
+  });
+  
+  const result = Array.from(salesByDate.values())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  console.log(`Generated ${result.length} data points for sales chart from transactions:`, result);
+  return result;
+};
+
 export const calculateSalesData = (
   sales: any[],
   timeRange: string,

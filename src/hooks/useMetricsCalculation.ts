@@ -1,4 +1,3 @@
-
 import { useMemo } from "react";
 import { Transaction, Product } from "@/models/types";
 import { TimeRangeType, ServiceIncomeWithCategory } from "@/components/metrics/types";
@@ -60,11 +59,12 @@ export const useProductMetricsCalculation = (
     return performance;
   }, [salesTransactions, sellableProducts]);
 
+  // Fix: Calculate sales data from transactions instead of sales table
   const salesData = useMemo(() => {
-    const data = metricsUtils.calculateSalesData(sales, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-    console.log(`Generated sales data with ${data.length} data points`);
+    const data = metricsUtils.calculateSalesDataFromTransactions(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
+    console.log(`Generated sales data with ${data.length} data points from transactions`);
     return data;
-  }, [sales, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
 
   const categoryData = useMemo(() => {
     const data = metricsUtils.calculateProductCategories(salesTransactions, sellableProducts);
