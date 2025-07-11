@@ -58,7 +58,7 @@ export interface ProductMetricsProps {
   timeRange: TimeRangeType;
   setTimeRange: (range: TimeRangeType) => void;
   exportCSV: () => void;
-  isExporting?: boolean; // Added isExporting prop
+  isExporting?: boolean;
 }
 
 export interface ServiceMetricsProps {
@@ -70,5 +70,5 @@ export interface ServiceMetricsProps {
   timeRange: TimeRangeType;
   setTimeRange: (range: TimeRangeType) => void;
   exportCSV: () => void;
-  isExporting?: boolean; // Added isExporting prop
+  isExporting?: boolean;
 }

@@ -35,6 +35,7 @@ interface ServiceIncome {
   amount: number;
   date: Date;
   customerName: string | null;
+  category?: string;
 }
 
 interface DataContextType {
@@ -195,10 +196,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           serviceName: item.services?.name || item.category || "Uncategorized",
           amount: item.amount,
           date: new Date(item.date),
-          customerName: item.customer_name
+          customerName: item.customer_name,
+          category: item.category
         }));
         
         console.log(`Fetched ${transformedData.length} service income records`);
+        console.log("Sample service income data:", transformedData.slice(0, 3));
         return transformedData;
       }
 
