@@ -118,25 +118,46 @@ export const calculateSalesData = (
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): SalesDataPoint[] => {
+  console.log(`Processing ${sales.length} sales records for timeRange: ${timeRange}`);
+  console.log("Date range filters:", {
+    sevenDaysAgo: dateRanges.sevenDaysAgo.toISOString(),
+    thirtyDaysAgo: dateRanges.thirtyDaysAgo.toISOString()
+  });
+
+  // Filter sales based on time range with proper timezone handling
   const filteredSales = sales.filter(sale => {
     const saleDate = new Date(sale.date);
     
     switch(timeRange) {
       case "7days":
-        return saleDate >= dateRanges.sevenDaysAgo;
+        const isIn7Days = saleDate >= dateRanges.sevenDaysAgo;
+        console.log(`Sale ${sale.id} date: ${saleDate.toISOString()}, in 7 days: ${isIn7Days}`);
+        return isIn7Days;
       case "30days":
-        return saleDate >= dateRanges.thirtyDaysAgo;
+        const isIn30Days = saleDate >= dateRanges.thirtyDaysAgo;
+        console.log(`Sale ${sale.id} date: ${saleDate.toISOString()}, in 30 days: ${isIn30Days}`);
+        return isIn30Days;
       case "monthly":
         return true;
       default:
-        return false;
+        return true;
     }
   });
+  
+  console.log(`Filtered to ${filteredSales.length} sales after applying timeRange filter`);
+  
+  // If no sales data, return empty array with debug info
+  if (filteredSales.length === 0) {
+    console.warn("No sales data found for the selected time range");
+    return [];
+  }
   
   const salesByDate = new Map();
   
   filteredSales.forEach(sale => {
-    const dateStr = new Date(sale.date).toISOString().split('T')[0];
+    // Ensure consistent date formatting in EST
+    const saleDate = new Date(sale.date);
+    const dateStr = saleDate.toISOString().split('T')[0];
     
     if (!salesByDate.has(dateStr)) {
       salesByDate.set(dateStr, {
@@ -148,8 +169,11 @@ export const calculateSalesData = (
     salesByDate.get(dateStr).revenue += sale.totalAmount;
   });
   
-  return Array.from(salesByDate.values())
+  const result = Array.from(salesByDate.values())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  console.log(`Generated ${result.length} data points for sales chart:`, result);
+  return result;
 };
 
 export const calculateProductCategories = (
@@ -205,8 +229,8 @@ export const calculateServicesData = (
       case "7days": return incomeDate >= dateRanges.sevenDaysAgo;
       case "30days": return incomeDate >= dateRanges.thirtyDaysAgo;
       case "monthly": return true;
-      case "daily": return true; // FIX: Add daily case to prevent filtering out
-      default: return true; // FIX: Changed from false to true to be more permissive
+      case "daily": return true;
+      default: return true;
     }
   });
 
@@ -226,7 +250,6 @@ export const calculateServicesData = (
           Array.isArray(parsed.serviceNames) &&
           Array.isArray(parsed.servicePrices)
         ) {
-          // Handle bundled/multi-service with discount
           const totalBeforeDiscount = parsed.servicePrices.reduce((s, v) => s + v, 0);
           const discount = parsed.discount || 0;
           
@@ -265,7 +288,6 @@ export const calculateServicesData = (
     }
   });
 
-  // Transform for table/chart/pie components
   const results = Array.from(serviceMap.values())
     .map(item => ({
       ...item,

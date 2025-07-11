@@ -25,7 +25,7 @@ const MetricsPieChart = ({
   tooltipLabel = "Value",
   colors = COLORS,
   height = "100%",
-  outerRadius = 100
+  outerRadius = 80  // Reduced from 100 to 80 to prevent text cutoff
 }: MetricsPieChartProps) => {
   
   const CustomTooltip = ({ active, payload }: TooltipProps<number, string>) => {
@@ -45,9 +45,16 @@ const MetricsPieChart = ({
     );
   };
 
+  // Truncate long category names for better display
+  const truncateLabel = (name: string, percent: number) => {
+    const maxLength = 12;
+    const truncatedName = name.length > maxLength ? `${name.substring(0, maxLength)}...` : name;
+    return `${truncatedName}: ${(percent * 100).toFixed(0)}%`;
+  };
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <PieChart>
+      <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
         <Pie
           data={data}
           dataKey="value"
@@ -56,9 +63,8 @@ const MetricsPieChart = ({
           cy="50%"
           outerRadius={outerRadius}
           fill="#8884d8"
-          label={({ name, percent }) => 
-            `${name}: ${(percent * 100).toFixed(0)}%`
-          }
+          label={({ name, percent }) => truncateLabel(name, percent)}
+          labelLine={false}
         >
           {data.map((_, index) => (
             <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
