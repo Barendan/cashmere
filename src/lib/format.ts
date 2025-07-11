@@ -12,7 +12,7 @@ export const formatCurrency = (value: number): string => {
 };
 
 /**
- * Format a date to a readable string
+ * Format a date to a readable string in EST timezone
  */
 export const formatDate = (date: Date | string): string => {
   if (typeof date === 'string') {
@@ -20,11 +20,28 @@ export const formatDate = (date: Date | string): string => {
   }
   
   return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', // EST/EDT timezone
     month: 'short',
     day: 'numeric',
     year: 'numeric',
     hour: 'numeric',
     minute: 'numeric',
+  }).format(date);
+};
+
+/**
+ * Format a date to EST date only
+ */
+export const formatDateEST = (date: Date | string): string => {
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+  
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   }).format(date);
 };
 

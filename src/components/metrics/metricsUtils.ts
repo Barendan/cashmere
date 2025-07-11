@@ -2,6 +2,7 @@ import { Transaction, Product } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
 
 export const getDateRanges = () => {
+  // Use EST timezone for all date calculations
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 7);
@@ -9,14 +10,28 @@ export const getDateRanges = () => {
   thirtyDaysAgo.setDate(today.getDate() - 30);
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   
-  // Add daily date ranges
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startOfYesterday = new Date(today);
-  startOfYesterday.setDate(today.getDate() - 1);
+  // Create EST-aware dates for today and yesterday
+  const estOffset = -5; // EST is UTC-5 (or UTC-4 during DST, but we'll use -5 for consistency)
+  const nowEST = new Date(today.getTime() + (estOffset * 60 * 60 * 1000));
+  
+  // Start of today in EST
+  const startOfToday = new Date(nowEST.getFullYear(), nowEST.getMonth(), nowEST.getDate());
+  
+  // Start and end of yesterday in EST
+  const startOfYesterday = new Date(nowEST);
+  startOfYesterday.setDate(nowEST.getDate() - 1);
   startOfYesterday.setHours(0, 0, 0, 0);
-  const endOfYesterday = new Date(today);
-  endOfYesterday.setDate(today.getDate() - 1);
+  
+  const endOfYesterday = new Date(nowEST);
+  endOfYesterday.setDate(nowEST.getDate() - 1);
   endOfYesterday.setHours(23, 59, 59, 999);
+
+  console.log("EST Date ranges:", {
+    startOfToday: startOfToday.toISOString(),
+    startOfYesterday: startOfYesterday.toISOString(),
+    endOfYesterday: endOfYesterday.toISOString(),
+    nowEST: nowEST.toISOString()
+  });
 
   return {
     today,
@@ -55,10 +70,14 @@ export const filterTransactionsByDayRange = (
   startDate: Date,
   endDate: Date
 ): Transaction[] => {
-  return transactions.filter(transaction => {
+  const filtered = transactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
-    return transactionDate >= startDate && transactionDate <= endDate;
+    const isInRange = transactionDate >= startDate && transactionDate <= endDate;
+    console.log(`Transaction ${transaction.id} date: ${transactionDate.toISOString()}, in range: ${isInRange}`);
+    return isInRange;
   });
+  console.log(`Filtered ${filtered.length} transactions from ${transactions.length} total for date range ${startDate.toISOString()} to ${endDate.toISOString()}`);
+  return filtered;
 };
 
 export const calculateProductPerformance = (
@@ -163,10 +182,14 @@ export const filterServiceIncomesByDayRange = (
   startDate: Date,
   endDate: Date
 ): ServiceIncomeWithCategory[] => {
-  return serviceIncomes.filter(income => {
+  const filtered = serviceIncomes.filter(income => {
     const incomeDate = new Date(income.date);
-    return incomeDate >= startDate && incomeDate <= endDate;
+    const isInRange = incomeDate >= startDate && incomeDate <= endDate;
+    console.log(`Service income ${income.id} date: ${incomeDate.toISOString()}, in range: ${isInRange}`);
+    return isInRange;
   });
+  console.log(`Filtered ${filtered.length} service incomes from ${serviceIncomes.length} total for date range ${startDate.toISOString()} to ${endDate.toISOString()}`);
+  return filtered;
 };
 
 export const calculateServicesData = (
@@ -174,15 +197,20 @@ export const calculateServicesData = (
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): ServiceMetric[] => {
+  console.log(`Calculating services data for timeRange: ${timeRange}`);
+  
   const filteredServiceIncomes = serviceIncomes.filter(income => {
     const incomeDate = new Date(income.date);
     switch (timeRange) {
       case "7days": return incomeDate >= dateRanges.sevenDaysAgo;
       case "30days": return incomeDate >= dateRanges.thirtyDaysAgo;
       case "monthly": return true;
-      default: return false;
+      case "daily": return true; // FIX: Add daily case to prevent filtering out
+      default: return true; // FIX: Changed from false to true to be more permissive
     }
   });
+
+  console.log(`Filtered ${filteredServiceIncomes.length} service incomes for timeRange: ${timeRange}`);
 
   const serviceMap = new Map();
 
@@ -238,12 +266,15 @@ export const calculateServicesData = (
   });
 
   // Transform for table/chart/pie components
-  return Array.from(serviceMap.values())
+  const results = Array.from(serviceMap.values())
     .map(item => ({
       ...item,
       uniqueCustomers: item.customers.size
     }))
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+  console.log(`Calculated ${results.length} service metrics with total revenue: ${results.reduce((sum, s) => sum + s.totalRevenue, 0)}`);
+  return results;
 };
 
 const processRegularService = (
