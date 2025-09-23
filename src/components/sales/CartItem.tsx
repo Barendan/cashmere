@@ -1,36 +1,56 @@
 
 import React, { useState } from 'react';
-import { Product } from '@/models/types';
+import { Product, Service } from '@/models/types';
 import { Button } from '@/components/ui/button';
-import { MinusCircle, PlusCircle, Trash2, Percent } from 'lucide-react';
+import { MinusCircle, PlusCircle, Trash2, Percent, Star, Package } from 'lucide-react';
 import { formatCurrency } from '@/lib/format';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CartItemProps {
-  product: Product;
+  item: Product | Service;
+  type: 'product' | 'service';
   quantity: number;
   onIncrement: () => void;
   onDecrement: () => void;
   onRemove: () => void;
-  maxQuantity: number;
+  maxQuantity?: number; // Optional for services
   discount: number;
   onDiscountChange: (discount: number) => void;
+  // Service-specific props
+  customerName?: string;
+  tip?: number;
+  notes?: string;
+  serviceDate?: Date;
+  onServiceFieldChange?: (fields: { customerName?: string; tip?: number; notes?: string; serviceDate?: Date }) => void;
 }
 
 const CartItem = ({ 
-  product, 
+  item, 
+  type,
   quantity, 
   onIncrement, 
   onDecrement, 
   onRemove, 
   maxQuantity,
   discount,
-  onDiscountChange
+  onDiscountChange,
+  customerName = '',
+  tip = 0,
+  notes = '',
+  serviceDate,
+  onServiceFieldChange
 }: CartItemProps) => {
-  const itemTotal = product.sellPrice * quantity;
+  const itemPrice = type === 'product' 
+    ? (item as Product).sellPrice 
+    : (item as Service).price;
+  const itemTotal = itemPrice * quantity;
   const discountedTotal = Math.max(0, itemTotal - discount);
   const hasDiscount = discount > 0;
+  
+  const isProduct = type === 'product';
+  const isService = type === 'service';
   
   const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
@@ -41,11 +61,22 @@ const CartItem = ({
     }
   };
   
+  const handleServiceFieldChange = (field: string, value: any) => {
+    if (onServiceFieldChange) {
+      onServiceFieldChange({ [field]: value });
+    }
+  };
+  
   return (
     <div className="p-3 border border-spa-sand rounded-md flex flex-col bg-white h-auto min-h-[88px]">
       <div className="flex justify-between items-start mb-2">
-        <div className="font-medium text-spa-deep text-sm truncate mr-2 flex-grow">
-          {product.name}
+        <div className="font-medium text-spa-deep text-sm truncate mr-2 flex-grow flex items-center">
+          {isProduct ? (
+            <Package className="h-4 w-4 mr-2 text-spa-sage" />
+          ) : (
+            <Star className="h-4 w-4 mr-2 text-spa-sage" />
+          )}
+          {item.name}
         </div>
         
         <div className="flex items-center gap-1 shrink-0">
@@ -68,7 +99,7 @@ const CartItem = ({
             variant="ghost" 
             className="h-6 w-6" 
             onClick={onIncrement} 
-            disabled={quantity >= maxQuantity}
+            disabled={isProduct && maxQuantity ? quantity >= maxQuantity : false}
           >
             <PlusCircle size={14} />
           </Button>
@@ -78,7 +109,7 @@ const CartItem = ({
       <div className="flex flex-col gap-2 mt-1">
         <div className="flex justify-between items-center">
           <div className="text-xs text-muted-foreground">
-            {formatCurrency(product.sellPrice)} each
+            {formatCurrency(itemPrice)} each
           </div>
           
           <div className="flex items-center gap-2">
@@ -113,11 +144,11 @@ const CartItem = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <Label htmlFor={`discount-${product.id}`} className="text-xs text-muted-foreground flex-shrink-0">
+          <Label htmlFor={`discount-${item.id}`} className="text-xs text-muted-foreground flex-shrink-0">
             Discount:
           </Label>
           <Input
-            id={`discount-${product.id}`}
+            id={`discount-${item.id}`}
             type="number"
             min="0"
             step="1"
@@ -127,6 +158,58 @@ const CartItem = ({
             placeholder="0.00"
           />
         </div>
+        
+        {/* Service-specific fields */}
+        {isService && (
+          <div className="space-y-2 mt-2 pt-2 border-t border-spa-sand/50">
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`customer-${item.id}`} className="text-xs text-muted-foreground flex-shrink-0">
+                Customer:
+              </Label>
+              <Input
+                id={`customer-${item.id}`}
+                type="text"
+                value={customerName}
+                onChange={(e) => handleServiceFieldChange('customerName', e.target.value)}
+                className="h-6 text-xs py-1 px-2"
+                placeholder="Customer name"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`tip-${item.id}`} className="text-xs text-muted-foreground flex-shrink-0">
+                Tip:
+              </Label>
+              <Input
+                id={`tip-${item.id}`}
+                type="number"
+                min="0"
+                step="1"
+                value={tip || ''}
+                onChange={(e) => {
+                  const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                  handleServiceFieldChange('tip', isNaN(value) ? 0 : Math.max(0, value));
+                }}
+                className="h-6 text-xs py-1 px-2"
+                placeholder="0.00"
+              />
+            </div>
+            
+            <div className="flex flex-col gap-1">
+              <Label htmlFor={`notes-${item.id}`} className="text-xs text-muted-foreground">
+                Notes:
+              </Label>
+              <Textarea
+                id={`notes-${item.id}`}
+                value={notes}
+                onChange={(e) => handleServiceFieldChange('notes', e.target.value)}
+                className="text-xs resize-none"
+                rows={2}
+                placeholder="Service notes..."
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

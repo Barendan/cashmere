@@ -68,7 +68,8 @@ const ShoppingCart = ({
               {items.map((item) => (
                 <CartItem 
                   key={item.product.id}
-                  product={item.product}
+                  item={item.product}
+                  type="product"
                   quantity={item.quantity}
                   maxQuantity={item.product.stockQuantity}
                   onIncrement={() => updateQuantity(item.product.id, item.quantity + 1)}
