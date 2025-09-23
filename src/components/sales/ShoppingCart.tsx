@@ -8,6 +8,7 @@ import { HoverFillButton } from '@/components/ui/hover-fill-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/format';
 import { Undo2 } from 'lucide-react';
+import { PAYMENT_METHODS } from '@/constants/paymentMethods';
 
 interface CartItem {
   product: Product;
@@ -26,17 +27,6 @@ interface ShoppingCartProps {
   undoLastTransaction?: () => void;
 }
 
-const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'venmo', label: 'Venmo' },
-  { value: 'zelle', label: 'Zelle' },
-  { value: 'cashapp', label: 'CashApp' },
-  { value: 'paypal', label: 'PayPal' },
-  { value: 'applepay', label: 'Apple Pay' },
-  { value: 'googlepay', label: 'Google Pay' },
-  { value: 'other', label: 'Other' }
-];
 
 const ShoppingCart = ({
   items,

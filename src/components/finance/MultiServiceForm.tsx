@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PAYMENT_METHODS } from "@/constants/paymentMethods";
 
 const serviceFormSchema = z.object({
   date: z.date({
@@ -55,14 +56,6 @@ const serviceFormSchema = z.object({
   tip: z.coerce.number().min(0).default(0)
 });
 
-const PAYMENT_METHODS = [
-  { value: "cash", label: "Cash" },
-  { value: "credit", label: "Credit Card" },
-  { value: "debit", label: "Debit Card" },
-  { value: "zelle", label: "Zelle" },
-  { value: "check", label: "Check" },
-  { value: "other", label: "Other" },
-];
 
 const MultiServiceForm = ({ onIncomeAdded }) => {
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
