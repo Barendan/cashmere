@@ -1,29 +1,28 @@
 
 import React, { useState } from 'react';
-import { Product } from '@/models/types';
+import { Product, Service } from '@/models/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency } from '@/lib/format';
-import { Undo2 } from 'lucide-react';
+import { Undo2, Package, Star, ShoppingBag } from 'lucide-react';
 import { PAYMENT_METHODS } from '@/constants/paymentMethods';
-
-interface CartItemForShoppingCart {
-  product: Product;
-  quantity: number;
-  discount: number;
-}
+import { CartItem as CartItemType } from '@/contexts/CartContext';
 
 interface ShoppingCartProps {
-  items: CartItemForShoppingCart[];
-  updateQuantity: (productId: string, quantity: number) => void;
-  updateDiscount: (productId: string, discount: number) => void;
-  removeItem: (productId: string) => void;
+  items: CartItemType[];
+  updateQuantity: (itemId: string, quantity: number) => void;
+  updateDiscount: (itemId: string, discount: number) => void;
+  updateServiceFields: (itemId: string, fields: { customerName?: string; tip?: number; notes?: string; serviceDate?: Date }) => void;
+  removeItem: (itemId: string) => void;
   clearCart: () => void;
   recordSale: (paymentMethod?: string) => void;
   isProcessing: boolean;
+  hasProducts: boolean;
+  hasServices: boolean;
+  isMixed: boolean;
   undoLastTransaction?: () => void;
 }
 
@@ -32,17 +31,32 @@ const ShoppingCart = ({
   items,
   updateQuantity,
   updateDiscount,
+  updateServiceFields,
   removeItem,
   clearCart,
   recordSale,
   isProcessing,
+  hasProducts,
+  hasServices,
+  isMixed,
   undoLastTransaction
 }: ShoppingCartProps) => {
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   
-  const subtotal = items.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
+  // Calculate totals including both products and services
+  const subtotal = items.reduce((sum, item) => {
+    const itemPrice = item.type === 'product' 
+      ? (item.item as Product).sellPrice 
+      : (item.item as Service).price;
+    return sum + (itemPrice * item.quantity);
+  }, 0);
+  
   const totalDiscount = items.reduce((sum, item) => sum + item.discount, 0);
-  const finalTotal = Math.max(0, subtotal - totalDiscount);
+  const totalTip = items.reduce((sum, item) => {
+    return sum + (item.type === 'service' ? (item.tip || 0) : 0);
+  }, 0);
+  
+  const finalTotal = Math.max(0, subtotal - totalDiscount + totalTip);
   
   const handleCompleteSale = () => {
     if (!paymentMethod) {
@@ -58,25 +72,40 @@ const ShoppingCart = ({
         <div className="flex-grow flex items-center justify-center text-muted-foreground p-4">
           <div className="text-center">
             <p>Your cart is empty</p>
-            <p className="text-sm mt-1">Click on products to add them</p>
+            <p className="text-sm mt-1">Click on products or services to add them</p>
           </div>
         </div>
       ) : (
         <>
+          {/* Cart Type Indicator */}
+          {isMixed && (
+            <div className="px-4 pt-2 pb-1">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 p-2 rounded-md">
+                <ShoppingBag className="h-4 w-4" />
+                <span>Mixed Cart: Products & Services</span>
+              </div>
+            </div>
+          )}
+          
           <ScrollArea className="flex-grow px-4 pt-4 pr-4">
             <div className="space-y-3">
               {items.map((item) => (
                 <CartItem 
-                  key={item.product.id}
-                  item={item.product}
-                  type="product"
+                  key={item.item.id}
+                  item={item.item}
+                  type={item.type}
                   quantity={item.quantity}
-                  maxQuantity={item.product.stockQuantity}
-                  onIncrement={() => updateQuantity(item.product.id, item.quantity + 1)}
-                  onDecrement={() => updateQuantity(item.product.id, item.quantity - 1)}
-                  onRemove={() => removeItem(item.product.id)}
+                  maxQuantity={item.type === 'product' ? (item.item as Product).stockQuantity : undefined}
+                  onIncrement={() => updateQuantity(item.item.id, item.quantity + 1)}
+                  onDecrement={() => updateQuantity(item.item.id, item.quantity - 1)}
+                  onRemove={() => removeItem(item.item.id)}
                   discount={item.discount}
-                  onDiscountChange={(discount) => updateDiscount(item.product.id, discount)}
+                  onDiscountChange={(discount) => updateDiscount(item.item.id, discount)}
+                  customerName={item.customerName}
+                  tip={item.tip}
+                  notes={item.notes}
+                  serviceDate={item.serviceDate}
+                  onServiceFieldChange={(fields) => updateServiceFields(item.item.id, fields)}
                 />
               ))}
             </div>
@@ -94,6 +123,15 @@ const ShoppingCart = ({
                   Total Discounts
                 </span>
                 <span>-{formatCurrency(totalDiscount)}</span>
+              </div>
+            )}
+            
+            {totalTip > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span className="flex items-center">
+                  Total Tips
+                </span>
+                <span>+{formatCurrency(totalTip)}</span>
               </div>
             )}
             
@@ -126,7 +164,7 @@ const ShoppingCart = ({
                 onClick={handleCompleteSale}
                 disabled={isProcessing || items.length === 0 || !paymentMethod}
               >
-                {isProcessing ? "Processing..." : "Complete Sale"}
+                {isProcessing ? "Processing..." : `Complete ${isMixed ? 'Mixed ' : hasServices ? 'Service ' : ''}Sale`}
               </HoverFillButton>
             </div>
             

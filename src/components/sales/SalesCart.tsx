@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Product } from '@/models/types';
+import { Product, Service } from '@/models/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ShoppingCart from './ShoppingCart';
 import { useCart } from '@/contexts/CartContext';
@@ -13,28 +13,68 @@ interface SalesCartProps {
 }
 
 const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
-  const { items, updateQuantity, updateDiscount, removeItem, clearCart } = useCart();
-  const { recordBulkSale } = useData();
+  const { items, updateQuantity, updateDiscount, updateServiceFields, removeItem, clearCart } = useCart();
+  const { recordBulkSale, recordServiceSale, recordMixedSale } = useData();
   const { toast } = useToast();
   
-  // Filter only product items for display
+  // Separate items by type
   const productItems = items.filter(item => item.type === 'product');
-  const totalItems = productItems.reduce((sum, item) => sum + item.quantity, 0);
+  const serviceItems = items.filter(item => item.type === 'service');
+  
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const hasProducts = productItems.length > 0;
+  const hasServices = serviceItems.length > 0;
+  const isMixed = hasProducts && hasServices;
   
   const handleCompleteSale = async (paymentMethod: string) => {
-    if (productItems.length === 0) return;
+    if (items.length === 0) return;
     
     setIsProcessing(true);
     
     try {
-      // Convert cart items to the format expected by recordBulkSale
-      const saleItems = productItems.map(item => ({
-        product: item.item as Product,
-        quantity: item.quantity,
-        discount: item.discount
-      }));
+      if (isMixed) {
+        // Mixed cart: both products and services
+        const productSaleItems = productItems.map(item => ({
+          product: item.item as Product,
+          quantity: item.quantity,
+          discount: item.discount
+        }));
+        
+        const serviceSaleItems = serviceItems.map(item => ({
+          service: item.item as Service,
+          quantity: item.quantity,
+          discount: item.discount,
+          customerName: item.customerName,
+          tip: item.tip,
+          notes: item.notes,
+          serviceDate: item.serviceDate
+        }));
+        
+        await recordMixedSale(productSaleItems, serviceSaleItems, paymentMethod);
+      } else if (hasProducts) {
+        // Products only
+        const saleItems = productItems.map(item => ({
+          product: item.item as Product,
+          quantity: item.quantity,
+          discount: item.discount
+        }));
+        
+        await recordBulkSale(saleItems, 0, paymentMethod);
+      } else if (hasServices) {
+        // Services only
+        const serviceSaleItems = serviceItems.map(item => ({
+          service: item.item as Service,
+          quantity: item.quantity,
+          discount: item.discount,
+          customerName: item.customerName,
+          tip: item.tip,
+          notes: item.notes,
+          serviceDate: item.serviceDate
+        }));
+        
+        await recordServiceSale(serviceSaleItems, paymentMethod);
+      }
       
-      await recordBulkSale(saleItems, 0, paymentMethod);
       clearCart();
     } catch (error) {
       console.error("Error processing sale:", error);
@@ -59,17 +99,17 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
       <CardContent className="flex-grow flex flex-col p-6 pt-0 overflow-hidden h-[calc(100%-85px)]">
         <div className="flex-grow flex flex-col h-full">
           <ShoppingCart 
-            items={productItems.map(item => ({
-              product: item.item as Product,
-              quantity: item.quantity,
-              discount: item.discount
-            }))}
+            items={items}
             updateQuantity={updateQuantity}
             updateDiscount={updateDiscount}
+            updateServiceFields={updateServiceFields}
             removeItem={removeItem}
             clearCart={clearCart}
             recordSale={handleCompleteSale}
             isProcessing={isProcessing}
+            hasProducts={hasProducts}
+            hasServices={hasServices}
+            isMixed={isMixed}
           />
         </div>
       </CardContent>

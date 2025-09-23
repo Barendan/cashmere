@@ -59,6 +59,8 @@ interface DataContextType {
   deleteService: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number, paymentMethod?: string) => Promise<void>;
+  recordServiceSale: (items: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
+  recordMixedSale: (products: {product: Product, quantity: number, discount: number}[], services: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -537,6 +539,86 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const recordServiceSale = async (items: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => {
+    if (items.length === 0) return;
+    
+    try {
+      console.log("Starting service sale process with items:", items.length);
+      const now = new Date();
+      
+      // Process each service separately as income records
+      for (const item of items) {
+        const serviceTotal = item.service.price * item.quantity;
+        const finalPrice = Math.max(0, serviceTotal - item.discount);
+        const tipAmount = item.tip || 0;
+        
+        const financeData = {
+          type: 'income',
+          date: item.serviceDate?.toISOString() || now.toISOString(),
+          amount: finalPrice,
+          description: `${item.service.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}${item.notes ? ` - ${item.notes}` : ''}`,
+          customer_name: item.customerName || null,
+          service_id: item.service.id,
+          payment_method: paymentMethod || null,
+          tip_amount: tipAmount > 0 ? tipAmount : null
+        };
+        
+        const { error } = await supabase
+          .from('finances')
+          .insert(financeData);
+          
+        if (error) throw error;
+      }
+      
+      toast({ 
+        title: "Service Sale Completed", 
+        description: `Processed ${items.length} service(s) successfully.`
+      });
+      await refreshData();
+    } catch (error) {
+      console.error('Error recording service sale:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to process service sale.", 
+        variant: "destructive" 
+      });
+      throw error;
+    }
+  };
+
+  const recordMixedSale = async (
+    products: {product: Product, quantity: number, discount: number}[], 
+    services: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], 
+    paymentMethod?: string
+  ) => {
+    try {
+      console.log("Starting mixed sale process - Products:", products.length, "Services:", services.length);
+      
+      // Process products through existing recordBulkSale
+      if (products.length > 0) {
+        await recordBulkSale(products, 0, paymentMethod);
+      }
+      
+      // Process services through recordServiceSale
+      if (services.length > 0) {
+        await recordServiceSale(services, paymentMethod);
+      }
+      
+      toast({ 
+        title: "Mixed Sale Completed", 
+        description: `Processed ${products.length} product(s) and ${services.length} service(s).`
+      });
+    } catch (error) {
+      console.error('Error recording mixed sale:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to process mixed sale.", 
+        variant: "destructive" 
+      });
+      throw error;
+    }
+  };
+
   const recordRestock = async (productId: string, quantity: number) => {
     const product = products.find(p => p.id === productId);
     if (!product) {
@@ -983,6 +1065,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         deleteService,
         recordSale,
         recordBulkSale,
+        recordServiceSale,
+        recordMixedSale,
         recordRestock,
         updateLastRestockDate,
         undoLastTransaction,
