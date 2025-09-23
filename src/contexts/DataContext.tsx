@@ -60,7 +60,7 @@ interface DataContextType {
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number, paymentMethod?: string) => Promise<void>;
   recordServiceSale: (items: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
-  recordMixedSale: (products: {product: Product, quantity: number, discount: number}[], services: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
+  recordMixedSale: (products: {product: Product, quantity: number, discount: number}[], serviceItems: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -546,8 +546,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log("Starting service sale process with items:", items.length);
       const now = new Date();
       
-      // Process each service separately as income records
+      // Validate all services exist
       for (const item of items) {
+        const serviceExists = services.find(s => s.id === item.service.id);
+        if (!serviceExists) {
+          throw new Error(`Service ${item.service.name} not found in current service list`);
+        }
+      }
+      
+      // Process each service separately as income records
+      const financePromises = items.map(async (item) => {
         const serviceTotal = item.service.price * item.quantity;
         const finalPrice = Math.max(0, serviceTotal - item.discount);
         const tipAmount = item.tip || 0;
@@ -555,7 +563,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const financeData = {
           type: 'income',
           date: item.serviceDate?.toISOString() || now.toISOString(),
-          amount: finalPrice,
+          amount: finalPrice + tipAmount, // Include tip in the total amount
           description: `${item.service.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}${item.notes ? ` - ${item.notes}` : ''}`,
           customer_name: item.customerName || null,
           service_id: item.service.id,
@@ -568,7 +576,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           .insert(financeData);
           
         if (error) throw error;
-      }
+        
+        return financeData;
+      });
+      
+      await Promise.all(financePromises);
       
       toast({ 
         title: "Service Sale Completed", 
@@ -579,7 +591,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('Error recording service sale:', error);
       toast({ 
         title: "Error", 
-        description: "Failed to process service sale.", 
+        description: `Failed to process service sale: ${error.message}`, 
         variant: "destructive" 
       });
       throw error;
@@ -588,31 +600,48 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const recordMixedSale = async (
     products: {product: Product, quantity: number, discount: number}[], 
-    services: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], 
+    serviceItems: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], 
     paymentMethod?: string
   ) => {
     try {
-      console.log("Starting mixed sale process - Products:", products.length, "Services:", services.length);
+      console.log("Starting mixed sale process - Products:", products.length, "Services:", serviceItems.length);
+      
+      // Validate all items before processing
+      for (const item of products) {
+        const productExists = displayableProducts.find(p => p.id === item.product.id);
+        if (!productExists) {
+          throw new Error(`Product ${item.product.name} not found`);
+        }
+      }
+      
+      for (const item of serviceItems) {
+        const serviceExists = services.find(s => s.id === item.service.id);
+        if (!serviceExists) {
+          throw new Error(`Service ${item.service.name} not found`);
+        }
+      }
       
       // Process products through existing recordBulkSale
       if (products.length > 0) {
+        console.log("Processing products...");
         await recordBulkSale(products, 0, paymentMethod);
       }
       
       // Process services through recordServiceSale
-      if (services.length > 0) {
-        await recordServiceSale(services, paymentMethod);
+      if (serviceItems.length > 0) {
+        console.log("Processing services...");
+        await recordServiceSale(serviceItems, paymentMethod);
       }
       
       toast({ 
         title: "Mixed Sale Completed", 
-        description: `Processed ${products.length} product(s) and ${services.length} service(s).`
+        description: `Processed ${products.length} product(s) and ${serviceItems.length} service(s).`
       });
     } catch (error) {
       console.error('Error recording mixed sale:', error);
       toast({ 
         title: "Error", 
-        description: "Failed to process mixed sale.", 
+        description: `Failed to process mixed sale: ${error.message}`, 
         variant: "destructive" 
       });
       throw error;
