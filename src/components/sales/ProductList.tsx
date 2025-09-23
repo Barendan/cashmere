@@ -15,7 +15,7 @@ interface ProductListProps {
 
 const ProductList = ({ products }: ProductListProps) => {
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const { addItem, removeItem, isProductInCart } = useCart();
+  const { addItem, removeItem, isItemInCart } = useCart();
   
   // Filter products to only show those available for sale, with stock, and not bulk restock products
   const availableProducts = products
@@ -34,9 +34,9 @@ const ProductList = ({ products }: ProductListProps) => {
   });
   
   const handleAddToCart = (product: Product) => {
-    addItem(product);
+    addItem(product, 'product');
   };
-  
+
   const handleRemoveFromCart = (product: Product) => {
     removeItem(product.id);
   };
@@ -70,7 +70,7 @@ const ProductList = ({ products }: ProductListProps) => {
                   product={product}
                   onAddToCart={handleAddToCart}
                   onRemoveFromCart={handleRemoveFromCart}
-                  isInCart={isProductInCart(product.id)}
+                  isInCart={isItemInCart(product.id)}
                   cardStyle={index < 3 ? `design-${index + 1}` : ""}
                 />
               ))}

@@ -10,14 +10,14 @@ import { formatCurrency } from '@/lib/format';
 import { Undo2 } from 'lucide-react';
 import { PAYMENT_METHODS } from '@/constants/paymentMethods';
 
-interface CartItem {
+interface CartItemForShoppingCart {
   product: Product;
   quantity: number;
   discount: number;
 }
 
 interface ShoppingCartProps {
-  items: CartItem[];
+  items: CartItemForShoppingCart[];
   updateQuantity: (productId: string, quantity: number) => void;
   updateDiscount: (productId: string, discount: number) => void;
   removeItem: (productId: string) => void;

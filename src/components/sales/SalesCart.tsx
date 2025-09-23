@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Product } from '@/models/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import ShoppingCart from './ShoppingCart';
 import { useCart } from '@/contexts/CartContext';
@@ -13,17 +14,27 @@ interface SalesCartProps {
 
 const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
   const { items, updateQuantity, updateDiscount, removeItem, clearCart } = useCart();
-  const { recordBulkSale, undoLastTransaction } = useData();
+  const { recordBulkSale } = useData();
   const { toast } = useToast();
-  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  
+  // Filter only product items for display
+  const productItems = items.filter(item => item.type === 'product');
+  const totalItems = productItems.reduce((sum, item) => sum + item.quantity, 0);
   
   const handleCompleteSale = async (paymentMethod: string) => {
-    if (items.length === 0) return;
+    if (productItems.length === 0) return;
     
     setIsProcessing(true);
     
     try {
-      await recordBulkSale(items, 0, paymentMethod);
+      // Convert cart items to the format expected by recordBulkSale
+      const saleItems = productItems.map(item => ({
+        product: item.item as Product,
+        quantity: item.quantity,
+        discount: item.discount
+      }));
+      
+      await recordBulkSale(saleItems, 0, paymentMethod);
       clearCart();
     } catch (error) {
       console.error("Error processing sale:", error);
@@ -48,14 +59,17 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
       <CardContent className="flex-grow flex flex-col p-6 pt-0 overflow-hidden h-[calc(100%-85px)]">
         <div className="flex-grow flex flex-col h-full">
           <ShoppingCart 
-            items={items}
+            items={productItems.map(item => ({
+              product: item.item as Product,
+              quantity: item.quantity,
+              discount: item.discount
+            }))}
             updateQuantity={updateQuantity}
             updateDiscount={updateDiscount}
             removeItem={removeItem}
             clearCart={clearCart}
             recordSale={handleCompleteSale}
             isProcessing={isProcessing}
-            undoLastTransaction={undoLastTransaction}
           />
         </div>
       </CardContent>
