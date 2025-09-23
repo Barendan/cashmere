@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Product, Transaction, Sale, TransactionInput } from "../models/types";
+import { Product, Transaction, Sale, TransactionInput, Service } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
 import { 
@@ -8,6 +8,12 @@ import {
   updateProductInDb, 
   deleteProductFromDb 
 } from "../services/productService";
+import { 
+  fetchServices, 
+  addServiceToDb, 
+  updateServiceInDb, 
+  deleteServiceFromDb 
+} from "../services/serviceService";
 import {
   fetchTransactions,
   fetchSales,
@@ -40,6 +46,7 @@ interface ServiceIncome {
 
 interface DataContextType {
   products: Product[];
+  services: Service[];
   transactions: Transaction[];
   sales: Sale[];
   serviceIncomes: ServiceIncome[];
@@ -47,12 +54,16 @@ interface DataContextType {
   addProduct: (product: Omit<Product, "id">) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => void;
   deleteProduct: (id: string) => void;
+  addService: (service: Omit<Service, "id">) => Promise<void>;
+  updateService: (id: string, updates: Partial<Service>) => void;
+  deleteService: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number, paymentMethod?: string) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
   getProduct: (id: string) => Product | undefined;
+  getService: (id: string) => Service | undefined;
   recordMonthlyRestock: (productUpdates: {product: Product, newQuantity: number}[]) => Promise<void>;
   recordTransactionInDb: (transactionData: any) => Promise<Transaction>;
   isLoading: boolean;
@@ -66,6 +77,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [serviceIncomes, setServiceIncomes] = useState<ServiceIncome[]>([]);
@@ -79,17 +91,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const [
         transformedProducts,
+        transformedServices,
         transformedSales,
         transformedTransactions,
         transformedServiceIncomes
       ] = await Promise.all([
         fetchProducts(),
+        fetchServices(),
         fetchSales(),
         fetchTransactions(),
         fetchServiceIncomes()
       ]);
 
       setProducts(transformedProducts);
+      setServices(transformedServices);
 
       const salesWithItems: Sale[] = transformedSales.map(sale => {
         const saleItems = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
@@ -139,6 +154,28 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         async () => {
           const updatedProducts = await fetchProducts();
           setProducts(updatedProducts);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('services-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'services'
+        },
+        async () => {
+          const updatedServices = await fetchServices();
+          setServices(updatedServices);
         }
       )
       .subscribe();
@@ -781,9 +818,70 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Service management functions
+  const addService = async (service: Omit<Service, "id">): Promise<void> => {
+    try {
+      const newService = await addServiceToDb(service);
+      setServices([...services, newService]);
+      toast({ title: "Service Added", description: `${service.name} was added.` });
+      await refreshData();
+    } catch (error) {
+      console.error('Error adding service:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to add service.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
+  const handleUpdateService = async (id: string, updates: Partial<Service>) => {
+    const oldService = services.find(s => s.id === id);
+    if (!oldService) return;
+
+    try {
+      await updateServiceInDb(id, updates);
+      setServices(services.map(s =>
+        s.id === id ? { ...s, ...updates } : s
+      ));
+      toast({ title: "Service Updated", description: `${oldService.name} was updated.` });
+      await refreshData();
+    } catch (error) {
+      console.error('Error updating service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update service.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteService = async (id: string) => {
+    const service = services.find(s => s.id === id);
+    if (!service) return;
+    
+    try {
+      await deleteServiceFromDb(id);
+      setServices(services.filter(s => s.id !== id));
+      toast({ title: "Service Deleted", description: `${service.name} was removed.` });
+      await refreshData();
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      toast({ 
+        title: "Error", 
+        description: "Failed to delete service.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
   const getProduct = (id: string) => {
     if (isBulkRestockProduct(id)) return undefined;
     return products.find(p => p.id === id);
+  };
+
+  const getService = (id: string) => {
+    return services.find(s => s.id === id);
   };
 
   const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
@@ -872,6 +970,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     <DataContext.Provider
       value={{
         products: displayableProducts,
+        services,
         transactions,
         sales,
         serviceIncomes,
@@ -879,12 +978,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         addProduct,
         updateProduct: handleUpdateProduct,
         deleteProduct,
+        addService,
+        updateService: handleUpdateService,
+        deleteService,
         recordSale,
         recordBulkSale,
         recordRestock,
         updateLastRestockDate,
         undoLastTransaction,
         getProduct,
+        getService,
         recordMonthlyRestock,
         recordTransactionInDb,
         isLoading,
