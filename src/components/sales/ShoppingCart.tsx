@@ -3,13 +3,11 @@ import React, { useState } from 'react';
 import { Product, Service } from '@/models/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CartItem from '@/components/sales/CartItem';
-import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/lib/format';
-import { Undo2, Package, Star, ShoppingBag, Percent, User } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { PAYMENT_METHODS } from '@/constants/paymentMethods';
 import { CartItem as CartItemType, useCart } from '@/contexts/CartContext';
 
@@ -112,9 +110,9 @@ const ShoppingCart = ({
           
           <div className="p-4 mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
             {/* Global Discount Input - styled like subtotal/total */}
-            <div className="flex justify-between text-sm mb-2 pt-2">
+            <div className="flex justify-between text-sm mb-1">
               <span className="text-muted-foreground">Discount</span>
-              <Input
+              <input
                 id="global-discount"
                 type="number"
                 min="0"
@@ -122,12 +120,12 @@ const ShoppingCart = ({
                 max={subtotal}
                 value={globalDiscount || ''}
                 onChange={handleGlobalDiscountChange}
-                className="h-8 w-20 text-right"
+                className="bg-transparent border-none outline-none text-right text-sm w-auto p-0 focus:ring-0"
                 placeholder="0.00"
               />
             </div>
             
-            <div className="flex justify-between text-sm mb-2">
+            <div className="flex justify-between text-sm mb-1">
               <span className="text-muted-foreground">Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
@@ -183,27 +181,6 @@ const ShoppingCart = ({
                 {isProcessing ? "Processing..." : `Complete ${isMixed ? 'Mixed ' : hasServices ? 'Service ' : ''}Sale`}
               </HoverFillButton>
             </div>
-            
-            {/* <div className="grid grid-cols-2 gap-3 mt-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-red-500 border-red-200 hover:bg-red-50"
-                onClick={clearCart}
-              >
-                Clear All
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-spa-sand"
-                onClick={undoLastTransaction}
-              >
-                <Undo2 size={16} className="mr-2" />
-                Undo Action
-              </Button>
-            </div> */}
           </div>
         </>
       )}
