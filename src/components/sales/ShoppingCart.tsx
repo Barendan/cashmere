@@ -88,7 +88,7 @@ const ShoppingCart = ({
           
           <div className="p-4 mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
             {/* Global Discount Input - styled like subtotal/total */}
-            <div className="flex justify-between text-sm mb-1">
+            <div className="flex justify-between text-sm mb-1 mt-4 ">
               <span className="text-muted-foreground">Discount</span>
               <input id="global-discount" type="number" min="0" step="0.01" max={subtotal} value={globalDiscount || ''} onChange={handleGlobalDiscountChange} placeholder="0.00" className="bg-background border border-input rounded-md py-1 text-right text-sm w-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             </div>
