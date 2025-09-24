@@ -120,7 +120,7 @@ const ShoppingCart = ({
                 max={subtotal}
                 value={globalDiscount || ''}
                 onChange={handleGlobalDiscountChange}
-                className="bg-transparent border-none outline-none text-right text-sm w-auto p-0 focus:ring-0"
+                className="bg-background border border-input rounded-md px-2 py-1 text-right text-sm w-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="0.00"
               />
             </div>
