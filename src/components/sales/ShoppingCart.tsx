@@ -6,8 +6,10 @@ import CartItem from '@/components/sales/CartItem';
 import { Button } from '@/components/ui/button';
 import { HoverFillButton } from '@/components/ui/hover-fill-button'; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/lib/format';
-import { Undo2, Package, Star, ShoppingBag } from 'lucide-react';
+import { Undo2, Package, Star, ShoppingBag, Percent, User } from 'lucide-react';
 import { PAYMENT_METHODS } from '@/constants/paymentMethods';
 import { CartItem as CartItemType } from '@/contexts/CartContext';
 
@@ -42,6 +44,8 @@ const ShoppingCart = ({
   undoLastTransaction
 }: ShoppingCartProps) => {
   const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [globalDiscount, setGlobalDiscount] = useState<number>(0);
+  const [globalCustomerName, setGlobalCustomerName] = useState<string>('');
   
   // Calculate totals including both products and services
   const subtotal = items.reduce((sum, item) => {
@@ -51,12 +55,23 @@ const ShoppingCart = ({
     return sum + (itemPrice * item.quantity);
   }, 0);
   
-  const totalDiscount = items.reduce((sum, item) => sum + item.discount, 0);
+  // For Phase 2: Use global discount instead of per-item discounts
+  // Keep the old calculation for backward compatibility but prioritize global discount
+  const totalDiscount = globalDiscount > 0 ? globalDiscount : items.reduce((sum, item) => sum + item.discount, 0);
   const totalTip = items.reduce((sum, item) => {
     return sum + (item.type === 'service' ? (item.tip || 0) : 0);
   }, 0);
   
   const finalTotal = Math.max(0, subtotal - totalDiscount + totalTip);
+  
+  const handleGlobalDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+    if (isNaN(value) || value < 0) {
+      setGlobalDiscount(0);
+    } else {
+      setGlobalDiscount(Math.min(value, subtotal)); // Ensure discount doesn't exceed subtotal
+    }
+  };
   
   const handleCompleteSale = () => {
     if (!paymentMethod) {
@@ -133,6 +148,52 @@ const ShoppingCart = ({
               <span>{formatCurrency(finalTotal)}</span>
             </div>
             
+            
+            {/* Cart Summary Section */}
+            <div className="space-y-3 border-t border-spa-sand/50 pt-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <ShoppingBag className="h-4 w-4" />
+                <span>Cart Summary</span>
+              </div>
+              
+              {/* Global Discount Input */}
+              <div className="space-y-1">
+                <Label htmlFor="global-discount" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <Percent className="h-3 w-3" />
+                  Discount (applies to entire cart)
+                </Label>
+                <Input
+                  id="global-discount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  max={subtotal}
+                  value={globalDiscount || ''}
+                  onChange={handleGlobalDiscountChange}
+                  className="h-8"
+                  placeholder="0.00"
+                />
+              </div>
+              
+              {/* Customer Name Input - only shown when cart has services */}
+              {hasServices && (
+                <div className="space-y-1">
+                  <Label htmlFor="global-customer" className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    Customer Name
+                  </Label>
+                  <Input
+                    id="global-customer"
+                    type="text"
+                    value={globalCustomerName}
+                    onChange={(e) => setGlobalCustomerName(e.target.value)}
+                    className="h-8"
+                    placeholder="Enter customer name"
+                  />
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
