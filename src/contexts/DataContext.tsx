@@ -58,9 +58,9 @@ interface DataContextType {
   updateService: (id: string, updates: Partial<Service>) => void;
   deleteService: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
-  recordBulkSale: (items: {product: Product, quantity: number, discount: number}[], discount?: number, paymentMethod?: string) => Promise<void>;
-  recordServiceSale: (items: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
-  recordMixedSale: (products: {product: Product, quantity: number, discount: number}[], serviceItems: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => Promise<void>;
+  recordBulkSale: (items: {product: Product, quantity: number}[], globalDiscount?: number, paymentMethod?: string) => Promise<void>;
+  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
+  recordMixedSale: (products: {product: Product, quantity: number}[], serviceItems: {service: Service, quantity: number}[], globalDiscount?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -418,7 +418,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const recordBulkSale = async (items: {product: Product, quantity: number, discount: number}[], discount: number = 0, paymentMethod?: string) => {
+  const recordBulkSale = async (items: {product: Product, quantity: number}[], globalDiscount: number = 0, paymentMethod?: string) => {
     if (items.length === 0) return;
     
     for (const item of items) {
@@ -440,10 +440,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         0
       );
       
-      const totalDiscount = items.reduce(
-        (sum, item) => sum + item.discount,
-        0
-      );
+      const totalDiscount = globalDiscount;
       
       const finalTotal = Math.max(0, subtotal - totalDiscount);
       
@@ -467,7 +464,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       for (const item of items) {
         const itemTotal = item.product.sellPrice * item.quantity;
-        const finalPrice = Math.max(0, itemTotal - item.discount);
+        // Distribute global discount proportionally across items
+        const itemDiscountShare = subtotal > 0 ? (itemTotal / subtotal) * totalDiscount : 0;
+        const finalPrice = Math.max(0, itemTotal - itemDiscountShare);
         
         newTransactions.push({
           product_id: item.product.id,
@@ -539,7 +538,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const recordServiceSale = async (items: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], paymentMethod?: string) => {
+  const recordServiceSale = async (items: {service: Service, quantity: number}[], globalDiscount: number = 0, globalCustomerName: string = '', paymentMethod?: string) => {
     if (items.length === 0) return;
     
     try {
@@ -554,21 +553,25 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
+      // Calculate subtotal for proportional discount distribution
+      const subtotal = items.reduce((sum, item) => sum + (item.service.price * item.quantity), 0);
+      
       // Process each service separately as income records
       const financePromises = items.map(async (item) => {
         const serviceTotal = item.service.price * item.quantity;
-        const finalPrice = Math.max(0, serviceTotal - item.discount);
-        const tipAmount = item.tip || 0;
+        // Distribute global discount proportionally across items
+        const itemDiscountShare = subtotal > 0 ? (serviceTotal / subtotal) * globalDiscount : 0;
+        const finalPrice = Math.max(0, serviceTotal - itemDiscountShare);
         
         const financeData = {
           type: 'income',
-          date: item.serviceDate?.toISOString() || now.toISOString(),
-          amount: finalPrice + tipAmount, // Include tip in the total amount
-          description: `${item.service.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}${item.notes ? ` - ${item.notes}` : ''}`,
-          customer_name: item.customerName || null,
+          date: now.toISOString(),
+          amount: finalPrice,
+          description: `${item.service.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`,
+          customer_name: globalCustomerName || null,
           service_id: item.service.id,
           payment_method: paymentMethod || null,
-          tip_amount: tipAmount > 0 ? tipAmount : null
+          tip_amount: null
         };
         
         const { error } = await supabase
@@ -599,8 +602,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const recordMixedSale = async (
-    products: {product: Product, quantity: number, discount: number}[], 
-    serviceItems: {service: Service, quantity: number, discount: number, customerName?: string, tip?: number, notes?: string, serviceDate?: Date}[], 
+    products: {product: Product, quantity: number}[], 
+    serviceItems: {service: Service, quantity: number}[], 
+    globalDiscount: number = 0,
+    globalCustomerName: string = '',
     paymentMethod?: string
   ) => {
     try {
@@ -621,16 +626,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
+      // Calculate proportional discount distribution
+      const productSubtotal = products.reduce((sum, item) => sum + (item.product.sellPrice * item.quantity), 0);
+      const serviceSubtotal = serviceItems.reduce((sum, item) => sum + (item.service.price * item.quantity), 0);
+      const totalSubtotal = productSubtotal + serviceSubtotal;
+      
+      const productDiscountShare = totalSubtotal > 0 ? (productSubtotal / totalSubtotal) * globalDiscount : 0;
+      const serviceDiscountShare = totalSubtotal > 0 ? (serviceSubtotal / totalSubtotal) * globalDiscount : 0;
+      
       // Process products through existing recordBulkSale
       if (products.length > 0) {
         console.log("Processing products...");
-        await recordBulkSale(products, 0, paymentMethod);
+        await recordBulkSale(products, productDiscountShare, paymentMethod);
       }
       
       // Process services through recordServiceSale
       if (serviceItems.length > 0) {
         console.log("Processing services...");
-        await recordServiceSale(serviceItems, paymentMethod);
+        await recordServiceSale(serviceItems, serviceDiscountShare, globalCustomerName, paymentMethod);
       }
       
       toast({ 

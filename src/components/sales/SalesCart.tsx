@@ -36,43 +36,31 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
         // Mixed cart: both products and services
         const productSaleItems = productItems.map(item => ({
           product: item.item as Product,
-          quantity: item.quantity,
-          discount: globalDiscount / items.length // Distribute global discount across items
+          quantity: item.quantity
         }));
         
         const serviceSaleItems = serviceItems.map(item => ({
           service: item.item as Service,
-          quantity: item.quantity,
-          discount: globalDiscount / items.length,
-          customerName: globalCustomerName,
-          tip: 0, // No tip field in phase 3
-          notes: '', // No notes field in phase 3
-          serviceDate: new Date()
+          quantity: item.quantity
         }));
         
-        await recordMixedSale(productSaleItems, serviceSaleItems, paymentMethod);
+        await recordMixedSale(productSaleItems, serviceSaleItems, globalDiscount, globalCustomerName, paymentMethod);
       } else if (hasProducts) {
         // Products only
         const saleItems = productItems.map(item => ({
           product: item.item as Product,
-          quantity: item.quantity,
-          discount: globalDiscount / items.length
+          quantity: item.quantity
         }));
         
-        await recordBulkSale(saleItems, 0, paymentMethod);
+        await recordBulkSale(saleItems, globalDiscount, paymentMethod);
       } else if (hasServices) {
         // Services only
         const serviceSaleItems = serviceItems.map(item => ({
           service: item.item as Service,
-          quantity: item.quantity,
-          discount: globalDiscount / items.length,
-          customerName: globalCustomerName,
-          tip: 0,
-          notes: '',
-          serviceDate: new Date()
+          quantity: item.quantity
         }));
         
-        await recordServiceSale(serviceSaleItems, paymentMethod);
+        await recordServiceSale(serviceSaleItems, globalDiscount, globalCustomerName, paymentMethod);
       }
       
       clearCart();
