@@ -102,7 +102,7 @@ const ShoppingCart = ({
                 <span className="flex items-center">
                   Total Discounts
                 </span>
-                <span>-{formatCurrency(totalDiscount)}</span>
+                <span className="mr-3 ">-{formatCurrency(totalDiscount)}</span>
               </div>}
             
             <div className="flex justify-between font-medium border-t border-spa-sand/50 pt-2 mt-2">
