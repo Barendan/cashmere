@@ -90,7 +90,7 @@ const ShoppingCart = ({
           <ScrollArea className="flex-grow px-4 pt-4 pr-4">
             <div className="space-y-3">
               {items.map((item) => (
-                <CartItem 
+                <CartItem
                   key={item.item.id}
                   item={item.item}
                   type={item.type}
@@ -99,13 +99,6 @@ const ShoppingCart = ({
                   onIncrement={() => updateQuantity(item.item.id, item.quantity + 1)}
                   onDecrement={() => updateQuantity(item.item.id, item.quantity - 1)}
                   onRemove={() => removeItem(item.item.id)}
-                  discount={item.discount}
-                  onDiscountChange={(discount) => updateDiscount(item.item.id, discount)}
-                  customerName={item.customerName}
-                  tip={item.tip}
-                  notes={item.notes}
-                  serviceDate={item.serviceDate}
-                  onServiceFieldChange={(fields) => updateServiceFields(item.item.id, fields)}
                 />
               ))}
             </div>
