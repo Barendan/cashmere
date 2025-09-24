@@ -7,26 +7,21 @@ export interface CartItem {
   item: Product | Service;
   type: 'product' | 'service';
   quantity: number;
-  discount: number;
-  // Service-specific fields (only used when type is 'service')
-  customerName?: string;
-  tip?: number;
-  notes?: string;
-  serviceDate?: Date;
 }
 
 interface CartContextType {
   items: CartItem[];
+  globalDiscount: number;
+  globalCustomerName: string;
   addItem: (item: Product | Service, type: 'product' | 'service') => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
-  updateDiscount: (itemId: string, discount: number) => void;
-  updateServiceFields: (itemId: string, fields: { customerName?: string; tip?: number; notes?: string; serviceDate?: Date }) => void;
+  updateGlobalDiscount: (discount: number) => void;
+  updateGlobalCustomerName: (customerName: string) => void;
   clearCart: () => void;
   isItemInCart: (itemId: string) => boolean;
   getSubtotal: () => number;
   getTotalDiscount: () => number;
-  getTotalTip: () => number;
   getFinalTotal: () => number;
 }
 
@@ -34,6 +29,8 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [globalDiscount, setGlobalDiscount] = useState<number>(0);
+  const [globalCustomerName, setGlobalCustomerName] = useState<string>('');
   const { toast } = useToast();
 
   const addItem = (item: Product | Service, type: 'product' | 'service') => {
@@ -42,14 +39,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const cartItem: CartItem = {
       item,
       type,
-      quantity: 1,
-      discount: 0,
-      ...(type === 'service' && {
-        customerName: '',
-        tip: 0,
-        notes: '',
-        serviceDate: new Date()
-      })
+      quantity: 1
     };
     
     setItems([...items, cartItem]);
@@ -88,37 +78,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     ));
   };
 
-  const updateDiscount = (itemId: string, discount: number) => {
-    const cartItem = items.find(item => item.item.id === itemId);
-    if (!cartItem) return;
-    
-    // Calculate item total based on type
-    const itemPrice = cartItem.type === 'product' 
-      ? (cartItem.item as Product).sellPrice 
-      : (cartItem.item as Service).price;
-    const itemTotal = itemPrice * cartItem.quantity;
-    const safeDiscount = Math.min(discount, itemTotal);
-    
-    setItems(items.map(item => 
-      item.item.id === itemId 
-        ? { ...item, discount: safeDiscount }
-        : item
-    ));
+  const updateGlobalDiscount = (discount: number) => {
+    const subtotal = getSubtotal();
+    const safeDiscount = Math.min(Math.max(0, discount), subtotal);
+    setGlobalDiscount(safeDiscount);
   };
 
-  const updateServiceFields = (itemId: string, fields: { customerName?: string; tip?: number; notes?: string; serviceDate?: Date }) => {
-    const cartItem = items.find(item => item.item.id === itemId);
-    if (!cartItem || cartItem.type !== 'service') return;
-    
-    setItems(items.map(item => 
-      item.item.id === itemId 
-        ? { ...item, ...fields }
-        : item
-    ));
+  const updateGlobalCustomerName = (customerName: string) => {
+    setGlobalCustomerName(customerName);
   };
 
   const clearCart = () => {
     setItems([]);
+    setGlobalDiscount(0);
+    setGlobalCustomerName('');
   };
 
   const isItemInCart = (itemId: string) => {
@@ -135,33 +108,28 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const getTotalDiscount = () => {
-    return items.reduce((sum, item) => sum + item.discount, 0);
-  };
-
-  const getTotalTip = () => {
-    return items.reduce((sum, item) => {
-      return sum + (item.type === 'service' ? (item.tip || 0) : 0);
-    }, 0);
+    return globalDiscount;
   };
 
   const getFinalTotal = () => {
-    return Math.max(0, getSubtotal() - getTotalDiscount() + getTotalTip());
+    return Math.max(0, getSubtotal() - getTotalDiscount());
   };
 
   return (
     <CartContext.Provider
       value={{
         items,
+        globalDiscount,
+        globalCustomerName,
         addItem,
         removeItem,
         updateQuantity,
-        updateDiscount,
-        updateServiceFields,
+        updateGlobalDiscount,
+        updateGlobalCustomerName,
         clearCart,
         isItemInCart,
         getSubtotal,
         getTotalDiscount,
-        getTotalTip,
         getFinalTotal
       }}
     >

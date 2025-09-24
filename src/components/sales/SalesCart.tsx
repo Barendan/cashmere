@@ -13,7 +13,7 @@ interface SalesCartProps {
 }
 
 const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
-  const { items, updateQuantity, updateDiscount, updateServiceFields, removeItem, clearCart } = useCart();
+  const { items, globalDiscount, globalCustomerName, updateQuantity, removeItem, clearCart } = useCart();
   const { recordBulkSale, recordServiceSale, recordMixedSale } = useData();
   const { toast } = useToast();
   
@@ -37,17 +37,17 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
         const productSaleItems = productItems.map(item => ({
           product: item.item as Product,
           quantity: item.quantity,
-          discount: item.discount
+          discount: globalDiscount / items.length // Distribute global discount across items
         }));
         
         const serviceSaleItems = serviceItems.map(item => ({
           service: item.item as Service,
           quantity: item.quantity,
-          discount: item.discount,
-          customerName: item.customerName,
-          tip: item.tip,
-          notes: item.notes,
-          serviceDate: item.serviceDate
+          discount: globalDiscount / items.length,
+          customerName: globalCustomerName,
+          tip: 0, // No tip field in phase 3
+          notes: '', // No notes field in phase 3
+          serviceDate: new Date()
         }));
         
         await recordMixedSale(productSaleItems, serviceSaleItems, paymentMethod);
@@ -56,7 +56,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
         const saleItems = productItems.map(item => ({
           product: item.item as Product,
           quantity: item.quantity,
-          discount: item.discount
+          discount: globalDiscount / items.length
         }));
         
         await recordBulkSale(saleItems, 0, paymentMethod);
@@ -65,11 +65,11 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
         const serviceSaleItems = serviceItems.map(item => ({
           service: item.item as Service,
           quantity: item.quantity,
-          discount: item.discount,
-          customerName: item.customerName,
-          tip: item.tip,
-          notes: item.notes,
-          serviceDate: item.serviceDate
+          discount: globalDiscount / items.length,
+          customerName: globalCustomerName,
+          tip: 0,
+          notes: '',
+          serviceDate: new Date()
         }));
         
         await recordServiceSale(serviceSaleItems, paymentMethod);
@@ -101,8 +101,6 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
           <ShoppingCart 
             items={items}
             updateQuantity={updateQuantity}
-            updateDiscount={updateDiscount}
-            updateServiceFields={updateServiceFields}
             removeItem={removeItem}
             clearCart={clearCart}
             recordSale={handleCompleteSale}

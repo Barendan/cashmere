@@ -11,13 +11,11 @@ import { Label } from '@/components/ui/label';
 import { formatCurrency } from '@/lib/format';
 import { Undo2, Package, Star, ShoppingBag, Percent, User } from 'lucide-react';
 import { PAYMENT_METHODS } from '@/constants/paymentMethods';
-import { CartItem as CartItemType } from '@/contexts/CartContext';
+import { CartItem as CartItemType, useCart } from '@/contexts/CartContext';
 
 interface ShoppingCartProps {
   items: CartItemType[];
   updateQuantity: (itemId: string, quantity: number) => void;
-  updateDiscount: (itemId: string, discount: number) => void;
-  updateServiceFields: (itemId: string, fields: { customerName?: string; tip?: number; notes?: string; serviceDate?: Date }) => void;
   removeItem: (itemId: string) => void;
   clearCart: () => void;
   recordSale: (paymentMethod?: string) => void;
@@ -32,8 +30,6 @@ interface ShoppingCartProps {
 const ShoppingCart = ({
   items,
   updateQuantity,
-  updateDiscount,
-  updateServiceFields,
   removeItem,
   clearCart,
   recordSale,
@@ -44,8 +40,7 @@ const ShoppingCart = ({
   undoLastTransaction
 }: ShoppingCartProps) => {
   const [paymentMethod, setPaymentMethod] = useState<string>('');
-  const [globalDiscount, setGlobalDiscount] = useState<number>(0);
-  const [globalCustomerName, setGlobalCustomerName] = useState<string>('');
+  const { globalDiscount, globalCustomerName, updateGlobalDiscount, updateGlobalCustomerName } = useCart();
   
   // Calculate totals including both products and services
   const subtotal = items.reduce((sum, item) => {
@@ -55,21 +50,17 @@ const ShoppingCart = ({
     return sum + (itemPrice * item.quantity);
   }, 0);
   
-  // For Phase 2: Use global discount instead of per-item discounts
-  // Keep the old calculation for backward compatibility but prioritize global discount
-  const totalDiscount = globalDiscount > 0 ? globalDiscount : items.reduce((sum, item) => sum + item.discount, 0);
-  const totalTip = items.reduce((sum, item) => {
-    return sum + (item.type === 'service' ? (item.tip || 0) : 0);
-  }, 0);
+  // Use global discount from cart context
+  const totalDiscount = globalDiscount;
   
-  const finalTotal = Math.max(0, subtotal - totalDiscount + totalTip);
+  const finalTotal = Math.max(0, subtotal - totalDiscount);
   
   const handleGlobalDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
     if (isNaN(value) || value < 0) {
-      setGlobalDiscount(0);
+      updateGlobalDiscount(0);
     } else {
-      setGlobalDiscount(Math.min(value, subtotal)); // Ensure discount doesn't exceed subtotal
+      updateGlobalDiscount(Math.min(value, subtotal)); // Ensure discount doesn't exceed subtotal
     }
   };
   
@@ -134,14 +125,6 @@ const ShoppingCart = ({
               </div>
             )}
             
-            {totalTip > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span className="flex items-center">
-                  Total Tips
-                </span>
-                <span>+{formatCurrency(totalTip)}</span>
-              </div>
-            )}
             
             <div className="flex justify-between font-medium border-t border-spa-sand/50 pt-2 mt-2">
               <span>Total</span>
@@ -186,7 +169,7 @@ const ShoppingCart = ({
                     id="global-customer"
                     type="text"
                     value={globalCustomerName}
-                    onChange={(e) => setGlobalCustomerName(e.target.value)}
+                    onChange={(e) => updateGlobalCustomerName(e.target.value)}
                     className="h-8"
                     placeholder="Enter customer name"
                   />
