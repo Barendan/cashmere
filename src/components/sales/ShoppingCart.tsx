@@ -95,7 +95,7 @@ const ShoppingCart = ({
             
             <div className="flex justify-between text-sm mb-1">
               <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatCurrency(subtotal)}</span>
+              <span className="mr-3 \n">{formatCurrency(subtotal)}</span>
             </div>
             
             {totalDiscount > 0 && <div className="flex justify-between text-sm text-red-600">
@@ -107,7 +107,7 @@ const ShoppingCart = ({
             
             <div className="flex justify-between font-medium border-t border-spa-sand/50 pt-2 mt-2">
               <span>Total</span>
-              <span>{formatCurrency(finalTotal)}</span>
+              <span className="mr-2 ">{formatCurrency(finalTotal)}</span>
             </div>
             
             <div className="space-y-3 border-t border-spa-sand/50 pt-3">
