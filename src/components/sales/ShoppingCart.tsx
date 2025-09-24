@@ -111,8 +111,9 @@ const ShoppingCart = ({
           </ScrollArea>
           
           <div className="p-4 mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
-            {/* Global Discount Input - moved above subtotal */}
-            <div className="space-y-1">
+            {/* Global Discount Input - styled like subtotal/total */}
+            <div className="flex justify-between text-sm mb-2 pt-2">
+              <span className="text-muted-foreground">Discount</span>
               <Input
                 id="global-discount"
                 type="number"
@@ -121,8 +122,8 @@ const ShoppingCart = ({
                 max={subtotal}
                 value={globalDiscount || ''}
                 onChange={handleGlobalDiscountChange}
-                className="h-8"
-                placeholder="Discount amount ($)"
+                className="h-8 w-20 text-right"
+                placeholder="0.00"
               />
             </div>
             
@@ -154,7 +155,6 @@ const ShoppingCart = ({
                     type="text"
                     value={globalCustomerName}
                     onChange={(e) => updateGlobalCustomerName(e.target.value)}
-                    className="h-8"
                     placeholder="Enter customer name"
                   />
                 </div>
