@@ -111,6 +111,21 @@ const ShoppingCart = ({
           </ScrollArea>
           
           <div className="p-4 mt-auto space-y-3 pt-3 border-t border-spa-sand/50">
+            {/* Global Discount Input - moved above subtotal */}
+            <div className="space-y-1">
+              <Input
+                id="global-discount"
+                type="number"
+                min="0"
+                step="0.01"
+                max={subtotal}
+                value={globalDiscount || ''}
+                onChange={handleGlobalDiscountChange}
+                className="h-8"
+                placeholder="Discount amount ($)"
+              />
+            </div>
+            
             <div className="flex justify-between text-sm mb-2">
               <span className="text-muted-foreground">Subtotal</span>
               <span>{formatCurrency(subtotal)}</span>
@@ -125,46 +140,15 @@ const ShoppingCart = ({
               </div>
             )}
             
-            
             <div className="flex justify-between font-medium border-t border-spa-sand/50 pt-2 mt-2">
               <span>Total</span>
               <span>{formatCurrency(finalTotal)}</span>
             </div>
             
-            
-            {/* Cart Summary Section */}
             <div className="space-y-3 border-t border-spa-sand/50 pt-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                <ShoppingBag className="h-4 w-4" />
-                <span>Cart Summary</span>
-              </div>
-              
-              {/* Global Discount Input */}
-              <div className="space-y-1">
-                <Label htmlFor="global-discount" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                  <Percent className="h-3 w-3" />
-                  Discount (applies to entire cart)
-                </Label>
-                <Input
-                  id="global-discount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  max={subtotal}
-                  value={globalDiscount || ''}
-                  onChange={handleGlobalDiscountChange}
-                  className="h-8"
-                  placeholder="0.00"
-                />
-              </div>
-              
               {/* Customer Name Input - only shown when cart has services */}
               {hasServices && (
                 <div className="space-y-1">
-                  <Label htmlFor="global-customer" className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Customer Name
-                  </Label>
                   <Input
                     id="global-customer"
                     type="text"
@@ -175,13 +159,8 @@ const ShoppingCart = ({
                   />
                 </div>
               )}
-            </div>
-
-            <div className="space-y-3">
+              
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Payment Method <span className="text-red-500">*</span>
-                </label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select payment method" />
