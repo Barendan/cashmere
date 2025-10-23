@@ -53,45 +53,62 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!isMounted) return;
 
         try {
-          if (session) {
-            console.log("Auth state change - user authenticated:", session.user.id);
+          // Handle SIGNED_OUT event
+          if (event === 'SIGNED_OUT' || !session) {
+            console.log("Auth state change - user signed out");
+            clearAllTimeouts();
             
-            // If already authenticated, just silently update the session without re-authenticating
-            if (authState.status === 'authenticated') {
-              console.log("Already authenticated - silently updating session");
-              setAuthState({ 
-                status: 'authenticated', 
-                session, 
-                user: authState.user // Keep existing user data
-              });
-            } else {
-              // Only process full login flow if not already authenticated
-              setAuthState({ status: 'authenticating' });
+            setAuthState({ status: 'unauthenticated' });
+            return;
+          }
+
+          // For all session events, use functional update to avoid stale closure
+          setAuthState(prev => {
+            console.log(`Processing ${event} - Previous status: ${prev.status}`);
+            
+            // Handle TOKEN_REFRESHED and USER_UPDATED - silent updates if already authenticated
+            if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+              if (prev.status === 'authenticated') {
+                console.log(`${event} - Silently updating session without re-authentication`);
+                return {
+                  status: 'authenticated',
+                  session,
+                  user: prev.user // Keep existing user data
+                };
+              }
+            }
+            
+            // Handle SIGNED_IN and INITIAL_SESSION
+            if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+              // If already authenticated with the same user, just update session
+              if (prev.status === 'authenticated' && prev.user.id === session.user.id) {
+                console.log(`${event} - Same user already authenticated, updating session only`);
+                return {
+                  status: 'authenticated',
+                  session,
+                  user: prev.user
+                };
+              }
               
-              // Use setTimeout to avoid potential Supabase deadlock
+              // Different user or not authenticated - trigger full login flow
+              console.log(`${event} - Triggering full authentication flow`);
+              
+              // Use setTimeout to avoid Supabase deadlock
               setTimeout(() => {
                 processSessionLogin(session, isMounted);
               }, 0);
+              
+              // Return previous state, processSessionLogin will update it
+              return prev;
             }
-          } else {
-            console.log("Auth state change - user not authenticated");
             
-            // Clear any active timeout
-            clearAllTimeouts();
-            
-            if (isMounted) {
-              setAuthState({ status: 'unauthenticated' });
-            }
-          }
+            // Default: return previous state unchanged
+            return prev;
+          });
         } catch (err) {
           console.error("Error processing auth state change:", err);
-          
-          if (isMounted) {
-            // Clear any active timeout
-            clearAllTimeouts();
-            
-            setAuthState({ status: 'error', error: "Authentication error. Please try again." });
-          }
+          clearAllTimeouts();
+          setAuthState({ status: 'error', error: "Authentication error. Please try again." });
         }
       }
     );

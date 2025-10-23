@@ -64,8 +64,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Show inline spinner during authentication without blocking navigation
-  if (authState.status === 'authenticating') {
+  // During 'authenticating' status, keep the page mounted to preserve form state
+  // Only show if we don't have a user yet (initial load scenario)
+  if (authState.status === 'authenticating' && !user) {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
