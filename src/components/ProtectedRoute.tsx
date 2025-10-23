@@ -58,10 +58,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requiredRole }) => {
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  // Only redirect if definitively unauthenticated, not during brief auth checks
+  if (authState.status === 'unauthenticated') {
     console.log("Protected route redirecting to login - user not authenticated");
     return <Navigate to="/login" replace />;
+  }
+
+  // Show inline spinner during authentication without blocking navigation
+  if (authState.status === 'authenticating') {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground mt-2">Verifying session...</p>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   // Check for required role

@@ -40,7 +40,6 @@ const AUTH_TIMEOUT = 15000;
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({ status: 'unauthenticated' });
-  const [skipNextAuthCheck, setSkipNextAuthCheck] = useState(false);
   
   // Set up auth state listeners
   useEffect(() => {
@@ -53,18 +52,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (!isMounted) return;
 
-        if (skipNextAuthCheck && event === 'INITIAL_SESSION') {
-          console.log("Skipping auth recheck after tab focus");
-          setSkipNextAuthCheck(false);
-          return;
-        }
-
         try {
           if (session) {
             console.log("Auth state change - user authenticated:", session.user.id);
             
-            // Only update to authenticating if not already authenticated
-            if (authState.status !== 'authenticated') {
+            // If already authenticated, just silently update the session without re-authenticating
+            if (authState.status === 'authenticated') {
+              console.log("Already authenticated - silently updating session");
+              setAuthState({ 
+                status: 'authenticated', 
+                session, 
+                user: authState.user // Keep existing user data
+              });
+            } else {
+              // Only process full login flow if not already authenticated
               setAuthState({ status: 'authenticating' });
               
               // Use setTimeout to avoid potential Supabase deadlock
@@ -198,24 +199,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
   };
 
-  useEffect(() => {
-    let pageWasHidden = false;
-  
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        pageWasHidden = true;
-      } else if (pageWasHidden) {
-        pageWasHidden = false;
-        setSkipNextAuthCheck(true);
-      }
-    };
-  
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-  
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
+  // Removed visibility change handler - Supabase handles token refresh automatically
+  // No need to re-authenticate when user switches browser tabs
 
   // Use a ref to track timeouts - prevents stale closure issues
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -408,14 +393,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   return (
     <AuthContext.Provider value={value}>
       {children}
-      {authState.status === 'authenticating' && (
-        <div className="fixed inset-0 bg-black/10 z-50 flex items-center justify-center">
-          <div className="bg-white p-4 rounded-md shadow-lg">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-spa-sage mx-auto"></div>
-            <p className="text-spa-deep mt-2">Verifying session...</p>
-          </div>
-        </div>
-      )}
     </AuthContext.Provider>
   );
 };
