@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase, mapFinanceRowToFinanceRecord } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import { 
   Tooltip,
@@ -21,6 +22,14 @@ import { FinanceRecord, Service } from "@/models/types";
 import { Button } from "@/components/ui/button";
 import { Trash2, BadgePercent } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,13 +60,15 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
   const [isLoading, setIsLoading] = useState(true);
   const [incomeToDelete, setIncomeToDelete] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
   useEffect(() => {
     const fetchIncomeRecords = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
           .from("finances")
           .select(`
             *,
@@ -65,10 +76,10 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
               name,
               price
             )
-          `)
+          `, { count: 'exact' })
           .eq("type", "income")
           .order("date", { ascending: false })
-          .limit(limit);
+          .range((currentPage - 1) * limit, currentPage * limit - 1);
 
         if (error) throw error;
 
@@ -120,6 +131,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
           });
 
           setIncomeRecords(formattedData);
+          setTotalCount(count || 0);
         }
       } catch (error) {
         console.error("Error fetching income records:", error);
@@ -134,7 +146,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
     };
 
     fetchIncomeRecords();
-  }, [toast, limit]);
+  }, [toast, limit, currentPage]);
 
   useEffect(() => {
     if (newIncome) {
@@ -185,6 +197,8 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
       };
       
       setIncomeRecords(prev => [newIncomeRecord, ...prev].slice(0, limit));
+      setCurrentPage(1); // Reset to first page when new income is added
+      setTotalCount(prev => prev + 1); // Increment total count
     }
   }, [newIncome, limit]);
 
@@ -200,6 +214,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
       if (error) throw error;
       
       setIncomeRecords(prev => prev.filter(record => record.id !== incomeToDelete));
+      setTotalCount(prev => Math.max(0, prev - 1)); // Decrement total count
       
       toast({
         title: "Success",
@@ -353,7 +368,7 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
 
   return (
     <div className="border rounded-md overflow-hidden">
-      <div className="overflow-x-auto">
+      <ScrollArea className="h-[400px]">
         <Table>
           <TableHeader>
             <TableRow className="bg-spa-cream">
@@ -373,17 +388,25 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
                 <TableCell>{formatServiceNames(record)}</TableCell>
                 <TableCell className="capitalize">{record.paymentMethod || "Unknown"}</TableCell>
                 <TableCell className="text-right">
-                  {record.discount > 0 ? (
+                  {(record.discount ?? 0) > 0 ? (
                     <div className="flex flex-col items-end">
                       <div className="text-xs text-gray-500 line-through">${record.originalTotal?.toFixed(2)}</div>
-                      <div className="font-medium text-emerald-600 flex items-center">
+                      <div className="font-medium text-gray-900 flex items-center">
                         <BadgePercent className="h-3 w-3 mr-1" />
                         ${record.amount.toFixed(2)}
                       </div>
-                      <div className="text-xs text-rose-600">-${record.discount.toFixed(2)}</div>
+                      <div className="text-[10px] text-rose-600">-${record.discount.toFixed(2)}</div>
+                      {(record.tipAmount ?? 0) > 0 && (
+                        <div className="text-[10px] text-green-600">+${record.tipAmount.toFixed(2)}</div>
+                      )}
                     </div>
                   ) : (
-                    <span className="font-medium text-emerald-600">${record.amount.toFixed(2)}</span>
+                    <div className="flex flex-col items-end">
+                      <div className="font-medium text-gray-900">${record.amount.toFixed(2)}</div>
+                      {(record.tipAmount ?? 0) > 0 && (
+                        <div className="text-[10px] text-green-600">+${record.tipAmount.toFixed(2)}</div>
+                      )}
+                    </div>
                   )}
                 </TableCell>
                 {isAdmin && (
@@ -402,7 +425,32 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ScrollArea>
+      
+      {/* Pagination Controls */}
+      {totalCount > limit && (
+        <div className="flex justify-between items-center p-4 border-t">
+          <span className="text-sm text-muted-foreground">
+            Showing {((currentPage - 1) * limit) + 1}-{Math.min(currentPage * limit, totalCount)} of {totalCount} records
+          </span>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalCount / limit), prev + 1))}
+                  className={currentPage * limit >= totalCount ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

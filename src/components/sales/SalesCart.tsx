@@ -13,7 +13,7 @@ interface SalesCartProps {
 }
 
 const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
-  const { items, globalDiscount, globalCustomerName, updateQuantity, removeItem, clearCart } = useCart();
+  const { items, globalDiscount, globalTip, globalCustomerName, updateQuantity, removeItem, clearCart } = useCart();
   const { recordBulkSale, recordServiceSale, recordMixedSale } = useData();
   const { toast } = useToast();
   
@@ -44,7 +44,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
           quantity: item.quantity
         }));
         
-        await recordMixedSale(productSaleItems, serviceSaleItems, globalDiscount, globalCustomerName, paymentMethod);
+        await recordMixedSale(productSaleItems, serviceSaleItems, globalDiscount, globalTip, globalCustomerName, paymentMethod);
       } else if (hasProducts) {
         // Products only
         const saleItems = productItems.map(item => ({
@@ -60,7 +60,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
           quantity: item.quantity
         }));
         
-        await recordServiceSale(serviceSaleItems, globalDiscount, globalCustomerName, paymentMethod);
+        await recordServiceSale(serviceSaleItems, globalDiscount, globalTip, globalCustomerName, paymentMethod);
       }
       
       clearCart();

@@ -36,26 +36,37 @@ const ShoppingCart = ({
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const {
     globalDiscount,
+    globalTip,
     globalCustomerName,
     updateGlobalDiscount,
-    updateGlobalCustomerName
+    updateGlobalTip,
+    updateGlobalCustomerName,
+    getSubtotal,
+    getTotalDiscount,
+    getTotalTip,
+    getFinalTotal
   } = useCart();
 
-  // Calculate totals including both products and services
-  const subtotal = items.reduce((sum, item) => {
-    const itemPrice = item.type === 'product' ? (item.item as Product).sellPrice : (item.item as Service).price;
-    return sum + itemPrice * item.quantity;
-  }, 0);
-
-  // Use global discount from cart context
-  const totalDiscount = globalDiscount;
-  const finalTotal = Math.max(0, subtotal - totalDiscount);
+  // Use cart context functions for calculations
+  const subtotal = getSubtotal();
+  const totalDiscount = getTotalDiscount();
+  const totalTip = getTotalTip();
+  const finalTotal = getFinalTotal();
   const handleGlobalDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
     if (isNaN(value) || value < 0) {
       updateGlobalDiscount(0);
     } else {
       updateGlobalDiscount(Math.min(value, subtotal)); // Ensure discount doesn't exceed subtotal
+    }
+  };
+
+  const handleGlobalTipChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+    if (isNaN(value) || value < 0) {
+      updateGlobalTip(0);
+    } else {
+      updateGlobalTip(value);
     }
   };
   const handleCompleteSale = () => {
@@ -93,6 +104,14 @@ const ShoppingCart = ({
               <input id="global-discount" type="number" min="0" step="0.01" max={subtotal} value={globalDiscount || ''} onChange={handleGlobalDiscountChange} placeholder="0.00" className="bg-background border border-input rounded-md py-1 text-right text-sm w-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
             </div>
             
+            {/* Global Tip Input - only shown when cart has services */}
+            {hasServices && (
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Tip</span>
+                <input id="global-tip" type="number" min="0" step="0.01" value={globalTip || ''} onChange={handleGlobalTipChange} placeholder="0.00" className="bg-background border border-input rounded-md py-1 text-right text-sm w-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+              </div>
+            )}
+            
             <div className="flex justify-between text-sm mb-1">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="mr-3 \n">{formatCurrency(subtotal)}</span>
@@ -103,6 +122,13 @@ const ShoppingCart = ({
                   Total Discounts
                 </span>
                 <span className="mr-3 ">-{formatCurrency(totalDiscount)}</span>
+              </div>}
+            
+            {totalTip > 0 && <div className="flex justify-between text-sm text-green-600">
+                <span className="flex items-center">
+                  Tip
+                </span>
+                <span className="mr-3 ">+{formatCurrency(totalTip)}</span>
               </div>}
             
             <div className="flex justify-between font-medium border-t border-spa-sand/50 pt-2 mt-2">

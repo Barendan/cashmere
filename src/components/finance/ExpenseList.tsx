@@ -15,6 +15,13 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FinanceRecord } from "@/models/types";
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Tooltip,
   TooltipContent,
@@ -57,6 +64,8 @@ interface ExpenseListProps {
 const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListProps) => {
   const [expenses, setExpenses] = useState<FinanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
@@ -66,12 +75,12 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
   useEffect(() => {
     const fetchExpenses = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error, count } = await supabase
           .from("finances")
-          .select("*")
+          .select("*", { count: 'exact' })
           .eq("type", "expense")
           .order("date", { ascending: false })
-          .limit(limit);
+          .range((currentPage - 1) * limit, currentPage * limit - 1);
 
         if (error) throw error;
 
@@ -81,6 +90,7 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
           );
 
           setExpenses(formattedData);
+          setTotalCount(count || 0);
         }
       } catch (error) {
         console.error("Error fetching expenses:", error);
@@ -95,12 +105,14 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
     };
 
     fetchExpenses();
-  }, [toast, limit]);
+  }, [toast, limit, currentPage]);
 
   useEffect(() => {
     if (newExpense) {
       const formattedExpense = mapFinanceRowToFinanceRecord(newExpense);
       setExpenses(prev => [formattedExpense, ...prev].slice(0, limit));
+      setCurrentPage(1); // Reset to first page when new expense is added
+      setTotalCount(prev => prev + 1); // Increment total count
     }
   }, [newExpense, limit]);
 
@@ -135,6 +147,7 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
       if (error) throw error;
 
       setExpenses((prev) => prev.filter(e => e.id !== selectedExpenseId));
+      setTotalCount(prev => Math.max(0, prev - 1)); // Decrement total count
       toast({
         title: "Expense deleted",
         description: "The expense record has been deleted.",
@@ -219,7 +232,7 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
       </AlertDialog>
 
       <div className="border rounded-md overflow-hidden">
-        <div className="overflow-x-auto">
+        <ScrollArea className="h-[400px]">
           <Table>
             <TableHeader>
               <TableRow className="bg-spa-cream">
@@ -267,7 +280,32 @@ const ExpenseList = ({ newExpense, limit = 20, compact = false }: ExpenseListPro
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ScrollArea>
+        
+        {/* Pagination Controls */}
+        {totalCount > limit && (
+          <div className="flex justify-between items-center p-4 border-t">
+            <span className="text-sm text-muted-foreground">
+              Showing {((currentPage - 1) * limit) + 1}-{Math.min(currentPage * limit, totalCount)} of {totalCount} records
+            </span>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalCount / limit), prev + 1))}
+                    className={currentPage * limit >= totalCount ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </>
   );

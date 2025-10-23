@@ -59,8 +59,8 @@ interface DataContextType {
   deleteService: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number}[], globalDiscount?: number, paymentMethod?: string) => Promise<void>;
-  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
-  recordMixedSale: (products: {product: Product, quantity: number}[], serviceItems: {service: Service, quantity: number}[], globalDiscount?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
+  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
+  recordMixedSale: (products: {product: Product, quantity: number}[], serviceItems: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -450,6 +450,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User',
         discount: totalDiscount > 0 ? totalDiscount : null,
+        tip_amount: null,
         original_total: totalDiscount > 0 ? subtotal : null,
         notes: totalDiscount > 0 ? `Discount: $${totalDiscount.toFixed(2)}` : null,
         payment_method: paymentMethod || null
@@ -538,7 +539,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const recordServiceSale = async (items: {service: Service, quantity: number}[], globalDiscount: number = 0, globalCustomerName: string = '', paymentMethod?: string) => {
+  const recordServiceSale = async (items: {service: Service, quantity: number}[], globalDiscount: number = 0, globalTip: number = 0, globalCustomerName: string = '', paymentMethod?: string) => {
     if (items.length === 0) return;
     
     try {
@@ -571,7 +572,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           customer_name: globalCustomerName || null,
           service_id: item.service.id,
           payment_method: paymentMethod || null,
-          tip_amount: null
+          tip_amount: globalTip > 0 ? globalTip : null
         };
         
         const { error } = await supabase
@@ -605,6 +606,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     products: {product: Product, quantity: number}[], 
     serviceItems: {service: Service, quantity: number}[], 
     globalDiscount: number = 0,
+    globalTip: number = 0,
     globalCustomerName: string = '',
     paymentMethod?: string
   ) => {

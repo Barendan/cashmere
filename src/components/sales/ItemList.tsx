@@ -89,7 +89,10 @@ const ItemList = ({ products, services }: ItemListProps) => {
           </TabsList>
           
           <TabsContent value="products" className="flex-grow flex flex-col m-0">
-            <ScrollArea className="flex-grow pr-4 pt-2 h-full">
+            <ScrollArea 
+              className="flex-grow overflow-auto max-h-[40vh] md:max-h-[50vh] lg:max-h-[55vh] pr-4 pt-2 scrollbar-thin scrollbar-thumb-spa-sand"
+              style={{ scrollBehavior: 'smooth' }}
+            >
               {filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredProducts.map((product, index) => (
@@ -119,7 +122,10 @@ const ItemList = ({ products, services }: ItemListProps) => {
           </TabsContent>
           
           <TabsContent value="services" className="flex-grow flex flex-col m-0">
-            <ScrollArea className="flex-grow pr-4 pt-2 h-full">
+            <ScrollArea 
+              className="flex-grow overflow-auto max-h-[40vh] md:max-h-[50vh] lg:max-h-[55vh] pr-4 pt-2 scrollbar-thin scrollbar-thumb-spa-sand"
+              style={{ scrollBehavior: 'smooth' }}
+            >
               {filteredServices.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredServices.map((service) => (

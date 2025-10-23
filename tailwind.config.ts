@@ -104,5 +104,30 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [
+		require("tailwindcss-animate"),
+		function({ addUtilities }) {
+			addUtilities({
+				'.scrollbar-thin': {
+					'scrollbar-width': 'thin',
+				},
+				'.scrollbar-thumb-spa-sand': {
+					'scrollbar-color': '#E6DFD9 transparent',
+				},
+				'.scrollbar-thumb-spa-sand::-webkit-scrollbar': {
+					'width': '8px',
+				},
+				'.scrollbar-thumb-spa-sand::-webkit-scrollbar-track': {
+					'background': 'transparent',
+				},
+				'.scrollbar-thumb-spa-sand::-webkit-scrollbar-thumb': {
+					'background-color': '#E6DFD9',
+					'border-radius': '4px',
+				},
+				'.scrollbar-thumb-spa-sand::-webkit-scrollbar-thumb:hover': {
+					'background-color': '#D1C6B8',
+				},
+			})
+		}
+	],
 } satisfies Config;
