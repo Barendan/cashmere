@@ -179,6 +179,7 @@ const ExpenseForm = ({ onExpenseAdded }) => {
                   type="number"
                   step="0.01"
                   placeholder="0.00"
+                  onFocus={(e) => e.target.select()}
                   {...field}
                 />
               </FormControl>

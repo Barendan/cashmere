@@ -281,6 +281,7 @@ const InventoryPage = () => {
                     type="number"
                     value={thresholdValue}
                     onChange={(e) => setThresholdValue(parseInt(e.target.value) || 0)}
+                    onFocus={(e) => e.target.select()}
                     min="0"
                     placeholder="Set threshold value"
                   />
@@ -418,7 +419,8 @@ const InventoryPage = () => {
                 id="costPrice" 
                 name="costPrice" 
                 value={newProduct.costPrice} 
-                onChange={handleNumberInputChange} 
+                onChange={handleNumberInputChange}
+                onFocus={(e) => e.target.select()}
                 className="col-span-3" 
               />
             </div>
@@ -431,7 +433,8 @@ const InventoryPage = () => {
                 id="sellPrice" 
                 name="sellPrice" 
                 value={newProduct.sellPrice} 
-                onChange={handleNumberInputChange} 
+                onChange={handleNumberInputChange}
+                onFocus={(e) => e.target.select()}
                 className="col-span-3" 
               />
             </div>
@@ -444,7 +447,8 @@ const InventoryPage = () => {
                 id="stockQuantity" 
                 name="stockQuantity" 
                 value={newProduct.stockQuantity} 
-                onChange={handleNumberInputChange} 
+                onChange={handleNumberInputChange}
+                onFocus={(e) => e.target.select()}
                 className="col-span-3" 
               />
             </div>
@@ -457,7 +461,8 @@ const InventoryPage = () => {
                 id="lowStockThreshold" 
                 name="lowStockThreshold" 
                 value={newProduct.lowStockThreshold} 
-                onChange={handleNumberInputChange} 
+                onChange={handleNumberInputChange}
+                onFocus={(e) => e.target.select()}
                 className="col-span-3" 
               />
             </div>
@@ -559,6 +564,7 @@ const InventoryPage = () => {
                       costPrice: parseFloat(e.target.value),
                     })
                   }
+                  onFocus={(e) => e.target.select()}
                   className="col-span-3"
                 />
               </div>
@@ -577,6 +583,7 @@ const InventoryPage = () => {
                       sellPrice: parseFloat(e.target.value),
                     })
                   }
+                  onFocus={(e) => e.target.select()}
                   className="col-span-3"
                 />
               </div>
@@ -595,6 +602,7 @@ const InventoryPage = () => {
                       stockQuantity: parseInt(e.target.value) || 0,
                     })
                   }
+                  onFocus={(e) => e.target.select()}
                   className="col-span-3"
                 />
               </div>
@@ -707,6 +715,7 @@ const InventoryPage = () => {
                                   item.product.id, 
                                   parseInt(e.target.value) || 0
                                 )}
+                                onFocus={(e) => e.target.select()}
                                 className="w-24 text-center"
                               />
                             </div>
