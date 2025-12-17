@@ -16,6 +16,7 @@ type MetricsBarChartProps = {
   barFill?: string;
   tooltipType?: "currency" | "percent" | "number";
   tooltipLabel?: string;
+  categoryGap?: string | number;
 };
 
 const MetricsBarChart = ({
@@ -28,7 +29,8 @@ const MetricsBarChart = ({
   barName = "Value",
   barFill = "#AECCC6",
   tooltipType = "currency",
-  tooltipLabel = "Value"
+  tooltipLabel = "Value",
+  categoryGap = "20%"
 }: MetricsBarChartProps) => {
   // Improved margin calculation based on layout and data
   const getDefaultMargin = () => {
@@ -73,7 +75,7 @@ const MetricsBarChart = ({
   return (
     <ResponsiveContainer width="100%" height={height}>
       {layout === "vertical" ? (
-        <BarChart data={data} layout="vertical" margin={defaultMargin}>
+        <BarChart data={data} layout="vertical" margin={defaultMargin} barCategoryGap={categoryGap}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis type="number" tick={{ fontSize: 12 }} />
           <YAxis 
@@ -88,11 +90,11 @@ const MetricsBarChart = ({
           <Bar 
             dataKey={dataKey} 
             name={barName} 
-            fill={barFill} 
+            fill={barFill}
           />
         </BarChart>
       ) : (
-        <BarChart data={data} margin={defaultMargin}>
+        <BarChart data={data} margin={defaultMargin} barCategoryGap={categoryGap}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
           <XAxis 
             dataKey={nameKey} 

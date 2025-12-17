@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "../contexts/AuthContext";
+import { useData } from "../contexts/DataContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import IncomeList from "@/components/finance/IncomeList";
@@ -9,7 +10,7 @@ import ExpenseForm from "@/components/finance/ExpenseForm";
 import ExpenseList from "@/components/finance/ExpenseList";
 import FinanceSummary from "@/components/finance/FinanceSummary";
 import usePageTitle from "@/hooks/usePageTitle";
-import { AlertCircle, TrendingUp, TrendingDown, PieChart, DollarSign, Receipt, CreditCard, ArrowRight, ShoppingBag, Star } from "lucide-react";
+import { TrendingUp, TrendingDown, PieChart, Receipt, CreditCard, ArrowRight, ShoppingBag, Star } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 const Finance = () => {
   usePageTitle("Finance");
   const { isAdmin } = useAuth();
+  const { products, services, transactions, sales, serviceIncomes } = useData();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [newIncome, setNewIncome] = useState(null);
@@ -34,6 +36,16 @@ const Finance = () => {
     const timer = setTimeout(() => setIsLoading(false), 500);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    console.log('[Finance] Data loaded:', {
+      products: products.length,
+      services: services.length,
+      transactions: transactions.length,
+      sales: sales.length,
+      serviceIncomes: serviceIncomes.length
+    });
+  }, [products.length, services.length, transactions.length, sales.length, serviceIncomes.length]);
 
   const handleExpenseAdded = (expense) => {
     setNewExpense(expense);

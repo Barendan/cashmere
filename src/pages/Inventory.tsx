@@ -65,6 +65,12 @@ const InventoryPage = () => {
   }, [isAdmin, toast]);
 
   useEffect(() => {
+    console.log('[Inventory] Data loaded:', {
+      products: products.length
+    });
+  }, [products.length]);
+
+  useEffect(() => {
     if (isMonthlyRestockModalOpen) {
       const initialUpdates = products.map(product => ({
         product,
@@ -127,15 +133,23 @@ const InventoryPage = () => {
     );
   };
 
-  const handleApplyThreshold = () => {
-    products.forEach(product => {
-      updateProduct(product.id, { lowStockThreshold: thresholdValue });
-    });
-    
-    toast({
-      title: "Success",
-      description: "Low stock threshold updated for all products.",
-    });
+  const handleApplyThreshold = async () => {
+    try {
+      await Promise.all(products.map(product => 
+        updateProduct(product.id, { lowStockThreshold: thresholdValue })
+      ));
+      toast({
+        title: "Success",
+        description: "Low stock threshold updated for all products.",
+      });
+    } catch (error) {
+      console.error("Error applying threshold:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update threshold for some products.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePerformMonthlyRestock = async () => {
@@ -267,10 +281,10 @@ const InventoryPage = () => {
               <CalendarDays className="h-4 w-4 mr-2" />
               Low Stock Threshold
             </CardTitle>
-            <CardDescription>Set minimum stock level for all products
-              <p className="text-xs text-muted-foreground">
+            <CardDescription>Set minimum stock level for all products. 
+              <span className="block text-xs text-muted-foreground">
                 Products below this quantity will be marked as low stock
-              </p>
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>

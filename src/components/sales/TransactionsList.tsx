@@ -28,6 +28,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 
 interface GroupedTransaction {
+  groupKey: string;
   saleId: string | null;
   parentTransactionId: string | null;
   transactions: Transaction[];
@@ -65,7 +66,7 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
     saleId: string | null;
   }>({ open: false, transaction: null, isSale: false, saleId: null });
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
-  const { deleteTransaction, deleteSale } = useData();
+  const { deleteTransaction, deleteSale, transactionsHasMore, transactionsTotalCount, loadMoreTransactions } = useData();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
 
@@ -234,6 +235,7 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
         salesMap.get(firstTransaction.saleId)?.paymentMethod : null;
       
       groupedTransactions.push({
+        groupKey: groupKey,
         saleId: firstTransaction.saleId || null,
         parentTransactionId: isParentRestock ? firstTransaction.id : null,
         transactions: sortedTransactions,
@@ -308,7 +310,7 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
               <TableBody>
                 {groupedTransactions.length > 0 ? (
                   groupedTransactions.map((group) => {
-                    const groupId = group.parentTransactionId || group.saleId || `group-${group.date.getTime()}`;
+                    const groupId = group.groupKey;
                     const hasDetails = group.transactions.length > 1 || 
                                       (group.isParentRestock && (childTransactionsMap[group.parentTransactionId!]?.length > 0 || 
                                       !childTransactionsMap[group.parentTransactionId!]));
@@ -551,6 +553,20 @@ const TransactionsList = ({ transactions, sales }: TransactionsListProps) => {
               </TableBody>
             </Table>
           </ScrollArea>
+          <div className="p-4 border-t border-spa-sand flex flex-col items-center gap-3">
+            <div className="text-sm text-muted-foreground">
+              Showing {transactions.length} of {transactionsTotalCount} transactions
+            </div>
+            {transactionsHasMore && (
+              <Button
+                onClick={loadMoreTransactions}
+                variant="outline"
+                className="w-full"
+              >
+                Load More Transactions
+              </Button>
+            )}
+          </div>
           <RestockDetailsModal
             open={restockModal.open}
             onOpenChange={open => setRestockModal(modal => ({...modal, open }))}

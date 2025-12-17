@@ -60,23 +60,53 @@ const mapSaleRowToSale = (row: SaleRow) => ({
   originalTotal: row.original_total || undefined
 });
 
-export const fetchTransactions = async () => {
-  const { data: transactionsData, error: transactionsError } = await supabase
+export const fetchTransactionsPaginated = async (page: number = 1, pageSize: number = 20) => {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  
+  const { data: transactionsData, error: transactionsError, count } = await supabase
     .from('transactions')
-    .select('*')
-    .order('date', { ascending: false });
+    .select('*', { count: 'exact' })
+    .order('date', { ascending: false })
+    .range(from, to);
   
   if (transactionsError) {
     throw transactionsError;
   }
   
-  return transactionsData.map(item => mapTransactionRowToTransaction(item));
+  return {
+    transactions: transactionsData.map(item => mapTransactionRowToTransaction(item)),
+    totalCount: count || 0,
+    hasMore: count ? to < count - 1 : false
+  };
 };
 
 export const fetchSales = async () => {
   // Using proper RPC call pattern
   const { data, error } = await supabase
     .rpc('get_sales');
+  
+  if (error) {
+    throw error;
+  }
+  
+  if (!data || !Array.isArray(data)) {
+    return [];
+  }
+  
+  return data.map(row => mapSaleRowToSale(row));
+};
+
+export const fetchSalesByIds = async (saleIds: string[]) => {
+  if (saleIds.length === 0) {
+    return [];
+  }
+  
+  // Query sales table directly with IDs filter
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .in('id', saleIds);
   
   if (error) {
     throw error;
@@ -136,10 +166,7 @@ export const recordTransactionInDb = async (transactionData: TransactionInput): 
 };
 
 export const recordBulkTransactionsInDb = async (transactions: TransactionInput[]) => {
-  console.log("Processing transactions for RPC call:", JSON.stringify(transactions));
-  
   try {
-    // Format transactions for Supabase RPC function
     const formattedTransactions = transactions.map(tx => ({
       product_id: tx.product_id, 
       product_name: tx.product_name,
@@ -153,9 +180,6 @@ export const recordBulkTransactionsInDb = async (transactions: TransactionInput[
       parent_transaction_id: tx.parent_transaction_id || null
     }));
     
-    console.log("Formatted transactions for RPC:", JSON.stringify(formattedTransactions));
-    
-    // Use the RPC function designed to bypass RLS
     const { data, error } = await supabase
       .rpc('insert_bulk_transactions', {
         transactions: formattedTransactions
@@ -171,7 +195,6 @@ export const recordBulkTransactionsInDb = async (transactions: TransactionInput[
       throw new Error('Failed to create transaction records');
     }
     
-    console.log("RPC transaction insert success, records:", data.length);
     return data.map(t => mapTransactionRowToTransaction(t));
   } catch (err) {
     console.error("Exception in recordBulkTransactionsInDb:", err);
@@ -189,7 +212,7 @@ export const updateProductStock = async (productId: string, newQuantity: number)
     .eq('id', productId);
 
   if (error) {
-    console.log('updateProductStock failed', error)
+    console.error('updateProductStock failed', error);
     throw error;
   }
 };

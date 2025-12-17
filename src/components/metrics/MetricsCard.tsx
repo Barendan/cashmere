@@ -9,6 +9,8 @@ type MetricsCardProps = {
   iconBgClass?: string;
   secondaryValue?: string | number;
   secondaryLabel?: string;
+  dateRange?: string;
+  className?: string;
 };
 
 const MetricsCard = ({ 
@@ -17,15 +19,22 @@ const MetricsCard = ({
   icon, 
   iconBgClass = "bg-spa-sage/20",
   secondaryValue,
-  secondaryLabel = "Yesterday"
+  secondaryLabel = "Yesterday",
+  dateRange,
+  className = ""
 }: MetricsCardProps) => {
   return (
-    <Card className="bg-white">
+    <Card className={`bg-white ${className}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{title}</p>
             <h3 className="text-2xl font-semibold mt-1">{value}</h3>
+            {dateRange && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {dateRange}
+              </p>
+            )}
             {secondaryValue !== undefined && (
               <p className="text-xs text-muted-foreground mt-1">
                 {secondaryLabel}: {secondaryValue}

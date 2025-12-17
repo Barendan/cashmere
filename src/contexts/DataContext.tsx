@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Product, Transaction, Sale, TransactionInput, Service } from "../models/types";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "./AuthContext";
@@ -15,8 +15,9 @@ import {
   deleteServiceFromDb 
 } from "../services/serviceService";
 import {
-  fetchTransactions,
+  fetchTransactionsPaginated,
   fetchSales,
+  fetchSalesByIds,
   recordSaleInDb,
   recordTransactionInDb,
   recordBulkTransactionsInDb,
@@ -42,6 +43,7 @@ interface ServiceIncome {
   date: Date;
   customerName: string | null;
   category?: string;
+  paymentMethod?: string;
 }
 
 interface DataContextType {
@@ -73,6 +75,21 @@ interface DataContextType {
   refreshData: () => Promise<void>;
   deleteTransaction: (transaction: Transaction) => Promise<boolean>;
   deleteSale: (saleId: string) => Promise<boolean>;
+  transactionsHasMore: boolean;
+  transactionsTotalCount: number;
+  loadMoreTransactions: () => Promise<void>;
+  fetchAllMetricsData: () => Promise<{
+    transactions: Transaction[];
+    sales: Sale[];
+    serviceIncomes: ServiceIncome[];
+  }>;
+  metricsCache: {
+    transactions: Transaction[];
+    sales: Sale[];
+    serviceIncomes: ServiceIncome[];
+  } | null;
+  isLoadingMetrics: boolean;
+  refreshMetricsData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -86,43 +103,59 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [lastRestockDate, setLastRestockDate] = useState<Date | null>(null);
   const [lastAction, setLastAction] = useState<{ action: string; data: any } | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [transactionsPage, setTransactionsPage] = useState<number>(1);
+  const [transactionsHasMore, setTransactionsHasMore] = useState<boolean>(true);
+  const [transactionsTotalCount, setTransactionsTotalCount] = useState<number>(0);
+  const [metricsCache, setMetricsCache] = useState<{
+    transactions: Transaction[];
+    sales: Sale[];
+    serviceIncomes: ServiceIncome[];
+  } | null>(null);
+  const [metricsCacheTimestamp, setMetricsCacheTimestamp] = useState<number | null>(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
 
   const refreshData = async () => {
     try {
       const [
         transformedProducts,
-        transformedServices,
-        transformedSales,
-        transformedTransactions,
-        transformedServiceIncomes
+        transformedServices
       ] = await Promise.all([
         fetchProducts(),
-        fetchServices(),
-        fetchSales(),
-        fetchTransactions(),
-        fetchServiceIncomes()
+        fetchServices()
       ]);
 
       setProducts(transformedProducts);
       setServices(transformedServices);
+      setServiceIncomes([]);
 
-      const salesWithItems: Sale[] = transformedSales.map(sale => {
-        const saleItems = transformedTransactions.filter(transaction => transaction.saleId === sale.id);
+      const { transactions: firstPageTransactions, hasMore, totalCount } = await fetchTransactionsPaginated(1, 20);
+      setTransactions(firstPageTransactions);
+      setTransactionsPage(1);
+      setTransactionsHasMore(hasMore);
+      setTransactionsTotalCount(totalCount);
+
+      // Fetch only sales that match the loaded transactions
+      const saleIds = [...new Set(firstPageTransactions.map(t => t.saleId).filter(Boolean) as string[])];
+      let matchingSales: Sale[] = [];
+      if (saleIds.length > 0) {
+        matchingSales = await fetchSalesByIds(saleIds);
+      }
+
+      const salesWithItems: Sale[] = matchingSales.map(sale => {
+        const saleItems = firstPageTransactions.filter(transaction => transaction.saleId === sale.id);
         return { ...sale, items: saleItems };
       });
 
       setSales(salesWithItems);
-      setTransactions(transformedTransactions);
-      setServiceIncomes(transformedServiceIncomes);
 
       const restockDate = await getLastRestockDate();
       if (restockDate) {
         setLastRestockDate(restockDate);
       }
-      
-      console.log(`Loaded ${transformedServiceIncomes.length} service income records`);
     } catch (error) {
       console.error('Error refreshing data:', error);
       toast({
@@ -132,6 +165,149 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     }
   };
+
+  const loadMoreTransactions = async () => {
+    if (!transactionsHasMore) return;
+    
+    try {
+      const nextPage = transactionsPage + 1;
+      const { transactions: newTransactions, hasMore, totalCount } = await fetchTransactionsPaginated(nextPage, 20);
+      
+      const updatedTransactions = [...transactions, ...newTransactions];
+      setTransactions(updatedTransactions);
+      setTransactionsPage(nextPage);
+      setTransactionsHasMore(hasMore);
+      setTransactionsTotalCount(totalCount);
+      
+      // Fetch sales for new transactions that we don't already have
+      const existingSaleIds = new Set(sales.map(s => s.id));
+      const newSaleIds = [...new Set(newTransactions.map(t => t.saleId).filter(Boolean) as string[])]
+        .filter(id => !existingSaleIds.has(id));
+      
+      let newSales: Sale[] = [];
+      if (newSaleIds.length > 0) {
+        newSales = await fetchSalesByIds(newSaleIds);
+      }
+      
+      // Merge existing sales with new sales
+      const allSales = [...sales, ...newSales];
+      
+      // Update sales with all transaction items
+      const updatedSales = allSales.map(sale => {
+        const saleItems = updatedTransactions.filter(t => t.saleId === sale.id);
+        return { ...sale, items: saleItems };
+      });
+      
+      setSales(updatedSales);
+    } catch (error) {
+      console.error('Error loading more transactions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load more transactions.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchAllMetricsData = useCallback(async () => {
+    try {
+      // Check if cache exists and is still valid (5 minutes)
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+      const now = Date.now();
+      
+      if (metricsCache && metricsCacheTimestamp && (now - metricsCacheTimestamp) < CACHE_DURATION) {
+        // Return cached data
+        return metricsCache;
+      }
+
+      // Fetch all data without touching context state
+      const [allSales, allServiceIncomes] = await Promise.all([
+        fetchSales(),
+        fetchServiceIncomes()
+      ]);
+
+      // Fetch all transactions in chunks
+      let allTransactions: Transaction[] = [];
+      let page = 1;
+      let hasMore = true;
+      const pageSize = 100;
+      
+      while (hasMore) {
+        const { transactions: pageTransactions, hasMore: more } = await fetchTransactionsPaginated(page, pageSize);
+        allTransactions = [...allTransactions, ...pageTransactions];
+        hasMore = more;
+        page++;
+      }
+
+      const metricsData = {
+        transactions: allTransactions,
+        sales: allSales,
+        serviceIncomes: allServiceIncomes
+      };
+
+      // Update cache
+      setMetricsCache(metricsData);
+      setMetricsCacheTimestamp(now);
+
+      return metricsData;
+    } catch (error) {
+      console.error('Error in fetchAllMetricsData:', error);
+      throw error; // Re-throw so calling code can handle it
+    }
+  }, [metricsCache, metricsCacheTimestamp]);
+
+  const refreshMetricsData = useCallback(async () => {
+    setIsLoadingMetrics(true);
+    try {
+      // Clear cache to force refresh
+      setMetricsCache(null);
+      setMetricsCacheTimestamp(null);
+      
+      // Fetch fresh data
+      const [allSales, allServiceIncomes] = await Promise.all([
+        fetchSales(),
+        fetchServiceIncomes()
+      ]);
+
+      // Fetch all transactions in chunks
+      let allTransactions: Transaction[] = [];
+      let page = 1;
+      let hasMore = true;
+      const pageSize = 100;
+      
+      while (hasMore) {
+        const { transactions: pageTransactions, hasMore: more } = await fetchTransactionsPaginated(page, pageSize);
+        allTransactions = [...allTransactions, ...pageTransactions];
+        hasMore = more;
+        page++;
+      }
+
+      const metricsData = {
+        transactions: allTransactions,
+        sales: allSales,
+        serviceIncomes: allServiceIncomes
+      };
+
+      // Update cache
+      setMetricsCache(metricsData);
+      setMetricsCacheTimestamp(Date.now());
+    } catch (error) {
+      console.error('Error refreshing metrics data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh metrics data.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  }, [toast]);
+
+  // Helper function to invalidate metrics cache
+  const invalidateMetricsCache = useCallback(() => {
+    setMetricsCache(null);
+    setMetricsCacheTimestamp(null);
+  }, []);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -211,7 +387,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const fetchServiceIncomes = async () => {
     try {
-      console.log("Fetching service incomes...");
       const { data, error } = await supabase
         .from('finances')
         .select(`
@@ -221,6 +396,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           customer_name,
           category,
           service_id,
+          payment_method,
           services(name)
         `)
         .eq('type', 'income')
@@ -236,11 +412,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           amount: item.amount,
           date: new Date(item.date),
           customerName: item.customer_name,
-          category: item.category
+          category: item.category,
+          paymentMethod: item.payment_method || undefined
         }));
         
-        console.log(`Fetched ${transformedData.length} service income records`);
-        console.log("Sample service income data:", transformedData.slice(0, 3));
         return transformedData;
       }
 
@@ -364,6 +539,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       oldQuantity: product.stockQuantity 
     });
 
+    // Invalidate metrics cache since we're adding a new sale
+    invalidateMetricsCache();
+
     try {
       const now = new Date();
       
@@ -432,8 +610,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
     
+    // Invalidate metrics cache since we're adding new sales
+    invalidateMetricsCache();
+    
     try {
-      console.log("Starting bulk sale process with items:", items.length);
       const now = new Date();
       const subtotal = items.reduce(
         (sum, item) => sum + (item.product.sellPrice * item.quantity), 
@@ -456,9 +636,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         payment_method: paymentMethod || null
       };
       
-      console.log("Creating sale record with total:", finalTotal, "total discount:", totalDiscount);
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
-      console.log("Sale record created with ID:", saleId);
       
       const newTransactions: any[] = [];
       const productUpdatesPromises: Promise<any>[] = [];
@@ -485,13 +663,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         productUpdatesPromises.push(promise);
       }
       
-      console.log("Recording transactions for products:", newTransactions.length);
       try {
         const newLocalTransactions = await recordBulkTransactionsInDb(newTransactions);
-        console.log("Transactions recorded successfully:", newLocalTransactions.length);
         
         await Promise.all(productUpdatesPromises);
-        console.log("Product stocks updated successfully");
         
         setProducts(products.map(p => {
           const soldItem = items.find(item => item.product.id === p.id);
@@ -542,8 +717,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const recordServiceSale = async (items: {service: Service, quantity: number}[], globalDiscount: number = 0, globalTip: number = 0, globalCustomerName: string = '', paymentMethod?: string) => {
     if (items.length === 0) return;
     
+    // Invalidate metrics cache since we're adding new service income
+    invalidateMetricsCache();
+    
     try {
-      console.log("Starting service sale process with items:", items.length);
       const now = new Date();
       
       // Validate all services exist
@@ -610,9 +787,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     globalCustomerName: string = '',
     paymentMethod?: string
   ) => {
+    // Invalidate metrics cache since we're adding new sales/income
+    invalidateMetricsCache();
+    
     try {
-      console.log("Starting mixed sale process - Products:", products.length, "Services:", serviceItems.length);
-      
       // Validate all items before processing
       for (const item of products) {
         const productExists = displayableProducts.find(p => p.id === item.product.id);
@@ -638,14 +816,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Process products through existing recordBulkSale
       if (products.length > 0) {
-        console.log("Processing products...");
         await recordBulkSale(products, productDiscountShare, paymentMethod);
       }
       
       // Process services through recordServiceSale
       if (serviceItems.length > 0) {
-        console.log("Processing services...");
-        await recordServiceSale(serviceItems, serviceDiscountShare, globalCustomerName, paymentMethod);
+        await recordServiceSale(serviceItems, serviceDiscountShare, globalTip, globalCustomerName, paymentMethod);
       }
       
       toast({ 
@@ -1010,9 +1186,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return services.find(s => s.id === id);
   };
 
-  const displayableProducts = products.filter(p => !isBulkRestockProduct(p.id));
-
   const deleteTransaction = async (transaction: Transaction): Promise<boolean> => {
+    // Invalidate metrics cache since we're deleting a transaction
+    invalidateMetricsCache();
+    
     try {
       if (transaction.type === 'sale') {
         const product = products.find(p => p.id === transaction.productId);
@@ -1052,6 +1229,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const deleteSale = async (saleId: string): Promise<boolean> => {
+    // Invalidate metrics cache since we're deleting a sale
+    invalidateMetricsCache();
+    
     try {
       const saleTransactions = transactions.filter(t => t.saleId === saleId);
       
@@ -1125,7 +1305,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }, 0),
         refreshData,
         deleteTransaction,
-        deleteSale
+        deleteSale,
+        transactionsHasMore,
+        transactionsTotalCount,
+        loadMoreTransactions,
+        fetchAllMetricsData,
+        metricsCache,
+        isLoadingMetrics,
+        refreshMetricsData
       }}
     >
       {children}

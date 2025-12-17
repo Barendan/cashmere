@@ -39,8 +39,6 @@ export const useMetricsExport = ({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
-      console.log(`Successfully exported ${isProductData ? "product" : "service"} data to CSV`);
     } catch (error) {
       console.error("Error exporting data:", error);
     } finally {

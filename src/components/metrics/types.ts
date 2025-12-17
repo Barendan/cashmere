@@ -9,6 +9,7 @@ export interface ServiceIncomeWithCategory {
   date: Date;
   customerName: string | null;
   category?: string;
+  paymentMethod?: string;
 }
 
 export interface ParsedServiceCategory {

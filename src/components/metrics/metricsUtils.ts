@@ -1,5 +1,5 @@
 
-import { Transaction, Product } from "@/models/types";
+import { Transaction, Product, Sale } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
 
 export const getDateRanges = () => {
@@ -25,15 +25,6 @@ export const getDateRanges = () => {
   const endOfYesterday = new Date(nowUTC);
   endOfYesterday.setDate(nowUTC.getDate() - 1);
   endOfYesterday.setHours(23, 59, 59, 999);
-
-  console.log("UTC Date ranges:", {
-    startOfToday: startOfToday.toISOString(),
-    startOfYesterday: startOfYesterday.toISOString(),
-    endOfYesterday: endOfYesterday.toISOString(),
-    sevenDaysAgo: sevenDaysAgo.toISOString(),
-    thirtyDaysAgo: thirtyDaysAgo.toISOString(),
-    nowUTC: nowUTC.toISOString()
-  });
 
   return {
     today,
@@ -72,14 +63,10 @@ export const filterTransactionsByDayRange = (
   startDate: Date,
   endDate: Date
 ): Transaction[] => {
-  const filtered = transactions.filter(transaction => {
+  return transactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
-    const isInRange = transactionDate >= startDate && transactionDate <= endDate;
-    console.log(`Transaction ${transaction.id} date: ${transactionDate.toISOString()}, in range: ${isInRange}`);
-    return isInRange;
+    return transactionDate >= startDate && transactionDate <= endDate;
   });
-  console.log(`Filtered ${filtered.length} transactions from ${transactions.length} total for date range ${startDate.toISOString()} to ${endDate.toISOString()}`);
-  return filtered;
 };
 
 export const calculateProductPerformance = (
@@ -120,25 +107,14 @@ export const calculateSalesDataFromTransactions = (
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): SalesDataPoint[] => {
-  console.log(`Processing ${salesTransactions.length} sales transactions for timeRange: ${timeRange}`);
-  console.log("Date range filters:", {
-    sevenDaysAgo: dateRanges.sevenDaysAgo.toISOString(),
-    thirtyDaysAgo: dateRanges.thirtyDaysAgo.toISOString()
-  });
-
-  // Filter transactions based on time range - compare UTC dates directly
   const filteredTransactions = salesTransactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
     
     switch(timeRange) {
       case "7days":
-        const isIn7Days = transactionDate >= dateRanges.sevenDaysAgo;
-        console.log(`Transaction ${transaction.id} date: ${transactionDate.toISOString()}, in 7 days: ${isIn7Days}`);
-        return isIn7Days;
+        return transactionDate >= dateRanges.sevenDaysAgo;
       case "30days":
-        const isIn30Days = transactionDate >= dateRanges.thirtyDaysAgo;
-        console.log(`Transaction ${transaction.id} date: ${transactionDate.toISOString()}, in 30 days: ${isIn30Days}`);
-        return isIn30Days;
+        return transactionDate >= dateRanges.thirtyDaysAgo;
       case "monthly":
         return true;
       default:
@@ -146,16 +122,7 @@ export const calculateSalesDataFromTransactions = (
     }
   });
   
-  console.log(`Filtered to ${filteredTransactions.length} transactions after applying timeRange filter`);
-  
-  // If no transaction data, return empty array but log for debugging
   if (filteredTransactions.length === 0) {
-    console.warn("No transaction data found for the selected time range");
-    console.warn("Available transactions sample:", salesTransactions.slice(0, 3).map(t => ({
-      id: t.id,
-      date: t.date,
-      dateISO: new Date(t.date).toISOString()
-    })));
     return [];
   }
   
@@ -176,11 +143,8 @@ export const calculateSalesDataFromTransactions = (
     salesByDate.get(dateStr).revenue += transaction.price;
   });
   
-  const result = Array.from(salesByDate.values())
+  return Array.from(salesByDate.values())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  console.log(`Generated ${result.length} data points for sales chart from transactions:`, result);
-  return result;
 };
 
 export const calculateSalesData = (
@@ -188,25 +152,14 @@ export const calculateSalesData = (
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): SalesDataPoint[] => {
-  console.log(`Processing ${sales.length} sales records for timeRange: ${timeRange}`);
-  console.log("Date range filters:", {
-    sevenDaysAgo: dateRanges.sevenDaysAgo.toISOString(),
-    thirtyDaysAgo: dateRanges.thirtyDaysAgo.toISOString()
-  });
-
-  // Filter sales based on time range with proper timezone handling
   const filteredSales = sales.filter(sale => {
     const saleDate = new Date(sale.date);
     
     switch(timeRange) {
       case "7days":
-        const isIn7Days = saleDate >= dateRanges.sevenDaysAgo;
-        console.log(`Sale ${sale.id} date: ${saleDate.toISOString()}, in 7 days: ${isIn7Days}`);
-        return isIn7Days;
+        return saleDate >= dateRanges.sevenDaysAgo;
       case "30days":
-        const isIn30Days = saleDate >= dateRanges.thirtyDaysAgo;
-        console.log(`Sale ${sale.id} date: ${saleDate.toISOString()}, in 30 days: ${isIn30Days}`);
-        return isIn30Days;
+        return saleDate >= dateRanges.thirtyDaysAgo;
       case "monthly":
         return true;
       default:
@@ -214,11 +167,7 @@ export const calculateSalesData = (
     }
   });
   
-  console.log(`Filtered to ${filteredSales.length} sales after applying timeRange filter`);
-  
-  // If no sales data, return empty array with debug info
   if (filteredSales.length === 0) {
-    console.warn("No sales data found for the selected time range");
     return [];
   }
   
@@ -239,11 +188,8 @@ export const calculateSalesData = (
     salesByDate.get(dateStr).revenue += sale.totalAmount;
   });
   
-  const result = Array.from(salesByDate.values())
+  return Array.from(salesByDate.values())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
-  console.log(`Generated ${result.length} data points for sales chart:`, result);
-  return result;
 };
 
 export const calculateProductCategories = (
@@ -276,14 +222,10 @@ export const filterServiceIncomesByDayRange = (
   startDate: Date,
   endDate: Date
 ): ServiceIncomeWithCategory[] => {
-  const filtered = serviceIncomes.filter(income => {
+  return serviceIncomes.filter(income => {
     const incomeDate = new Date(income.date);
-    const isInRange = incomeDate >= startDate && incomeDate <= endDate;
-    console.log(`Service income ${income.id} date: ${incomeDate.toISOString()}, in range: ${isInRange}`);
-    return isInRange;
+    return incomeDate >= startDate && incomeDate <= endDate;
   });
-  console.log(`Filtered ${filtered.length} service incomes from ${serviceIncomes.length} total for date range ${startDate.toISOString()} to ${endDate.toISOString()}`);
-  return filtered;
 };
 
 export const calculateServicesData = (
@@ -291,8 +233,6 @@ export const calculateServicesData = (
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): ServiceMetric[] => {
-  console.log(`Calculating services data for timeRange: ${timeRange}`);
-  
   const filteredServiceIncomes = serviceIncomes.filter(income => {
     const incomeDate = new Date(income.date);
     switch (timeRange) {
@@ -303,8 +243,6 @@ export const calculateServicesData = (
       default: return true;
     }
   });
-
-  console.log(`Filtered ${filteredServiceIncomes.length} service incomes for timeRange: ${timeRange}`);
 
   const serviceMap = new Map();
 
@@ -351,6 +289,7 @@ export const calculateServicesData = (
           processRegularService(income, serviceMap);
         }
       } catch (e) {
+        console.error('Error parsing service category JSON:', e, income);
         processRegularService(income, serviceMap);
       }
     } else {
@@ -358,15 +297,12 @@ export const calculateServicesData = (
     }
   });
 
-  const results = Array.from(serviceMap.values())
+  return Array.from(serviceMap.values())
     .map(item => ({
       ...item,
       uniqueCustomers: item.customers.size
     }))
     .sort((a, b) => b.totalRevenue - a.totalRevenue);
-
-  console.log(`Calculated ${results.length} service metrics with total revenue: ${results.reduce((sum, s) => sum + s.totalRevenue, 0)}`);
-  return results;
 };
 
 const processRegularService = (
@@ -495,4 +431,205 @@ export const exportToCsv = (
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+};
+
+export const calculateCashIncome = (
+  sales: Sale[],
+  serviceIncomes: ServiceIncomeWithCategory[],
+  startDate: Date,
+  endDate?: Date
+): number => {
+  let totalCash = 0;
+
+  // Calculate cash from product sales
+  const cashSales = sales.filter(sale => {
+    const saleDate = new Date(sale.date);
+    const inDateRange = endDate 
+      ? saleDate >= startDate && saleDate <= endDate
+      : saleDate >= startDate;
+    return sale.paymentMethod === 'cash' && inDateRange;
+  });
+
+  cashSales.forEach(sale => {
+    totalCash += sale.totalAmount;
+  });
+
+  // Calculate cash from service incomes
+  const cashServiceIncomes = serviceIncomes.filter(income => {
+    const incomeDate = new Date(income.date);
+    const inDateRange = endDate
+      ? incomeDate >= startDate && incomeDate <= endDate
+      : incomeDate >= startDate;
+    return income.paymentMethod === 'cash' && inDateRange;
+  });
+
+  cashServiceIncomes.forEach(income => {
+    totalCash += income.amount;
+  });
+
+  return totalCash;
+};
+
+export const getLast30DaysRange = (): { startDate: Date; endDate: Date } => {
+  const today = new Date();
+  const endDate = new Date(today);
+  endDate.setHours(23, 59, 59, 999);
+  
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 29); // 30 days including today
+  startDate.setHours(0, 0, 0, 0);
+  
+  return { startDate, endDate };
+};
+
+export const calculateWeeklyCashIncome = (
+  sales: Sale[],
+  serviceIncomes: ServiceIncomeWithCategory[],
+  numberOfWeeks: number = 5
+): Array<{ weekLabel: string; startDate: Date; endDate: Date; cash: number }> => {
+  const weeks: Array<{ weekLabel: string; startDate: Date; endDate: Date; cash: number }> = [];
+  const today = new Date();
+  const currentDay = today.getDay(); // 0 = Sunday, 6 = Saturday
+  const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1; // Convert to Monday = 0
+  
+  // Calculate the start of the current week (Monday)
+  const startOfCurrentWeek = new Date(today);
+  startOfCurrentWeek.setDate(today.getDate() - daysFromMonday);
+  startOfCurrentWeek.setHours(0, 0, 0, 0);
+  
+  for (let i = 0; i < numberOfWeeks; i++) {
+    const weekStart = new Date(startOfCurrentWeek);
+    weekStart.setDate(startOfCurrentWeek.getDate() - (i * 7));
+    
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    // Calculate cash for this week
+    const weekCash = calculateCashIncome(sales, serviceIncomes, weekStart, weekEnd);
+    
+    // Format week label
+    let weekLabel: string;
+    if (i === 0) {
+      weekLabel = "This Week";
+    } else if (i === 1) {
+      weekLabel = "Last Week";
+    } else {
+      const startStr = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endStr = weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      weekLabel = `${startStr} - ${endStr}`;
+    }
+    
+    weeks.push({
+      weekLabel,
+      startDate: weekStart,
+      endDate: weekEnd,
+      cash: weekCash
+    });
+  }
+  
+  // Reverse to show oldest first
+  return weeks.reverse();
+};
+
+export const calculateMonthlyCashIncome = (
+  sales: Sale[],
+  serviceIncomes: ServiceIncomeWithCategory[],
+  numberOfMonths: number = 12
+): Array<{ monthLabel: string; startDate: Date; endDate: Date; cash: number }> => {
+  const months: Array<{ monthLabel: string; startDate: Date; endDate: Date; cash: number }> = [];
+  const today = new Date();
+  
+  for (let i = 0; i < numberOfMonths; i++) {
+    const targetMonth = today.getMonth() - i;
+    const targetYear = today.getFullYear();
+    
+    // Calculate the actual year and month accounting for negative months
+    let actualYear = targetYear;
+    let actualMonth = targetMonth;
+    
+    while (actualMonth < 0) {
+      actualMonth += 12;
+      actualYear -= 1;
+    }
+    
+    // Start of month
+    const startDate = new Date(actualYear, actualMonth, 1);
+    startDate.setHours(0, 0, 0, 0);
+    
+    // End of month (last day)
+    const endDate = new Date(actualYear, actualMonth + 1, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    // Calculate cash for this month
+    const monthCash = calculateCashIncome(sales, serviceIncomes, startDate, endDate);
+    
+    // Format month label
+    let monthLabel: string;
+    if (i === 0) {
+      monthLabel = "This Month";
+    } else if (i === 1) {
+      monthLabel = "Last Month";
+    } else {
+      monthLabel = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    
+    months.push({
+      monthLabel,
+      startDate,
+      endDate,
+      cash: monthCash
+    });
+  }
+  
+  // Reverse to show oldest first
+  return months.reverse();
+};
+
+export const calculateDailyCashIncome = (
+  sales: Sale[],
+  serviceIncomes: ServiceIncomeWithCategory[],
+  startDate: Date,
+  endDate: Date
+): Array<{ date: string; cash: number }> => {
+  const dailyCashMap = new Map<string, number>();
+  
+  // Initialize all days in range with 0
+  const currentDate = new Date(startDate);
+  while (currentDate <= endDate) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    dailyCashMap.set(dateStr, 0);
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Calculate cash from product sales
+  const cashSales = sales.filter(sale => {
+    const saleDate = new Date(sale.date);
+    return sale.paymentMethod === 'cash' && saleDate >= startDate && saleDate <= endDate;
+  });
+  
+  cashSales.forEach(sale => {
+    const saleDate = new Date(sale.date);
+    const dateStr = saleDate.toISOString().split('T')[0];
+    const currentCash = dailyCashMap.get(dateStr) || 0;
+    dailyCashMap.set(dateStr, currentCash + sale.totalAmount);
+  });
+  
+  // Calculate cash from service incomes
+  const cashServiceIncomes = serviceIncomes.filter(income => {
+    const incomeDate = new Date(income.date);
+    return income.paymentMethod === 'cash' && incomeDate >= startDate && incomeDate <= endDate;
+  });
+  
+  cashServiceIncomes.forEach(income => {
+    const incomeDate = new Date(income.date);
+    const dateStr = incomeDate.toISOString().split('T')[0];
+    const currentCash = dailyCashMap.get(dateStr) || 0;
+    dailyCashMap.set(dateStr, currentCash + income.amount);
+  });
+  
+  // Convert to array and sort by date
+  return Array.from(dailyCashMap.entries())
+    .map(([date, cash]) => ({ date, cash }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 };

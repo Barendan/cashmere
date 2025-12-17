@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useData } from "../contexts/DataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Package2, Award } from "lucide-react";
@@ -14,10 +14,60 @@ import useMetricsExport from "@/hooks/useMetricsExport";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
-  const { products, transactions, sales, serviceIncomes, isLoading } = useData();
+  const { products, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRangeType>("7days");
   const [metricView, setMetricView] = useState<"products" | "services">("products");
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
+
+  // Use cached data if available, otherwise fetch
+  const transactions = useMemo(() => metricsCache?.transactions || [], [metricsCache]);
+  const sales = useMemo(() => metricsCache?.sales || [], [metricsCache]);
+  const serviceIncomes = useMemo(() => metricsCache?.serviceIncomes || [], [metricsCache]);
+
+  const [wasCached, setWasCached] = useState<boolean>(false);
+  const hasLoggedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isAdmin || authLoading) return;
+
+    const loadData = async () => {
+      // If cache exists, use it immediately and mark as cached
+      if (metricsCache) {
+        setWasCached(true);
+        setIsLoadingMetrics(false);
+        hasLoggedRef.current = false; // Reset log flag when cache is used
+        return;
+      }
+
+      // Otherwise fetch data and mark as fresh
+      setWasCached(false);
+      setIsLoadingMetrics(true);
+      hasLoggedRef.current = false; // Reset log flag when fetching
+      try {
+        await fetchAllMetricsData();
+      } catch (error) {
+        console.error('Error loading metrics data:', error);
+      } finally {
+        setIsLoadingMetrics(false);
+      }
+    };
+
+    loadData();
+  }, [isAdmin, authLoading, fetchAllMetricsData, metricsCache]);
+
+  // Log when data is loaded (cached or fresh) - only once per data load
+  useEffect(() => {
+    if (metricsCache && transactions.length > 0 && !isLoadingMetrics && !hasLoggedRef.current) {
+      console.log(`[Metrics] Data loaded${wasCached ? ' from cache' : ''}:`, {
+        transactions: transactions.length,
+        sales: sales.length,
+        serviceIncomes: serviceIncomes.length,
+        cached: wasCached
+      });
+      hasLoggedRef.current = true;
+    }
+  }, [metricsCache, transactions.length, sales.length, serviceIncomes.length, isLoadingMetrics, wasCached]);
 
   // Use our custom hooks for calculations
   const {
@@ -43,12 +93,6 @@ const Metrics = () => {
     yesterdayUniqueCustomers
   } = useServiceMetricsCalculation(serviceIncomes, timeRange);
 
-  // Output service metrics data for debugging
-  console.log(`Service Metrics Data: ${servicesData.length} services, ${serviceIncomes.length} income records`);
-  console.log(`Service Type Data: ${serviceTypeData.length} service types`);
-  console.log(`Service Metrics Totals: Today Revenue: ${todayServiceRevenue}, Services: ${todayServicesProvided}, Customers: ${todayUniqueCustomers}`);
-
-  // Setup metrics export
   const { exportData: exportProductsData, isExporting: isExportingProducts } = useMetricsExport({
     getExportData: () => productPerformance,
     isProductData: true
@@ -72,7 +116,7 @@ const Metrics = () => {
     return <Navigate to="/" replace />;
   }
 
-  if (isLoading) {
+  if (authLoading || isLoadingMetrics || contextIsLoadingMetrics) {
     return (
       <div className="w-full h-[70vh] flex items-center justify-center min-w-[90vw]">
         <div className="text-center">
@@ -118,6 +162,8 @@ const Metrics = () => {
           setTimeRange={setTimeRange}
           exportCSV={handleExport}
           isExporting={isExportingProducts}
+          sales={sales}
+          serviceIncomes={serviceIncomes}
         />
       ) : (
         <ServiceMetrics

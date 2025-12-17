@@ -9,6 +9,9 @@ import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
 import { ProductMetricsProps } from "./types";
+import { Sale } from "@/models/types";
+import { ServiceIncomeWithCategory } from "./types";
+import CashMetricsViewer from "./CashMetricsViewer";
 
 interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalRevenue' | 'totalProfit' | 'totalItemsSold'> {
   todayRevenue: number;
@@ -17,6 +20,8 @@ interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalReven
   yesterdayRevenue: number;
   yesterdayProfit: number;
   yesterdayItemsSold: number;
+  sales: Sale[];
+  serviceIncomes: ServiceIncomeWithCategory[];
 }
 
 const ProductMetrics = ({
@@ -32,7 +37,9 @@ const ProductMetrics = ({
   timeRange,
   setTimeRange,
   exportCSV,
-  isExporting = false
+  isExporting = false,
+  sales,
+  serviceIncomes
 }: DailyProductMetricsProps) => {
   const productColumns = [
     { key: "name", header: "Product Name", className: "font-medium" },
@@ -219,6 +226,9 @@ const ProductMetrics = ({
           />
         </CardContent>
       </Card>
+
+      {/* Cash Metrics Viewer */}
+      <CashMetricsViewer sales={sales} serviceIncomes={serviceIncomes} />
     </div>
   );
 };
