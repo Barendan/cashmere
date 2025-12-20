@@ -44,6 +44,21 @@ export interface Sale {
   originalTotal?: number;
 }
 
+export interface FinanceTransaction {
+  id: string;
+  date: Date;
+  totalAmount: number;
+  customerName?: string;
+  paymentMethod: string;  // Required (NOT NULL)
+  cashAmount: number;
+  tipAmount: number;
+  discount: number;
+  originalTotal?: number;
+  userId: string;
+  userName: string;
+  notes?: string;
+}
+
 export interface SalesData {
   day: string;
   revenue: number;

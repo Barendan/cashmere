@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      finance_transactions: {
+        Row: {
+          id: string
+          date: string
+          total_amount: number
+          customer_name: string | null
+          payment_method: string
+          cash_amount: number
+          tip_amount: number
+          discount: number
+          original_total: number | null
+          user_id: string
+          user_name: string
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          date?: string
+          total_amount: number
+          customer_name?: string | null
+          payment_method: string
+          cash_amount?: number
+          tip_amount?: number
+          discount?: number
+          original_total?: number | null
+          user_id: string
+          user_name: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          date?: string
+          total_amount?: number
+          customer_name?: string | null
+          payment_method?: string
+          cash_amount?: number
+          tip_amount?: number
+          discount?: number
+          original_total?: number | null
+          user_id?: string
+          user_name?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       finances: {
         Row: {
           amount: number
@@ -29,6 +80,7 @@ export type Database = {
           type: string
           updated_at: string
           vendor: string | null
+          finance_transaction_id: string | null
         }
         Insert: {
           amount: number
@@ -44,6 +96,7 @@ export type Database = {
           type: string
           updated_at?: string
           vendor?: string | null
+          finance_transaction_id?: string | null
         }
         Update: {
           amount?: number
@@ -59,6 +112,7 @@ export type Database = {
           type?: string
           updated_at?: string
           vendor?: string | null
+          finance_transaction_id?: string | null
         }
         Relationships: [
           {
@@ -66,6 +120,13 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finances_finance_transaction_id_fkey"
+            columns: ["finance_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
             referencedColumns: ["id"]
           },
         ]

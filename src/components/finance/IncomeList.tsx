@@ -75,6 +75,15 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
             services:service_id (
               name,
               price
+            ),
+            finance_transactions:finance_transaction_id (
+              id,
+              customer_name,
+              payment_method,
+              cash_amount,
+              tip_amount,
+              discount,
+              original_total
             )
           `, { count: 'exact' })
           .eq("type", "income")
@@ -87,36 +96,70 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
           const formattedData: ServiceIncome[] = data.map((record) => {
             const financeRecord = mapFinanceRowToFinanceRecord(record);
             
+            // Check if this is a grouped transaction
+            const isGrouped = !!record.finance_transaction_id && record.finance_transactions;
+            const ft = record.finance_transactions;
+            
             let servicesList = undefined;
             let discount = 0;
             let originalTotal = 0;
             let tipAmount = 0;
+            let customerName: string | null;
+            let paymentMethod: string | undefined;
+            let cashAmount = 0;
+            let finalAmount = record.amount;
             
-            if (record.category) {
-              try {
-                const parsedCategory = JSON.parse(record.category);
-                if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds)) {
-                  servicesList = parsedCategory.serviceNames.map((name: string, index: number) => ({
-                    id: parsedCategory.serviceIds[index],
-                    name,
-                    price: parsedCategory.servicePrices[index],
-                    quantity: parsedCategory.serviceQuantities ? parsedCategory.serviceQuantities[index] : 1
-                  }));
-                }
-                
-                if (parsedCategory.discount !== undefined) {
-                  discount = parsedCategory.discount;
-                }
-                
-                if (parsedCategory.originalTotal !== undefined) {
-                  originalTotal = parsedCategory.originalTotal;
-                }
+            if (isGrouped && ft) {
+              // Grouped record: get data from finance_transactions
+              customerName = ft.customer_name;
+              paymentMethod = ft.payment_method;
+              cashAmount = ft.cash_amount || 0;
+              tipAmount = ft.tip_amount || 0;
+              discount = ft.discount || 0;
+              originalTotal = ft.original_total || record.amount;
+              
+              // Calculate proportional discount for this service line item
+              if (discount > 0 && originalTotal > 0) {
+                const discountProportion = record.amount / originalTotal;
+                finalAmount = record.amount - (discount * discountProportion);
+              }
+            } else {
+              // Legacy record: get data from finances and parse category JSON if needed
+              customerName = financeRecord.customerName || null;
+              paymentMethod = financeRecord.paymentMethod;
+              tipAmount = 0;
+              discount = 0;
+              originalTotal = record.amount;
+              cashAmount = 0;
+              finalAmount = record.amount;
+              
+              // Handle legacy JSON category parsing (for old grouped records if any)
+              if (record.category) {
+                try {
+                  const parsedCategory = JSON.parse(record.category);
+                  if (parsedCategory.serviceIds && Array.isArray(parsedCategory.serviceIds)) {
+                    servicesList = parsedCategory.serviceNames.map((name: string, index: number) => ({
+                      id: parsedCategory.serviceIds[index],
+                      name,
+                      price: parsedCategory.servicePrices[index],
+                      quantity: parsedCategory.serviceQuantities ? parsedCategory.serviceQuantities[index] : 1
+                    }));
+                  }
+                  
+                  if (parsedCategory.discount !== undefined) {
+                    discount = parsedCategory.discount;
+                  }
+                  
+                  if (parsedCategory.originalTotal !== undefined) {
+                    originalTotal = parsedCategory.originalTotal;
+                  }
 
-                if (parsedCategory.tipAmount !== undefined) {
-                  tipAmount = parsedCategory.tipAmount;
+                  if (parsedCategory.tipAmount !== undefined) {
+                    tipAmount = parsedCategory.tipAmount;
+                  }
+                } catch (e) {
+                  console.error("Error parsing service details:", e);
                 }
-              } catch (e) {
-                console.error("Error parsing service details:", e);
               }
             }
             
@@ -126,7 +169,10 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
               servicesList,
               discount,
               originalTotal,
-              tipAmount
+              tipAmount,
+              customerName: customerName,
+              paymentMethod: paymentMethod,
+              amount: finalAmount
             };
           });
 
@@ -206,15 +252,46 @@ const IncomeList = ({ newIncome, limit = 20, compact = false }: IncomeListProps)
     if (!incomeToDelete) return;
     
     try {
-      const { error } = await supabase
+      // First, check if this record has a finance_transaction_id
+      const { data: financeRecord } = await supabase
         .from('finances')
-        .delete()
-        .eq('id', incomeToDelete);
-        
-      if (error) throw error;
+        .select('finance_transaction_id')
+        .eq('id', incomeToDelete)
+        .single();
       
-      setIncomeRecords(prev => prev.filter(record => record.id !== incomeToDelete));
-      setTotalCount(prev => Math.max(0, prev - 1)); // Decrement total count
+      if (financeRecord?.finance_transaction_id) {
+        // Grouped transaction: delete the finance_transaction (CASCADE will delete all related finances)
+        // First, get all finances IDs that belong to this transaction so we can remove them from UI
+        const { data: relatedFinances } = await supabase
+          .from('finances')
+          .select('id')
+          .eq('finance_transaction_id', financeRecord.finance_transaction_id);
+        
+        const relatedIds = relatedFinances?.map(f => f.id) || [];
+        
+        // Delete the finance_transaction (CASCADE will handle finances)
+        const { error } = await supabase
+          .from('finance_transactions')
+          .delete()
+          .eq('id', financeRecord.finance_transaction_id);
+        
+        if (error) throw error;
+        
+        // Remove all related records from UI
+        setIncomeRecords(prev => prev.filter(record => !relatedIds.includes(record.id)));
+        setTotalCount(prev => Math.max(0, prev - relatedIds.length));
+      } else {
+        // Legacy record: delete directly from finances
+        const { error } = await supabase
+          .from('finances')
+          .delete()
+          .eq('id', incomeToDelete);
+        
+        if (error) throw error;
+        
+        setIncomeRecords(prev => prev.filter(record => record.id !== incomeToDelete));
+        setTotalCount(prev => Math.max(0, prev - 1)); // Decrement total count
+      }
       
       toast({
         title: "Success",

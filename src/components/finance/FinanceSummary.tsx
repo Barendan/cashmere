@@ -173,10 +173,18 @@ const FinanceSummary: React.FC<FinanceSummaryProps> & {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: incomeData, error: incomeError } = await supabase
+      // For grouped transactions: sum finance_transactions.total_amount
+      // For legacy records: sum finances.amount where finance_transaction_id IS NULL
+      const { data: groupedIncomeData, error: groupedIncomeError } = await supabase
+        .from("finance_transactions")
+        .select("total_amount")
+        .gte("date", startOfMonth.toISOString());
+
+      const { data: legacyIncomeData, error: legacyIncomeError } = await supabase
         .from("finances")
         .select("amount")
         .eq("type", "income")
+        .is("finance_transaction_id", null)
         .gte("date", startOfMonth.toISOString());
 
       // Fetch total expenses for current month
@@ -186,12 +194,14 @@ const FinanceSummary: React.FC<FinanceSummaryProps> & {
         .eq("type", "expense")
         .gte("date", startOfMonth.toISOString());
 
-      if (incomeError || expenseError) {
-        throw incomeError || expenseError;
+      if (groupedIncomeError || legacyIncomeError || expenseError) {
+        throw groupedIncomeError || legacyIncomeError || expenseError;
       }
 
       // Calculate totals
-      const totalIncome = incomeData?.reduce((sum, record) => sum + record.amount, 0) || 0;
+      const groupedIncome = groupedIncomeData?.reduce((sum, record) => sum + record.total_amount, 0) || 0;
+      const legacyIncome = legacyIncomeData?.reduce((sum, record) => sum + record.amount, 0) || 0;
+      const totalIncome = groupedIncome + legacyIncome;
       const totalExpenses = expenseData?.reduce((sum, record) => sum + record.amount, 0) || 0;
       const netProfit = totalIncome - totalExpenses;
 

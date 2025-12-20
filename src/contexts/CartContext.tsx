@@ -14,12 +14,14 @@ interface CartContextType {
   globalDiscount: number;
   globalTip: number;
   globalCustomerName: string;
+  globalCashAmount: number;
   addItem: (item: Product | Service, type: 'product' | 'service') => void;
   removeItem: (itemId: string) => void;
   updateQuantity: (itemId: string, quantity: number) => void;
   updateGlobalDiscount: (discount: number) => void;
   updateGlobalTip: (tip: number) => void;
   updateGlobalCustomerName: (customerName: string) => void;
+  updateGlobalCashAmount: (amount: number) => void;
   clearCart: () => void;
   isItemInCart: (itemId: string) => boolean;
   getSubtotal: () => number;
@@ -35,6 +37,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [globalDiscount, setGlobalDiscount] = useState<number>(0);
   const [globalTip, setGlobalTip] = useState<number>(0);
   const [globalCustomerName, setGlobalCustomerName] = useState<string>('');
+  const [globalCashAmount, setGlobalCashAmount] = useState<number>(0);
   const { toast } = useToast();
 
   const addItem = (item: Product | Service, type: 'product' | 'service') => {
@@ -112,11 +115,20 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setGlobalCustomerName(customerName);
   };
 
+  const updateGlobalCashAmount = (amount: number) => {
+    // Calculate final total for validation
+    const subtotal = getSubtotal();
+    const finalTotal = Math.max(0, subtotal - globalDiscount + globalTip);
+    const safeAmount = Math.min(Math.max(0, amount), finalTotal);
+    setGlobalCashAmount(safeAmount);
+  };
+
   const clearCart = () => {
     setItems([]);
     setGlobalDiscount(0);
     setGlobalTip(0);
     setGlobalCustomerName('');
+    setGlobalCashAmount(0);
   };
 
   const isItemInCart = (itemId: string) => {
@@ -151,12 +163,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         globalDiscount,
         globalTip,
         globalCustomerName,
+        globalCashAmount,
         addItem,
         removeItem,
         updateQuantity,
         updateGlobalDiscount,
         updateGlobalTip,
         updateGlobalCustomerName,
+        updateGlobalCashAmount,
         clearCart,
         isItemInCart,
         getSubtotal,

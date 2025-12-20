@@ -34,16 +34,22 @@ import {
 import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
 import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct } from "../config/systemProducts";
+import { recordFinanceTransactionInDb } from "../services/financeTransactionService";
 
 interface ServiceIncome {
   id: string;
   serviceId: string;
   serviceName: string;
-  amount: number;
+  amount: number;  // Final price after discount
   date: Date;
   customerName: string | null;
   category?: string;
   paymentMethod?: string;
+  tipAmount?: number;
+  discount?: number;
+  originalTotal?: number;
+  cashAmount?: number;
+  financeTransactionId?: string;  // For deduplicating cash calculations
 }
 
 interface DataContextType {
@@ -61,8 +67,8 @@ interface DataContextType {
   deleteService: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
   recordBulkSale: (items: {product: Product, quantity: number}[], globalDiscount?: number, paymentMethod?: string) => Promise<void>;
-  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
-  recordMixedSale: (products: {product: Product, quantity: number}[], serviceItems: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string) => Promise<void>;
+  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string, cashAmount?: number) => Promise<void>;
+  recordMixedSale: (products: {product: Product, quantity: number}[], serviceItems: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string, cashAmount?: number) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
   undoLastTransaction: () => void;
@@ -397,7 +403,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           category,
           service_id,
           payment_method,
-          services(name)
+          finance_transaction_id,
+          services(name),
+          finance_transactions:finance_transaction_id (
+            id,
+            customer_name,
+            payment_method,
+            cash_amount,
+            tip_amount,
+            discount,
+            original_total
+          )
         `)
         .eq('type', 'income')
         .order('date', { ascending: false });
@@ -405,16 +421,62 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) throw error;
 
       if (data) {
-        const transformedData = data.map(item => ({
-          id: item.id,
-          serviceId: item.service_id || item.category || "uncategorized",
-          serviceName: item.services?.name || item.category || "Uncategorized",
-          amount: item.amount,
-          date: new Date(item.date),
-          customerName: item.customer_name,
-          category: item.category,
-          paymentMethod: item.payment_method || undefined
-        }));
+        // Transform data - handle both grouped and legacy records
+        const transformedData = data.map(item => {
+          const isGrouped = !!item.finance_transaction_id && item.finance_transactions;
+          const ft = item.finance_transactions;
+          
+          // For grouped records: get data from finance_transactions
+          // For legacy records: get data from finances (current behavior)
+          let customerName: string | null;
+          let paymentMethod: string | undefined;
+          let tipAmount: number | undefined;
+          let discount: number | undefined;
+          let originalTotal: number | undefined;
+          let cashAmount: number | undefined;
+          let finalAmount = item.amount;
+          
+          if (isGrouped && ft) {
+            // Grouped record: read from finance_transactions
+            customerName = ft.customer_name;
+            paymentMethod = ft.payment_method;
+            tipAmount = ft.tip_amount || 0;
+            discount = ft.discount || 0;
+            originalTotal = ft.original_total || item.amount;
+            cashAmount = ft.cash_amount || 0;
+            
+            // Calculate proportional discount for this service line item
+            if (discount > 0 && originalTotal > 0) {
+              const discountProportion = item.amount / originalTotal;
+              finalAmount = item.amount - (discount * discountProportion);
+            }
+          } else {
+            // Legacy record: read from finances (existing behavior)
+            customerName = item.customer_name;
+            paymentMethod = item.payment_method || undefined;
+            tipAmount = undefined;  // Legacy records don't have tip stored per service
+            discount = 0;  // Legacy records don't have discount stored
+            originalTotal = item.amount;  // For legacy, amount is final price
+            cashAmount = 0;  // Legacy records have no cash split
+            finalAmount = item.amount;
+          }
+          
+          return {
+            id: item.id,
+            serviceId: item.service_id || item.category || "uncategorized",
+            serviceName: item.services?.name || item.category || "Uncategorized",
+            amount: finalAmount,  // Final price after discount
+            date: new Date(item.date),
+            customerName: customerName,
+            category: item.category,
+            paymentMethod: paymentMethod,
+            tipAmount: tipAmount,
+            discount: discount,
+            originalTotal: originalTotal,
+            cashAmount: cashAmount,
+            financeTransactionId: item.finance_transaction_id || undefined
+          };
+        });
         
         return transformedData;
       }
@@ -714,14 +776,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const recordServiceSale = async (items: {service: Service, quantity: number}[], globalDiscount: number = 0, globalTip: number = 0, globalCustomerName: string = '', paymentMethod?: string) => {
+  const recordServiceSale = async (
+    items: {service: Service, quantity: number}[],
+    globalDiscount: number = 0,
+    globalTip: number = 0,
+    globalCustomerName: string = '',
+    paymentMethod?: string,
+    cashAmount: number = 0
+  ) => {
     if (items.length === 0) return;
+    
+    // Validate paymentMethod is provided
+    if (!paymentMethod) {
+      throw new Error('Payment method is required');
+    }
     
     // Invalidate metrics cache since we're adding new service income
     invalidateMetricsCache();
     
     try {
       const now = new Date();
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
       
       // Validate all services exist
       for (const item of items) {
@@ -731,25 +809,59 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
-      // Calculate subtotal for proportional discount distribution
-      const subtotal = items.reduce((sum, item) => sum + (item.service.price * item.quantity), 0);
+      // Calculate original subtotal (before discount)
+      const originalSubtotal = items.reduce((sum, item) => 
+        sum + (item.service.price * item.quantity), 0
+      );
       
-      // Process each service separately as income records
+      // Calculate final subtotal (after discount, before tip)
+      const finalSubtotal = Math.max(0, originalSubtotal - globalDiscount);
+      const finalTotal = finalSubtotal + globalTip;
+      
+      // Validate cash amount
+      let validatedCashAmount = cashAmount;
+      if (paymentMethod === 'cash') {
+        // If payment is cash-only, cash_amount must equal total
+        validatedCashAmount = finalTotal;
+      } else if (cashAmount > 0) {
+        // If split payment, validate cash doesn't exceed total
+        if (cashAmount >= finalTotal) {
+          throw new Error('Cash amount cannot exceed or equal total amount in split payment');
+        }
+      }
+      
+      // Step 1: Create finance_transaction (summary row)
+      const financeTransactionData = {
+        date: now.toISOString(),
+        total_amount: finalTotal,
+        customer_name: globalCustomerName || null,
+        payment_method: paymentMethod,
+        cash_amount: validatedCashAmount,
+        tip_amount: globalTip,
+        discount: globalDiscount,
+        original_total: originalSubtotal,
+        user_id: user.id,
+        user_name: user?.name || user?.email || user?.id || 'Unknown User',
+        notes: null
+      };
+      
+      const financeTransaction = await recordFinanceTransactionInDb(financeTransactionData);
+      
+      // Step 2: Create finances rows (line items) - one per service
       const financePromises = items.map(async (item) => {
         const serviceTotal = item.service.price * item.quantity;
-        // Distribute global discount proportionally across items
-        const itemDiscountShare = subtotal > 0 ? (serviceTotal / subtotal) * globalDiscount : 0;
-        const finalPrice = Math.max(0, serviceTotal - itemDiscountShare);
         
+        // Store ORIGINAL price (not discounted) in finances.amount
         const financeData = {
           type: 'income',
           date: now.toISOString(),
-          amount: finalPrice,
+          amount: serviceTotal,  // Original price, not discounted
           description: `${item.service.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}`,
-          customer_name: globalCustomerName || null,
+          customer_name: null,  // NULL - read from finance_transactions
           service_id: item.service.id,
-          payment_method: paymentMethod || null,
-          tip_amount: globalTip > 0 ? globalTip : null
+          payment_method: null,  // NULL - read from finance_transactions
+          tip_amount: null,  // NULL - read from finance_transactions
+          finance_transaction_id: financeTransaction.id  // Link to parent transaction
         };
         
         const { error } = await supabase
@@ -767,12 +879,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         title: "Service Sale Completed", 
         description: `Processed ${items.length} service(s) successfully.`
       });
-      await refreshData();
-    } catch (error) {
+      
+      // Refresh service incomes to show the new record
+      const updatedServiceIncomes = await fetchServiceIncomes();
+      setServiceIncomes(updatedServiceIncomes);
+      
+    } catch (error: any) {
       console.error('Error recording service sale:', error);
       toast({ 
         title: "Error", 
-        description: `Failed to process service sale: ${error.message}`, 
+        description: error.message || "Failed to record service sale.", 
         variant: "destructive" 
       });
       throw error;
@@ -785,8 +901,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     globalDiscount: number = 0,
     globalTip: number = 0,
     globalCustomerName: string = '',
-    paymentMethod?: string
+    paymentMethod?: string,
+    cashAmount: number = 0
   ) => {
+    // Validate paymentMethod is provided
+    if (!paymentMethod) {
+      throw new Error('Payment method is required');
+    }
     // Invalidate metrics cache since we're adding new sales/income
     invalidateMetricsCache();
     
@@ -821,14 +942,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Process services through recordServiceSale
       if (serviceItems.length > 0) {
-        await recordServiceSale(serviceItems, serviceDiscountShare, globalTip, globalCustomerName, paymentMethod);
+        await recordServiceSale(serviceItems, serviceDiscountShare, globalTip, globalCustomerName, paymentMethod, cashAmount);
       }
       
       toast({ 
         title: "Mixed Sale Completed", 
         description: `Processed ${products.length} product(s) and ${serviceItems.length} service(s).`
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error recording mixed sale:', error);
       toast({ 
         title: "Error", 

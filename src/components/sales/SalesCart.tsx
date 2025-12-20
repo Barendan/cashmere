@@ -13,7 +13,7 @@ interface SalesCartProps {
 }
 
 const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
-  const { items, globalDiscount, globalTip, globalCustomerName, updateQuantity, removeItem, clearCart } = useCart();
+  const { items, globalDiscount, globalTip, globalCustomerName, globalCashAmount, updateQuantity, removeItem, clearCart } = useCart();
   const { recordBulkSale, recordServiceSale, recordMixedSale } = useData();
   const { toast } = useToast();
   
@@ -26,7 +26,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
   const hasServices = serviceItems.length > 0;
   const isMixed = hasProducts && hasServices;
   
-  const handleCompleteSale = async (paymentMethod: string) => {
+  const handleCompleteSale = async (paymentMethod: string, cashAmount: number = 0) => {
     if (items.length === 0) return;
     
     setIsProcessing(true);
@@ -44,7 +44,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
           quantity: item.quantity
         }));
         
-        await recordMixedSale(productSaleItems, serviceSaleItems, globalDiscount, globalTip, globalCustomerName, paymentMethod);
+        await recordMixedSale(productSaleItems, serviceSaleItems, globalDiscount, globalTip, globalCustomerName, paymentMethod, cashAmount);
       } else if (hasProducts) {
         // Products only
         const saleItems = productItems.map(item => ({
@@ -60,7 +60,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
           quantity: item.quantity
         }));
         
-        await recordServiceSale(serviceSaleItems, globalDiscount, globalTip, globalCustomerName, paymentMethod);
+        await recordServiceSale(serviceSaleItems, globalDiscount, globalTip, globalCustomerName, paymentMethod, cashAmount);
       }
       
       clearCart();

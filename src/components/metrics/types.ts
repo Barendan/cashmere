@@ -10,6 +10,11 @@ export interface ServiceIncomeWithCategory {
   customerName: string | null;
   category?: string;
   paymentMethod?: string;
+  tipAmount?: number;
+  discount?: number;
+  originalTotal?: number;
+  cashAmount?: number;
+  financeTransactionId?: string;  // For deduplicating cash calculations in grouped transactions
 }
 
 export interface ParsedServiceCategory {
