@@ -1,9 +1,9 @@
 import { supabase } from "../integrations/supabase/client";
 import { FinanceTransaction } from "../models/types";
-import type { Tables } from "../integrations/supabase/types";
+import type { Database } from "../integrations/supabase/types";
 
-type FinanceTransactionRow = Tables['finance_transactions']['Row'];
-type FinanceTransactionInsert = Tables['finance_transactions']['Insert'];
+type FinanceTransactionRow = Database['public']['Tables']['finance_transactions']['Row'];
+type FinanceTransactionInsert = Database['public']['Tables']['finance_transactions']['Insert'];
 
 // Map database row to FinanceTransaction model
 export const mapFinanceTransactionRowToFinanceTransaction = (

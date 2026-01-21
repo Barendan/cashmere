@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -16,52 +16,52 @@ export type Database = {
     Tables: {
       finance_transactions: {
         Row: {
-          id: string
-          date: string
-          total_amount: number
+          cash_amount: number | null
+          created_at: string | null
           customer_name: string | null
-          payment_method: string
-          cash_amount: number
-          tip_amount: number
-          discount: number
+          date: string
+          discount: number | null
+          id: string
+          notes: string | null
           original_total: number | null
+          payment_method: string
+          tip_amount: number | null
+          total_amount: number
+          updated_at: string | null
           user_id: string
           user_name: string
-          notes: string | null
-          created_at: string
-          updated_at: string
         }
         Insert: {
-          id?: string
-          date?: string
-          total_amount: number
+          cash_amount?: number | null
+          created_at?: string | null
           customer_name?: string | null
-          payment_method: string
-          cash_amount?: number
-          tip_amount?: number
-          discount?: number
+          date?: string
+          discount?: number | null
+          id?: string
+          notes?: string | null
           original_total?: number | null
+          payment_method: string
+          tip_amount?: number | null
+          total_amount: number
+          updated_at?: string | null
           user_id: string
           user_name: string
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
         }
         Update: {
-          id?: string
-          date?: string
-          total_amount?: number
+          cash_amount?: number | null
+          created_at?: string | null
           customer_name?: string | null
-          payment_method?: string
-          cash_amount?: number
-          tip_amount?: number
-          discount?: number
+          date?: string
+          discount?: number | null
+          id?: string
+          notes?: string | null
           original_total?: number | null
+          payment_method?: string
+          tip_amount?: number | null
+          total_amount?: number
+          updated_at?: string | null
           user_id?: string
           user_name?: string
-          notes?: string | null
-          created_at?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -73,6 +73,7 @@ export type Database = {
           customer_name: string | null
           date: string
           description: string | null
+          finance_transaction_id: string | null
           id: string
           payment_method: string | null
           service_id: string | null
@@ -80,7 +81,6 @@ export type Database = {
           type: string
           updated_at: string
           vendor: string | null
-          finance_transaction_id: string | null
         }
         Insert: {
           amount: number
@@ -89,6 +89,7 @@ export type Database = {
           customer_name?: string | null
           date?: string
           description?: string | null
+          finance_transaction_id?: string | null
           id?: string
           payment_method?: string | null
           service_id?: string | null
@@ -96,7 +97,6 @@ export type Database = {
           type: string
           updated_at?: string
           vendor?: string | null
-          finance_transaction_id?: string | null
         }
         Update: {
           amount?: number
@@ -105,6 +105,7 @@ export type Database = {
           customer_name?: string | null
           date?: string
           description?: string | null
+          finance_transaction_id?: string | null
           id?: string
           payment_method?: string | null
           service_id?: string | null
@@ -112,21 +113,20 @@ export type Database = {
           type?: string
           updated_at?: string
           vendor?: string | null
-          finance_transaction_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "finances_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "services"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "finances_finance_transaction_id_fkey"
             columns: ["finance_transaction_id"]
             isOneToOne: false
             referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finances_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -342,7 +342,7 @@ export type Database = {
     }
     Functions: {
       get_sales: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           created_at: string
           date: string
@@ -353,11 +353,14 @@ export type Database = {
           user_id: string
           user_name: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "sales"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
-      get_user_role: {
-        Args: { user_id?: string }
-        Returns: string
-      }
+      get_user_role: { Args: { user_id?: string }; Returns: string }
       insert_bulk_transactions: {
         Args: { transactions: Json[] }
         Returns: {
@@ -374,6 +377,12 @@ export type Database = {
           user_id: string
           user_name: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       insert_sale: {
         Args: { p_sale: Json }
@@ -387,6 +396,12 @@ export type Database = {
           user_id: string
           user_name: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "sales"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       insert_transaction_with_sale: {
         Args: { p_transaction: Json }
@@ -404,6 +419,12 @@ export type Database = {
           user_id: string
           user_name: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "transactions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
     }
     Enums: {
