@@ -47,6 +47,10 @@ export const useProductMetricsCalculation = (
     return metricsUtils.calculateProductCategories(salesTransactions, sellableProducts);
   }, [salesTransactions, sellableProducts]);
 
+  const itemsSoldData = useMemo(() => {
+    return metricsUtils.calculateItemsSoldData(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
+  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+
   const { totalRevenue: todayRevenue, totalItemsSold: todayItemsSold, totalProfit: todayProfit } = useMemo(() => {
     return metricsUtils.calculateTotalMetrics(todayTransactions, sellableProducts);
   }, [todayTransactions, sellableProducts]);
