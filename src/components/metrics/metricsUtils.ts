@@ -147,6 +147,36 @@ export const calculateSalesDataFromTransactions = (
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 };
 
+export const calculateItemsSoldData = (
+  salesTransactions: Transaction[],
+  timeRange: string,
+  dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
+): SalesDataPoint[] => {
+  const filteredTransactions = salesTransactions.filter(transaction => {
+    const transactionDate = new Date(transaction.date);
+    switch(timeRange) {
+      case "7days": return transactionDate >= dateRanges.sevenDaysAgo;
+      case "30days": return transactionDate >= dateRanges.thirtyDaysAgo;
+      case "monthly": return true;
+      default: return true;
+    }
+  });
+
+  if (filteredTransactions.length === 0) return [];
+
+  const soldByDate = new Map<string, { date: string; revenue: number }>();
+  filteredTransactions.forEach(transaction => {
+    const dateStr = new Date(transaction.date).toISOString().split('T')[0];
+    if (!soldByDate.has(dateStr)) {
+      soldByDate.set(dateStr, { date: dateStr, revenue: 0 });
+    }
+    soldByDate.get(dateStr)!.revenue += transaction.quantity;
+  });
+
+  return Array.from(soldByDate.values())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+};
+
 export const calculateSalesData = (
   sales: any[],
   timeRange: string,

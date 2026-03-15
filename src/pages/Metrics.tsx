@@ -74,6 +74,7 @@ const Metrics = () => {
     productPerformance,
     salesData,
     categoryData,
+    itemsSoldData,
     todayRevenue,
     todayItemsSold,
     todayProfit,
@@ -156,6 +157,7 @@ const Metrics = () => {
           yesterdayProfit={yesterdayProfit}
           yesterdayItemsSold={yesterdayItemsSold}
           salesData={salesData}
+          itemsSoldData={itemsSoldData}
           productPerformance={productPerformance}
           categoryData={categoryData}
           timeRange={timeRange}

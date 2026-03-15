@@ -20,6 +20,7 @@ interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalReven
   yesterdayRevenue: number;
   yesterdayProfit: number;
   yesterdayItemsSold: number;
+  itemsSoldData: { date: string; revenue: number }[];
   sales: Sale[];
   serviceIncomes: ServiceIncomeWithCategory[];
 }
@@ -32,6 +33,7 @@ const ProductMetrics = ({
   yesterdayProfit,
   yesterdayItemsSold,
   salesData,
+  itemsSoldData,
   productPerformance,
   categoryData,
   timeRange,
@@ -150,6 +152,28 @@ const ProductMetrics = ({
               barFill="#AECCC6"
               tooltipType="currency"
               tooltipLabel="Revenue"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-white">
+        <CardHeader>
+          <div>
+            <CardTitle className="text-spa-deep">Items Sold Over Time</CardTitle>
+            <CardDescription>Track quantity of products sold (uses same time range above)</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <MetricsBarChart 
+              data={itemsSoldData}
+              dataKey="revenue"
+              nameKey="date"
+              barName="Items Sold"
+              barFill="#D4A574"
+              tooltipType="number"
+              tooltipLabel="Items Sold"
             />
           </div>
         </CardContent>
