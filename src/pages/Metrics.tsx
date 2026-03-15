@@ -74,6 +74,7 @@ const Metrics = () => {
     productPerformance,
     salesData,
     categoryData,
+    itemsSoldData,
     todayRevenue,
     todayItemsSold,
     todayProfit,
