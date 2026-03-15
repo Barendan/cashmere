@@ -157,6 +157,28 @@ const ProductMetrics = ({
         </CardContent>
       </Card>
 
+      <Card className="bg-white">
+        <CardHeader>
+          <div>
+            <CardTitle className="text-spa-deep">Items Sold Over Time</CardTitle>
+            <CardDescription>Track quantity of products sold (uses same time range above)</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[300px]">
+            <MetricsBarChart 
+              data={itemsSoldData}
+              dataKey="revenue"
+              nameKey="date"
+              barName="Items Sold"
+              barFill="#D4A574"
+              tooltipType="number"
+              tooltipLabel="Items Sold"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-white">
           <CardHeader>

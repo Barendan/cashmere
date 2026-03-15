@@ -63,6 +63,7 @@ export const useProductMetricsCalculation = (
     productPerformance,
     salesData,
     categoryData,
+    itemsSoldData,
     todayRevenue,
     todayItemsSold,
     todayProfit,
