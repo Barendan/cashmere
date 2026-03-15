@@ -20,6 +20,7 @@ interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalReven
   yesterdayRevenue: number;
   yesterdayProfit: number;
   yesterdayItemsSold: number;
+  itemsSoldData: { date: string; revenue: number }[];
   sales: Sale[];
   serviceIncomes: ServiceIncomeWithCategory[];
 }
