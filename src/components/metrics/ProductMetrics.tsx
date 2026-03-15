@@ -33,6 +33,7 @@ const ProductMetrics = ({
   yesterdayProfit,
   yesterdayItemsSold,
   salesData,
+  itemsSoldData,
   productPerformance,
   categoryData,
   timeRange,
