@@ -140,7 +140,7 @@ const ProductMetrics = ({
 
       {/* Sales Overview + Items Sold + Recent Sales in one container */}
       <Card className="bg-card">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-spa-deep">Sales Dashboard</CardTitle>
             <CardDescription>Product sales overview and recent activity</CardDescription>
