@@ -113,7 +113,7 @@ const generateDateRange = (start: Date, end: Date): string[] => {
   const endNorm = new Date(end);
   endNorm.setHours(0, 0, 0, 0);
   while (current <= endNorm) {
-    dates.push(current.toISOString().split('T')[0]);
+    dates.push(toLocalDateKey(current));
     current.setDate(current.getDate() + 1);
   }
   return dates;
