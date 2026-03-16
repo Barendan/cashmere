@@ -289,7 +289,7 @@ const ProductMetrics = ({
       </div>
 
       {/* Scrollable Product Profitability */}
-      <Card className="bg-white max-w-[80%]">
+      <Card className="bg-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-spa-deep">Product Profitability</CardTitle>

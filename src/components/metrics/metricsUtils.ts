@@ -611,6 +611,54 @@ export const exportToCsv = (
   document.body.removeChild(link);
 };
 
+export const generateMonthlyProductSalesCsv = (
+  transactions: Transaction[]
+): string => {
+  const salesOnly = transactions.filter(t => t.type === 'sale');
+  if (salesOnly.length === 0) return '';
+
+  // Group by month
+  const monthlyMap = new Map<string, { revenue: number; itemsSold: number }>();
+
+  salesOnly.forEach(t => {
+    const d = new Date(t.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthlyMap.has(key)) {
+      monthlyMap.set(key, { revenue: 0, itemsSold: 0 });
+    }
+    const entry = monthlyMap.get(key)!;
+    entry.revenue += t.price;
+    entry.itemsSold += t.quantity;
+  });
+
+  const sortedKeys = Array.from(monthlyMap.keys()).sort();
+  let csv = 'Month,Items Sold,Revenue\n';
+  sortedKeys.forEach(k => {
+    const [y, m] = k.split('-').map(Number);
+    const label = new Date(y, m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+    const entry = monthlyMap.get(k)!;
+    csv += `"${label}",${entry.itemsSold},${entry.revenue.toFixed(2)}\n`;
+  });
+
+  return csv;
+};
+
+export const exportMonthlyProductSales = (transactions: Transaction[]): void => {
+  const csv = generateMonthlyProductSalesCsv(transactions);
+  if (!csv) return;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `spa-product-sales-monthly-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 export const calculateCashIncome = (
   sales: Sale[],
   serviceIncomes: ServiceIncomeWithCategory[],
