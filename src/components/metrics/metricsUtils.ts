@@ -147,12 +147,8 @@ export const calculateSalesDataFromTransactions = (
     salesByDate.get(dateStr).revenue += transaction.price;
   });
   
-  return Array.from(salesByDate.values())
-    .sort((a, b) => {
-      const keys = Array.from(salesByDate.keys());
-      return keys.indexOf([...salesByDate.entries()].find(([, v]) => v === a)![0]) -
-             keys.indexOf([...salesByDate.entries()].find(([, v]) => v === b)![0]);
-    });
+  const keys = Array.from(salesByDate.keys()).sort();
+  return keys.map(k => salesByDate.get(k)!);
 };
 
 export const calculateItemsSoldData = (
