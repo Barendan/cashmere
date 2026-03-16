@@ -11,8 +11,8 @@ export const getDateRanges = () => {
   const today = new Date();
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 7);
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 30);
+  const sixWeeksAgo = new Date(today);
+  sixWeeksAgo.setDate(today.getDate() - 42);
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   
   // Create UTC-aware dates for today and yesterday
