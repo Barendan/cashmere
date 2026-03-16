@@ -315,7 +315,7 @@ export const calculateItemsSoldData = (
 export const calculateSalesData = (
   sales: any[],
   timeRange: string,
-  dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
+  dateRanges: { sevenDaysAgo: Date, sixWeeksAgo: Date }
 ): SalesDataPoint[] => {
   const filteredSales = sales.filter(sale => {
     const saleDate = new Date(sale.date);
