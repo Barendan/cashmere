@@ -401,8 +401,8 @@ export const calculateServicesData = (
   const filteredServiceIncomes = serviceIncomes.filter(income => {
     const incomeDate = new Date(income.date);
     switch (timeRange) {
-      case "7days": return incomeDate >= dateRanges.sevenDaysAgo;
-      case "30days": return incomeDate >= dateRanges.thirtyDaysAgo;
+      case "daily": return incomeDate >= dateRanges.sevenDaysAgo;
+      case "weekly": return incomeDate >= dateRanges.sixWeeksAgo;
       case "monthly": return true;
       case "daily": return true;
       default: return true;
