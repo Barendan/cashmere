@@ -611,18 +611,48 @@ export const exportToCsv = (
   document.body.removeChild(link);
 };
 
+/**
+ * Convert a UTC date to an EST/EDT-aware YYYY-MM key for monthly bucketing.
+ */
+const toESTMonthKey = (d: Date): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+  }).formatToParts(d);
+  const year = parts.find(p => p.type === 'year')!.value;
+  const month = parts.find(p => p.type === 'month')!.value;
+  return `${year}-${month}`;
+};
+
+/**
+ * Generate a contiguous range of YYYY-MM keys from startKey to endKey inclusive.
+ */
+const generateMonthKeysRange = (startKey: string, endKey: string): string[] => {
+  const keys: string[] = [];
+  const [sy, sm] = startKey.split('-').map(Number);
+  const [ey, em] = endKey.split('-').map(Number);
+  let y = sy, m = sm;
+  while (y < ey || (y === ey && m <= em)) {
+    keys.push(`${y}-${String(m).padStart(2, '0')}`);
+    m++;
+    if (m > 12) { m = 1; y++; }
+  }
+  return keys;
+};
+
 export const generateMonthlyProductSalesCsv = (
   transactions: Transaction[]
 ): string => {
   const salesOnly = transactions.filter(t => t.type === 'sale');
   if (salesOnly.length === 0) return '';
 
-  // Group by month
+  // Group by EST month
   const monthlyMap = new Map<string, { revenue: number; itemsSold: number }>();
 
   salesOnly.forEach(t => {
     const d = new Date(t.date);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const key = toESTMonthKey(d);
     if (!monthlyMap.has(key)) {
       monthlyMap.set(key, { revenue: 0, itemsSold: 0 });
     }
@@ -631,12 +661,16 @@ export const generateMonthlyProductSalesCsv = (
     entry.itemsSold += t.quantity;
   });
 
-  const sortedKeys = Array.from(monthlyMap.keys()).sort();
+  // Build contiguous range from earliest to current month (EST)
+  const allKeys = Array.from(monthlyMap.keys()).sort();
+  const currentMonthKey = toESTMonthKey(new Date());
+  const rangeKeys = generateMonthKeysRange(allKeys[0], currentMonthKey);
+
   let csv = 'Month,Items Sold,Revenue\n';
-  sortedKeys.forEach(k => {
+  rangeKeys.forEach(k => {
     const [y, m] = k.split('-').map(Number);
-    const label = new Date(y, m - 1, 1).toLocaleString('default', { month: 'long', year: 'numeric' });
-    const entry = monthlyMap.get(k)!;
+    const label = new Date(y, m - 1, 15).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const entry = monthlyMap.get(k) || { itemsSold: 0, revenue: 0 };
     csv += `"${label}",${entry.itemsSold},${entry.revenue.toFixed(2)}\n`;
   });
 
