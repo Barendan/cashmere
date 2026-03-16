@@ -11,6 +11,7 @@ import DataTable from "./DataTable";
 import { ProductMetricsProps } from "./types";
 import { Sale, Transaction } from "@/models/types";
 import { ServiceIncomeWithCategory } from "./types";
+import { exportMonthlyProductSales } from "./metricsUtils";
 import CashMetricsViewer from "./CashMetricsViewer";
 import { Separator } from "@/components/ui/separator";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from "recharts";
@@ -139,7 +140,7 @@ const ProductMetrics = ({
 
       {/* Sales Overview + Items Sold + Recent Sales in one container */}
       <Card className="bg-card">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-spa-deep">Sales Dashboard</CardTitle>
             <CardDescription>Product sales overview and recent activity</CardDescription>
@@ -165,6 +166,14 @@ const ProductMetrics = ({
               className="text-xs"
             >
               Monthly
+            </Button>
+            <Button
+              variant="outline"
+              className="text-xs"
+              onClick={() => exportMonthlyProductSales(transactions)}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Export Monthly
             </Button>
           </div>
         </CardHeader>
@@ -289,7 +298,7 @@ const ProductMetrics = ({
       </div>
 
       {/* Scrollable Product Profitability */}
-      <Card className="bg-white max-w-[80%]">
+      <Card className="bg-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-spa-deep">Product Profitability</CardTitle>
