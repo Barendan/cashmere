@@ -89,8 +89,8 @@ export const useServiceMetricsCalculation = (
   }, [serviceIncomes, startOfYesterday, endOfYesterday]);
 
   const servicesData = useMemo(() => {
-    return metricsUtils.calculateServicesData(serviceIncomes, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-  }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateServicesData(serviceIncomes, timeRange, { sevenDaysAgo, sixWeeksAgo });
+  }, [serviceIncomes, timeRange, sevenDaysAgo, sixWeeksAgo]);
 
   const serviceTypeData = useMemo(() => {
     return metricsUtils.calculateServiceTypeData(servicesData);
