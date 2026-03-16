@@ -11,6 +11,7 @@ import DataTable from "./DataTable";
 import { ProductMetricsProps } from "./types";
 import { Sale, Transaction } from "@/models/types";
 import { ServiceIncomeWithCategory } from "./types";
+import { exportMonthlyProductSales } from "./metricsUtils";
 import CashMetricsViewer from "./CashMetricsViewer";
 import { Separator } from "@/components/ui/separator";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from "recharts";
