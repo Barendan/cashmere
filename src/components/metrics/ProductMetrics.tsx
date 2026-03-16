@@ -167,6 +167,14 @@ const ProductMetrics = ({
             >
               Monthly
             </Button>
+            <Button
+              variant="outline"
+              className="text-xs"
+              onClick={() => exportMonthlyProductSales(transactions)}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Export Monthly
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
