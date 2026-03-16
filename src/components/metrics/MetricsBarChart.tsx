@@ -102,7 +102,7 @@ const MetricsBarChart = ({
             angle={-45}
             textAnchor="end"
             height={80}
-            interval={0}
+            interval="preserveStartEnd"
             tickFormatter={formatLabel}
           />
           <YAxis tick={{ fontSize: 12 }} />
