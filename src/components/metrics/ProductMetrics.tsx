@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, DollarSign, ArrowUp, ShoppingBag } from "lucide-react";
-import { formatCurrency, formatPercent, formatTooltipValue } from "@/lib/format";
+import { formatCurrency, formatPercent, formatTooltipValue, formatDateEST } from "@/lib/format";
 import MetricsCard from "./MetricsCard";
 import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
