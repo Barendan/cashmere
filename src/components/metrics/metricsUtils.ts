@@ -281,7 +281,7 @@ export const calculateSalesData = (
   filteredSales.forEach(sale => {
     // Ensure consistent date formatting in EST
     const saleDate = new Date(sale.date);
-    const dateStr = saleDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(saleDate);
     
     if (!salesByDate.has(dateStr)) {
       salesByDate.set(dateStr, {
