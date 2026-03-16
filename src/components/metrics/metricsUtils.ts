@@ -130,6 +130,39 @@ const generateMonthRange = (start: Date, end: Date): string[] => {
   return months;
 };
 
+const getWeekMonday = (d: Date): Date => {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const toWeekKey = (d: Date): string => {
+  const monday = getWeekMonday(d);
+  return toLocalDateKey(monday);
+};
+
+const weekKeyToLabel = (weekKey: string): string => {
+  const monday = new Date(weekKey + 'T00:00:00');
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${fmt(monday)}–${fmt(sunday)}`;
+};
+
+const generateWeekRange = (start: Date, end: Date): string[] => {
+  const weeks: string[] = [];
+  const current = getWeekMonday(start);
+  const endMonday = getWeekMonday(end);
+  while (current <= endMonday) {
+    weeks.push(toLocalDateKey(current));
+    current.setDate(current.getDate() + 7);
+  }
+  return weeks;
+};
+
 export const calculateSalesDataFromTransactions = (
   salesTransactions: Transaction[],
   timeRange: string,
