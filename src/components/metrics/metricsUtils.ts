@@ -516,10 +516,10 @@ export const calculateUniqueCustomers = (
     const incomeDate = new Date(income.date);
     
     switch(timeRange) {
-      case "7days":
+      case "daily":
         return incomeDate >= dateRanges.sevenDaysAgo;
-      case "30days":
-        return incomeDate >= dateRanges.thirtyDaysAgo;
+      case "weekly":
+        return incomeDate >= dateRanges.sixWeeksAgo;
       case "monthly":
         return incomeDate >= dateRanges.startOfMonth;
       default:
