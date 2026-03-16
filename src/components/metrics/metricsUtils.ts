@@ -78,6 +78,20 @@ export const calculateProductPerformance = (
   products: Product[]
 ): ProductMetric[] => {
   const productMap = new Map();
+
+  // Initialize all sellable products with zero values
+  products.forEach(product => {
+    if (product.forSale) {
+      productMap.set(product.id, {
+        id: product.id,
+        name: product.name,
+        totalSold: 0,
+        totalRevenue: 0,
+        costPrice: product.costPrice,
+        profit: 0
+      });
+    }
+  });
   
   salesTransactions.forEach(transaction => {
     const productId = transaction.productId;
