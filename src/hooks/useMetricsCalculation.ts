@@ -117,8 +117,8 @@ export const useServiceMetricsCalculation = (
   }, [todayServicesData]);
 
   const yesterdayServicesData = useMemo(() => {
-    return metricsUtils.calculateServicesData(yesterdayServiceIncomes, "daily", { sevenDaysAgo, thirtyDaysAgo });
-  }, [yesterdayServiceIncomes, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateServicesData(yesterdayServiceIncomes, "daily", { sevenDaysAgo, sixWeeksAgo });
+  }, [yesterdayServiceIncomes, sevenDaysAgo, sixWeeksAgo]);
 
   const yesterdayServiceRevenue = useMemo(() => {
     return yesterdayServicesData.reduce((sum, s) => sum + s.totalRevenue, 0);

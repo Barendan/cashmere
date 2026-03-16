@@ -157,18 +157,18 @@ const ProductMetrics = ({
           </div>
           <div className="flex items-center space-x-2">
             <Button 
-              variant={timeRange === "7days" ? "default" : "outline"} 
-              onClick={() => setTimeRange("7days")}
+              variant={timeRange === "daily" ? "default" : "outline"} 
+              onClick={() => setTimeRange("daily")}
               className="text-xs"
             >
-              7D
+              Daily
             </Button>
             <Button 
-              variant={timeRange === "30days" ? "default" : "outline"} 
-              onClick={() => setTimeRange("30days")}
+              variant={timeRange === "weekly" ? "default" : "outline"} 
+              onClick={() => setTimeRange("weekly")}
               className="text-xs"
             >
-              30D
+              Weekly
             </Button>
             <Button 
               variant={timeRange === "monthly" ? "default" : "outline"} 
