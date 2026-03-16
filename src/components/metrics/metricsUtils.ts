@@ -747,7 +747,7 @@ export const calculateDailyCashIncome = (
 
   serviceIncomesInRange.forEach(income => {
     const incomeDate = new Date(income.date);
-    const dateStr = incomeDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(incomeDate);
     const currentCash = dailyCashMap.get(dateStr) || 0;
 
     // For grouped transactions (has financeTransactionId), count cashAmount only once per transaction per day
