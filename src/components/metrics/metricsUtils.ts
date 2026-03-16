@@ -216,7 +216,7 @@ export const calculateItemsSoldData = (
     const transactionDate = new Date(transaction.date);
     const dateStr = timeRange === "monthly"
       ? `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`
-      : transactionDate.toISOString().split('T')[0];
+      : toLocalDateKey(transactionDate);
     const displayDate = timeRange === "monthly"
       ? transactionDate.toLocaleString('default', { month: 'short', year: 'numeric' })
       : dateStr;
