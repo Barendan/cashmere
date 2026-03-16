@@ -404,7 +404,6 @@ export const calculateServicesData = (
       case "daily": return incomeDate >= dateRanges.sevenDaysAgo;
       case "weekly": return incomeDate >= dateRanges.sixWeeksAgo;
       case "monthly": return true;
-      case "daily": return true;
       default: return true;
     }
   });
