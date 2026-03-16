@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, DollarSign, ArrowUp, ShoppingBag } from "lucide-react";
-import { formatCurrency, formatPercent, formatTooltipValue } from "@/lib/format";
+import { formatCurrency, formatPercent, formatTooltipValue, formatDateEST } from "@/lib/format";
 import MetricsCard from "./MetricsCard";
 import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
@@ -28,17 +28,6 @@ interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalReven
   transactions: Transaction[];
 }
 
-const getRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-};
 
 const ProductMetrics = ({
   todayRevenue,
@@ -157,18 +146,18 @@ const ProductMetrics = ({
           </div>
           <div className="flex items-center space-x-2">
             <Button 
-              variant={timeRange === "7days" ? "default" : "outline"} 
-              onClick={() => setTimeRange("7days")}
+              variant={timeRange === "daily" ? "default" : "outline"} 
+              onClick={() => setTimeRange("daily")}
               className="text-xs"
             >
-              7D
+              Daily
             </Button>
             <Button 
-              variant={timeRange === "30days" ? "default" : "outline"} 
-              onClick={() => setTimeRange("30days")}
+              variant={timeRange === "weekly" ? "default" : "outline"} 
+              onClick={() => setTimeRange("weekly")}
               className="text-xs"
             >
-              30D
+              Weekly
             </Button>
             <Button 
               variant={timeRange === "monthly" ? "default" : "outline"} 
@@ -229,7 +218,7 @@ const ProductMetrics = ({
                 }
 
                 return recentItems.map((item, i) => {
-                  const ago = getRelativeTime(new Date(item.date));
+                  const dateLabel = formatDateEST(new Date(item.date));
                   return (
                     <div key={item.id || i} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
                       <div className="flex-1 min-w-0">
@@ -237,7 +226,7 @@ const ProductMetrics = ({
                       </div>
                       <span className="text-muted-foreground mx-2">×{item.quantity}</span>
                       <span className="font-medium w-20 text-right">{formatCurrency(item.price * item.quantity)}</span>
-                      <span className="text-xs text-muted-foreground ml-3 w-20 text-right">{ago}</span>
+                      <span className="text-xs text-muted-foreground ml-3 w-28 text-right">{dateLabel}</span>
                     </div>
                   );
                 });
@@ -300,7 +289,7 @@ const ProductMetrics = ({
       </div>
 
       {/* Scrollable Product Profitability */}
-      <Card className="bg-white">
+      <Card className="bg-white max-w-[80%]">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-spa-deep">Product Profitability</CardTitle>
@@ -328,7 +317,7 @@ const ProductMetrics = ({
               profitMargin: item.totalRevenue > 0 ? (item.profit / item.totalRevenue) * 100 : 0
             }))}
             columns={productColumns}
-            maxHeight="400px"
+            maxHeight="320px"
             emptyMessage="No product sales data available."
           />
         </CardContent>

@@ -11,7 +11,7 @@ export const useProductMetricsCalculation = (
   timeRange: TimeRangeType
 ) => {
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
-  const { startOfMonth, sevenDaysAgo, thirtyDaysAgo, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
+  const { startOfMonth, sevenDaysAgo, sixWeeksAgo, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
   
   // Filter out internal-use products from metrics calculations
   const sellableProducts = useMemo(() => {
@@ -40,16 +40,16 @@ export const useProductMetricsCalculation = (
   }, [salesTransactions, sellableProducts]);
 
   const salesData = useMemo(() => {
-    return metricsUtils.calculateSalesDataFromTransactions(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateSalesDataFromTransactions(salesTransactions, timeRange, { sevenDaysAgo, sixWeeksAgo });
+  }, [salesTransactions, timeRange, sevenDaysAgo, sixWeeksAgo]);
 
   const categoryData = useMemo(() => {
     return metricsUtils.calculateProductCategories(salesTransactions, sellableProducts);
   }, [salesTransactions, sellableProducts]);
 
   const itemsSoldData = useMemo(() => {
-    return metricsUtils.calculateItemsSoldData(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateItemsSoldData(salesTransactions, timeRange, { sevenDaysAgo, sixWeeksAgo });
+  }, [salesTransactions, timeRange, sevenDaysAgo, sixWeeksAgo]);
 
   const { totalRevenue: todayRevenue, totalItemsSold: todayItemsSold, totalProfit: todayProfit } = useMemo(() => {
     return metricsUtils.calculateTotalMetrics(todayTransactions, sellableProducts);
@@ -78,7 +78,7 @@ export const useServiceMetricsCalculation = (
   timeRange: TimeRangeType
 ) => {
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
-  const { sevenDaysAgo, thirtyDaysAgo, startOfMonth, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
+  const { sevenDaysAgo, sixWeeksAgo, startOfMonth, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
 
   const todayServiceIncomes = useMemo(() => {
     return metricsUtils.filterServiceIncomesByDayRange(serviceIncomes, startOfToday, new Date());
@@ -89,16 +89,16 @@ export const useServiceMetricsCalculation = (
   }, [serviceIncomes, startOfYesterday, endOfYesterday]);
 
   const servicesData = useMemo(() => {
-    return metricsUtils.calculateServicesData(serviceIncomes, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-  }, [serviceIncomes, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateServicesData(serviceIncomes, timeRange, { sevenDaysAgo, sixWeeksAgo });
+  }, [serviceIncomes, timeRange, sevenDaysAgo, sixWeeksAgo]);
 
   const serviceTypeData = useMemo(() => {
     return metricsUtils.calculateServiceTypeData(servicesData);
   }, [servicesData]);
 
   const todayServicesData = useMemo(() => {
-    return metricsUtils.calculateServicesData(todayServiceIncomes, "daily", { sevenDaysAgo, thirtyDaysAgo });
-  }, [todayServiceIncomes, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateServicesData(todayServiceIncomes, "daily", { sevenDaysAgo, sixWeeksAgo });
+  }, [todayServiceIncomes, sevenDaysAgo, sixWeeksAgo]);
 
   const todayServiceRevenue = useMemo(() => {
     return todayServicesData.reduce((sum, s) => sum + s.totalRevenue, 0);
@@ -117,8 +117,8 @@ export const useServiceMetricsCalculation = (
   }, [todayServicesData]);
 
   const yesterdayServicesData = useMemo(() => {
-    return metricsUtils.calculateServicesData(yesterdayServiceIncomes, "daily", { sevenDaysAgo, thirtyDaysAgo });
-  }, [yesterdayServiceIncomes, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateServicesData(yesterdayServiceIncomes, "daily", { sevenDaysAgo, sixWeeksAgo });
+  }, [yesterdayServiceIncomes, sevenDaysAgo, sixWeeksAgo]);
 
   const yesterdayServiceRevenue = useMemo(() => {
     return yesterdayServicesData.reduce((sum, s) => sum + s.totalRevenue, 0);

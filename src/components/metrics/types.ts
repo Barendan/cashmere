@@ -52,7 +52,7 @@ export interface CategoryDataPoint {
   value: number;
 }
 
-export type TimeRangeType = "7days" | "30days" | "monthly";
+export type TimeRangeType = "daily" | "weekly" | "monthly";
 
 export interface ProductMetricsProps {
   totalRevenue: number;
