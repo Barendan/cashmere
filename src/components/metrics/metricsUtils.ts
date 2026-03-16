@@ -396,7 +396,7 @@ export const filterServiceIncomesByDayRange = (
 export const calculateServicesData = (
   serviceIncomes: ServiceIncomeWithCategory[],
   timeRange: string,
-  dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
+  dateRanges: { sevenDaysAgo: Date, sixWeeksAgo: Date }
 ): ServiceMetric[] => {
   const filteredServiceIncomes = serviceIncomes.filter(income => {
     const incomeDate = new Date(income.date);
