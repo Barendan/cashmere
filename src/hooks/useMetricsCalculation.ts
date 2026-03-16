@@ -11,7 +11,7 @@ export const useProductMetricsCalculation = (
   timeRange: TimeRangeType
 ) => {
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
-  const { startOfMonth, sevenDaysAgo, thirtyDaysAgo, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
+  const { startOfMonth, sevenDaysAgo, sixWeeksAgo, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
   
   // Filter out internal-use products from metrics calculations
   const sellableProducts = useMemo(() => {
