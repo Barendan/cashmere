@@ -78,7 +78,7 @@ export const useServiceMetricsCalculation = (
   timeRange: TimeRangeType
 ) => {
   const dateRanges = useMemo(() => metricsUtils.getDateRanges(), []);
-  const { sevenDaysAgo, thirtyDaysAgo, startOfMonth, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
+  const { sevenDaysAgo, sixWeeksAgo, startOfMonth, startOfToday, startOfYesterday, endOfYesterday } = dateRanges;
 
   const todayServiceIncomes = useMemo(() => {
     return metricsUtils.filterServiceIncomesByDayRange(serviceIncomes, startOfToday, new Date());
