@@ -9,7 +9,7 @@ import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
 import { ProductMetricsProps } from "./types";
-import { Sale } from "@/models/types";
+import { Sale, Transaction } from "@/models/types";
 import { ServiceIncomeWithCategory } from "./types";
 import CashMetricsViewer from "./CashMetricsViewer";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +25,7 @@ interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalReven
   itemsSoldData: { date: string; revenue: number }[];
   sales: Sale[];
   serviceIncomes: ServiceIncomeWithCategory[];
+  transactions: Transaction[];
 }
 
 const getRelativeTime = (date: Date): string => {
