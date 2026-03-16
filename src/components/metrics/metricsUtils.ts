@@ -730,7 +730,7 @@ export const calculateDailyCashIncome = (
   
   cashSales.forEach(sale => {
     const saleDate = new Date(sale.date);
-    const dateStr = saleDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(saleDate);
     const currentCash = dailyCashMap.get(dateStr) || 0;
     dailyCashMap.set(dateStr, currentCash + sale.totalAmount);
   });
