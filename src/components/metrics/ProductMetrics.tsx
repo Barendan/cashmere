@@ -328,7 +328,7 @@ const ProductMetrics = ({
               profitMargin: item.totalRevenue > 0 ? (item.profit / item.totalRevenue) * 100 : 0
             }))}
             columns={productColumns}
-            maxHeight="400px"
+            maxHeight="320px"
             emptyMessage="No product sales data available."
           />
         </CardContent>
