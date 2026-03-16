@@ -717,7 +717,7 @@ export const calculateDailyCashIncome = (
   // Initialize all days in range with 0
   const currentDate = new Date(startDate);
   while (currentDate <= endDate) {
-    const dateStr = currentDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(currentDate);
     dailyCashMap.set(dateStr, 0);
     currentDate.setDate(currentDate.getDate() + 1);
   }
