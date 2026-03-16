@@ -2,6 +2,10 @@
 import { Transaction, Product, Sale } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
 
+const toLocalDateKey = (d: Date): string => {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export const getDateRanges = () => {
   // Use consistent UTC timezone for all date calculations
   const today = new Date();
@@ -109,7 +113,7 @@ const generateDateRange = (start: Date, end: Date): string[] => {
   const endNorm = new Date(end);
   endNorm.setHours(0, 0, 0, 0);
   while (current <= endNorm) {
-    dates.push(current.toISOString().split('T')[0]);
+    dates.push(toLocalDateKey(current));
     current.setDate(current.getDate() + 1);
   }
   return dates;
@@ -153,7 +157,7 @@ export const calculateSalesDataFromTransactions = (
     const transactionDate = new Date(transaction.date);
     const dateStr = timeRange === "monthly"
       ? `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`
-      : transactionDate.toISOString().split('T')[0];
+      : toLocalDateKey(transactionDate);
     const displayDate = timeRange === "monthly"
       ? transactionDate.toLocaleString('default', { month: 'short', year: 'numeric' })
       : dateStr;
@@ -212,7 +216,7 @@ export const calculateItemsSoldData = (
     const transactionDate = new Date(transaction.date);
     const dateStr = timeRange === "monthly"
       ? `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`
-      : transactionDate.toISOString().split('T')[0];
+      : toLocalDateKey(transactionDate);
     const displayDate = timeRange === "monthly"
       ? transactionDate.toLocaleString('default', { month: 'short', year: 'numeric' })
       : dateStr;
@@ -277,7 +281,7 @@ export const calculateSalesData = (
   filteredSales.forEach(sale => {
     // Ensure consistent date formatting in EST
     const saleDate = new Date(sale.date);
-    const dateStr = saleDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(saleDate);
     
     if (!salesByDate.has(dateStr)) {
       salesByDate.set(dateStr, {
@@ -713,7 +717,7 @@ export const calculateDailyCashIncome = (
   // Initialize all days in range with 0
   const currentDate = new Date(startDate);
   while (currentDate <= endDate) {
-    const dateStr = currentDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(currentDate);
     dailyCashMap.set(dateStr, 0);
     currentDate.setDate(currentDate.getDate() + 1);
   }
@@ -726,7 +730,7 @@ export const calculateDailyCashIncome = (
   
   cashSales.forEach(sale => {
     const saleDate = new Date(sale.date);
-    const dateStr = saleDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(saleDate);
     const currentCash = dailyCashMap.get(dateStr) || 0;
     dailyCashMap.set(dateStr, currentCash + sale.totalAmount);
   });
@@ -743,7 +747,7 @@ export const calculateDailyCashIncome = (
 
   serviceIncomesInRange.forEach(income => {
     const incomeDate = new Date(income.date);
-    const dateStr = incomeDate.toISOString().split('T')[0];
+    const dateStr = toLocalDateKey(incomeDate);
     const currentCash = dailyCashMap.get(dateStr) || 0;
 
     // For grouped transactions (has financeTransactionId), count cashAmount only once per transaction per day
