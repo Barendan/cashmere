@@ -129,13 +129,17 @@ export const calculateSalesDataFromTransactions = (
   const salesByDate = new Map();
   
   filteredTransactions.forEach(transaction => {
-    // Ensure consistent date formatting in UTC
     const transactionDate = new Date(transaction.date);
-    const dateStr = transactionDate.toISOString().split('T')[0];
+    const dateStr = timeRange === "monthly"
+      ? `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`
+      : transactionDate.toISOString().split('T')[0];
+    const displayDate = timeRange === "monthly"
+      ? transactionDate.toLocaleString('default', { month: 'short', year: 'numeric' })
+      : dateStr;
     
     if (!salesByDate.has(dateStr)) {
       salesByDate.set(dateStr, {
-        date: dateStr,
+        date: displayDate,
         revenue: 0
       });
     }
@@ -144,7 +148,11 @@ export const calculateSalesDataFromTransactions = (
   });
   
   return Array.from(salesByDate.values())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => {
+      const keys = Array.from(salesByDate.keys());
+      return keys.indexOf([...salesByDate.entries()].find(([, v]) => v === a)![0]) -
+             keys.indexOf([...salesByDate.entries()].find(([, v]) => v === b)![0]);
+    });
 };
 
 export const calculateItemsSoldData = (
