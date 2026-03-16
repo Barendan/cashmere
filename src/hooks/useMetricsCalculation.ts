@@ -40,8 +40,8 @@ export const useProductMetricsCalculation = (
   }, [salesTransactions, sellableProducts]);
 
   const salesData = useMemo(() => {
-    return metricsUtils.calculateSalesDataFromTransactions(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateSalesDataFromTransactions(salesTransactions, timeRange, { sevenDaysAgo, sixWeeksAgo });
+  }, [salesTransactions, timeRange, sevenDaysAgo, sixWeeksAgo]);
 
   const categoryData = useMemo(() => {
     return metricsUtils.calculateProductCategories(salesTransactions, sellableProducts);
