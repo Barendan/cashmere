@@ -33,7 +33,7 @@ export const getDateRanges = () => {
   return {
     today,
     sevenDaysAgo,
-    thirtyDaysAgo,
+    sixWeeksAgo,
     startOfMonth,
     startOfToday,
     startOfYesterday,
