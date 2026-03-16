@@ -507,7 +507,7 @@ export const calculateServiceTypeData = (
 export const calculateUniqueCustomers = (
   serviceIncomes: ServiceIncomeWithCategory[],
   timeRange: string,
-  dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date, startOfMonth: Date }
+  dateRanges: { sevenDaysAgo: Date, sixWeeksAgo: Date, startOfMonth: Date }
 ): number => {
   const customers = new Set();
 
