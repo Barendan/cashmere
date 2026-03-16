@@ -102,11 +102,36 @@ export const calculateProductPerformance = (
     .sort((a: ProductMetric, b: ProductMetric) => b.profit - a.profit);
 };
 
+const generateDateRange = (start: Date, end: Date): string[] => {
+  const dates: string[] = [];
+  const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
+  const endNorm = new Date(end);
+  endNorm.setHours(0, 0, 0, 0);
+  while (current <= endNorm) {
+    dates.push(current.toISOString().split('T')[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
+};
+
+const generateMonthRange = (start: Date, end: Date): string[] => {
+  const months: string[] = [];
+  const current = new Date(start.getFullYear(), start.getMonth(), 1);
+  const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (current <= endMonth) {
+    months.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`);
+    current.setMonth(current.getMonth() + 1);
+  }
+  return months;
+};
+
 export const calculateSalesDataFromTransactions = (
   salesTransactions: Transaction[],
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): SalesDataPoint[] => {
+  const today = new Date();
   const filteredTransactions = salesTransactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
     
@@ -122,11 +147,7 @@ export const calculateSalesDataFromTransactions = (
     }
   });
   
-  if (filteredTransactions.length === 0) {
-    return [];
-  }
-  
-  const salesByDate = new Map();
+  const salesByDate = new Map<string, SalesDataPoint>();
   
   filteredTransactions.forEach(transaction => {
     const transactionDate = new Date(transaction.date);
@@ -138,17 +159,36 @@ export const calculateSalesDataFromTransactions = (
       : dateStr;
     
     if (!salesByDate.has(dateStr)) {
-      salesByDate.set(dateStr, {
-        date: displayDate,
-        revenue: 0
-      });
+      salesByDate.set(dateStr, { date: displayDate, revenue: 0 });
     }
     
-    salesByDate.get(dateStr).revenue += transaction.price;
+    salesByDate.get(dateStr)!.revenue += transaction.price;
   });
-  
-  const keys = Array.from(salesByDate.keys()).sort();
-  return keys.map(k => salesByDate.get(k)!);
+
+  // Backfill missing dates with zero
+  let allKeys: string[];
+  if (timeRange === "monthly") {
+    if (filteredTransactions.length === 0) return [];
+    const earliest = new Date(Math.min(...filteredTransactions.map(t => new Date(t.date).getTime())));
+    allKeys = generateMonthRange(earliest, today);
+    allKeys.forEach(k => {
+      if (!salesByDate.has(k)) {
+        const [y, m] = k.split('-').map(Number);
+        const d = new Date(y, m - 1, 1);
+        salesByDate.set(k, { date: d.toLocaleString('default', { month: 'short', year: 'numeric' }), revenue: 0 });
+      }
+    });
+  } else {
+    const rangeStart = timeRange === "7days" ? dateRanges.sevenDaysAgo : dateRanges.thirtyDaysAgo;
+    allKeys = generateDateRange(rangeStart, today);
+    allKeys.forEach(k => {
+      if (!salesByDate.has(k)) {
+        salesByDate.set(k, { date: k, revenue: 0 });
+      }
+    });
+  }
+
+  return allKeys.map(k => salesByDate.get(k)!);
 };
 
 export const calculateItemsSoldData = (
@@ -156,6 +196,7 @@ export const calculateItemsSoldData = (
   timeRange: string,
   dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
 ): SalesDataPoint[] => {
+  const today = new Date();
   const filteredTransactions = salesTransactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
     switch(timeRange) {
@@ -165,8 +206,6 @@ export const calculateItemsSoldData = (
       default: return true;
     }
   });
-
-  if (filteredTransactions.length === 0) return [];
 
   const soldByDate = new Map<string, { date: string; revenue: number }>();
   filteredTransactions.forEach(transaction => {
@@ -183,8 +222,30 @@ export const calculateItemsSoldData = (
     soldByDate.get(dateStr)!.revenue += transaction.quantity;
   });
 
-  const keys = Array.from(soldByDate.keys()).sort();
-  return keys.map(k => soldByDate.get(k)!);
+  // Backfill missing dates with zero
+  let allKeys: string[];
+  if (timeRange === "monthly") {
+    if (filteredTransactions.length === 0) return [];
+    const earliest = new Date(Math.min(...filteredTransactions.map(t => new Date(t.date).getTime())));
+    allKeys = generateMonthRange(earliest, today);
+    allKeys.forEach(k => {
+      if (!soldByDate.has(k)) {
+        const [y, m] = k.split('-').map(Number);
+        const d = new Date(y, m - 1, 1);
+        soldByDate.set(k, { date: d.toLocaleString('default', { month: 'short', year: 'numeric' }), revenue: 0 });
+      }
+    });
+  } else {
+    const rangeStart = timeRange === "7days" ? dateRanges.sevenDaysAgo : dateRanges.thirtyDaysAgo;
+    allKeys = generateDateRange(rangeStart, today);
+    allKeys.forEach(k => {
+      if (!soldByDate.has(k)) {
+        soldByDate.set(k, { date: k, revenue: 0 });
+      }
+    });
+  }
+
+  return allKeys.map(k => soldByDate.get(k)!);
 };
 
 export const calculateSalesData = (
