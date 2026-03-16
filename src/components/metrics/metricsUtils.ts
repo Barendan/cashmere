@@ -321,10 +321,10 @@ export const calculateSalesData = (
     const saleDate = new Date(sale.date);
     
     switch(timeRange) {
-      case "7days":
+      case "daily":
         return saleDate >= dateRanges.sevenDaysAgo;
-      case "30days":
-        return saleDate >= dateRanges.thirtyDaysAgo;
+      case "weekly":
+        return saleDate >= dateRanges.sixWeeksAgo;
       case "monthly":
         return true;
       default:
