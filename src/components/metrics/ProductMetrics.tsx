@@ -229,7 +229,7 @@ const ProductMetrics = ({
                 }
 
                 return recentItems.map((item, i) => {
-                  const ago = getRelativeTime(new Date(item.date));
+                  const dateLabel = formatDateEST(new Date(item.date));
                   return (
                     <div key={item.id || i} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
                       <div className="flex-1 min-w-0">
@@ -237,7 +237,7 @@ const ProductMetrics = ({
                       </div>
                       <span className="text-muted-foreground mx-2">×{item.quantity}</span>
                       <span className="font-medium w-20 text-right">{formatCurrency(item.price * item.quantity)}</span>
-                      <span className="text-xs text-muted-foreground ml-3 w-20 text-right">{ago}</span>
+                      <span className="text-xs text-muted-foreground ml-3 w-28 text-right">{dateLabel}</span>
                     </div>
                   );
                 });
