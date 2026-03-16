@@ -166,6 +166,7 @@ const Metrics = () => {
           isExporting={isExportingProducts}
           sales={sales}
           serviceIncomes={serviceIncomes}
+          transactions={transactions}
         />
       ) : (
         <ServiceMetrics
