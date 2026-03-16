@@ -27,11 +27,9 @@ type ViewMode = "daily" | "weekly" | "monthly";
 const CashMetricsViewer = ({ sales, serviceIncomes }: CashMetricsViewerProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>("daily");
 
-  // Get date ranges for summary cards
   const dateRanges = useMemo(() => getDateRanges(), []);
   const { startOfToday, startOfMonth } = dateRanges;
   
-  // Calculate week and month ranges (memoized)
   const { startOfCurrentWeek, endOfCurrentWeek, endOfCurrentMonth, today } = useMemo(() => {
     const now = new Date();
     const currentDay = now.getDay();
@@ -56,7 +54,6 @@ const CashMetricsViewer = ({ sales, serviceIncomes }: CashMetricsViewerProps) =>
     };
   }, []);
 
-  // Summary cards calculations
   const todayCash = useMemo(() => {
     return calculateCashIncome(sales, serviceIncomes, startOfToday, today);
   }, [sales, serviceIncomes, startOfToday, today]);
@@ -69,20 +66,10 @@ const CashMetricsViewer = ({ sales, serviceIncomes }: CashMetricsViewerProps) =>
     return calculateCashIncome(sales, serviceIncomes, startOfMonth, endOfCurrentMonth);
   }, [sales, serviceIncomes, startOfMonth, endOfCurrentMonth]);
 
-  // Format date ranges for summary cards
-  const todayDateRange = useMemo(() => {
-    return format(today, "MMM d, yyyy");
-  }, [today]);
+  const todayDateRange = useMemo(() => format(today, "MMM d, yyyy"), [today]);
+  const weekDateRange = useMemo(() => `${format(startOfCurrentWeek, "MMM d")} - ${format(endOfCurrentWeek, "MMM d, yyyy")}`, [startOfCurrentWeek, endOfCurrentWeek]);
+  const monthDateRange = useMemo(() => `${format(startOfMonth, "MMM d")} - ${format(endOfCurrentMonth, "MMM d, yyyy")}`, [startOfMonth, endOfCurrentMonth]);
 
-  const weekDateRange = useMemo(() => {
-    return `${format(startOfCurrentWeek, "MMM d")} - ${format(endOfCurrentWeek, "MMM d, yyyy")}`;
-  }, [startOfCurrentWeek, endOfCurrentWeek]);
-
-  const monthDateRange = useMemo(() => {
-    return `${format(startOfMonth, "MMM d")} - ${format(endOfCurrentMonth, "MMM d, yyyy")}`;
-  }, [startOfMonth, endOfCurrentMonth]);
-
-  // Chart data based on view mode
   const chartData = useMemo(() => {
     if (viewMode === "daily") {
       const range = getLast30DaysRange();
@@ -106,61 +93,66 @@ const CashMetricsViewer = ({ sales, serviceIncomes }: CashMetricsViewerProps) =>
     }
   }, [viewMode, sales, serviceIncomes]);
 
-  // Chart colors based on view mode
   const barFill = useMemo(() => {
-    if (viewMode === "daily") return "#FCD34D"; // Yellow
-    if (viewMode === "weekly") return "#AECCC6"; // Spa sage
-    return "#7E9A9A"; // Spa deep
+    if (viewMode === "daily") return "#FCD34D";
+    if (viewMode === "weekly") return "#AECCC6";
+    return "#7E9A9A";
   }, [viewMode]);
 
-  // Chart height - use 350px for all views
   const chartHeight = 350;
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <MetricsCard
-          title="Cash Today"
-          value={formatCurrency(todayCash)}
-          icon={<Coins className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-yellow-100"
-          dateRange={todayDateRange}
-          className="transition-all duration-200 shadow-md hover:shadow-lg border border-spa-sage/20 hover:scale-[1.02] cursor-default"
-        />
-        
-        <MetricsCard
-          title="Cash This Week"
-          value={formatCurrency(weekCash)}
-          icon={<Coins className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
-          dateRange={weekDateRange}
-          className="transition-all duration-200 shadow-md hover:shadow-lg border border-spa-sage/20 hover:scale-[1.02] cursor-default"
-        />
-        
-        <MetricsCard
-          title="Cash This Month"
-          value={formatCurrency(monthCash)}
-          icon={<Coins className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-sage/20"
-          dateRange={monthDateRange}
-          className="transition-all duration-200 shadow-md hover:shadow-lg border border-spa-sage/20 hover:scale-[1.02] cursor-default"
-        />
-      </div>
+    <Card className="bg-muted/30 border border-border shadow-md">
+      <CardHeader>
+        <CardTitle className="text-spa-deep flex items-center gap-2">
+          <Coins className="h-5 w-5" />
+          Cash Overview
+        </CardTitle>
+        <CardDescription>Track your cash income at a glance</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {/* Summary Cards with distinct backgrounds */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <MetricsCard
+            title="Cash Today"
+            value={formatCurrency(todayCash)}
+            icon={<Coins className="h-6 w-6 text-amber-700" />}
+            iconBgClass="bg-amber-200"
+            dateRange={todayDateRange}
+            className="bg-amber-50 border-amber-200 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] cursor-default"
+          />
+          
+          <MetricsCard
+            title="Cash This Week"
+            value={formatCurrency(weekCash)}
+            icon={<Coins className="h-6 w-6 text-sky-700" />}
+            iconBgClass="bg-sky-200"
+            dateRange={weekDateRange}
+            className="bg-sky-50 border-sky-200 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] cursor-default"
+          />
+          
+          <MetricsCard
+            title="Cash This Month"
+            value={formatCurrency(monthCash)}
+            icon={<Coins className="h-6 w-6 text-emerald-700" />}
+            iconBgClass="bg-emerald-200"
+            dateRange={monthDateRange}
+            className="bg-emerald-50 border-emerald-200 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.02] cursor-default"
+          />
+        </div>
 
-      {/* Detailed View Section */}
-      <Card className="bg-white shadow-md">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {/* Trends Chart — borderless since nested */}
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div>
-              <CardTitle className="text-spa-deep flex items-center gap-2">
-                <Coins className="h-5 w-5" />
+              <h3 className="text-base font-semibold text-spa-deep flex items-center gap-2">
+                <Coins className="h-4 w-4" />
                 Cash Income Trends
-              </CardTitle>
-              <CardDescription>Track your cash flow over time</CardDescription>
+              </h3>
+              <p className="text-sm text-muted-foreground">Track your cash flow over time</p>
             </div>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <TabsList className="bg-white border border-spa-sage/20">
+              <TabsList className="bg-white border border-border">
                 <TabsTrigger 
                   value="daily"
                   className="data-[state=active]:bg-spa-deep data-[state=active]:text-white"
@@ -182,8 +174,6 @@ const CashMetricsViewer = ({ sales, serviceIncomes }: CashMetricsViewerProps) =>
               </TabsList>
             </Tabs>
           </div>
-        </CardHeader>
-        <CardContent>
           <div style={{ minHeight: `${chartHeight}px`, height: `${chartHeight}px` }}>
             {chartData.length > 0 ? (
               <MetricsBarChart
@@ -205,9 +195,9 @@ const CashMetricsViewer = ({ sales, serviceIncomes }: CashMetricsViewerProps) =>
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

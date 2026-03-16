@@ -136,13 +136,13 @@ const Metrics = () => {
           <p className="text-muted-foreground">Analyze your business performance</p>
         </div>
         <Tabs defaultValue="products" value={metricView} onValueChange={(v) => setMetricView(v as "products" | "services")}>
-          <TabsList>
-            <TabsTrigger value="products" className="flex items-center gap-1">
-              <Package2 className="h-4 w-4" />
+          <TabsList className="h-auto">
+            <TabsTrigger value="products" className="flex items-center gap-2 text-base px-6 py-3">
+              <Package2 className="h-5 w-5" />
               Products
             </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center gap-1">
-              <Award className="h-4 w-4" />
+            <TabsTrigger value="services" className="flex items-center gap-2 text-base px-6 py-3">
+              <Award className="h-5 w-5" />
               Services
             </TabsTrigger>
           </TabsList>
