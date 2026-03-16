@@ -3,7 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Download, DollarSign, ArrowUp, ShoppingBag } from "lucide-react";
-import { formatCurrency, formatPercent } from "@/lib/format";
+import { formatCurrency, formatPercent, formatTooltipValue } from "@/lib/format";
 import MetricsCard from "./MetricsCard";
 import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
@@ -12,6 +12,8 @@ import { ProductMetricsProps } from "./types";
 import { Sale } from "@/models/types";
 import { ServiceIncomeWithCategory } from "./types";
 import CashMetricsViewer from "./CashMetricsViewer";
+import { Separator } from "@/components/ui/separator";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from "recharts";
 
 interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalRevenue' | 'totalProfit' | 'totalItemsSold'> {
   todayRevenue: number;
@@ -85,6 +87,26 @@ const ProductMetrics = ({
     }
   ];
 
+  // Dual-bar tooltip for product performance
+  const DualBarTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+    if (!active || !payload || !payload.length) return null;
+    return (
+      <div className="bg-white p-3 border border-border rounded-md shadow-md">
+        <p className="font-medium text-sm mb-1">{label}</p>
+        {payload.map((entry, i) => (
+          <p key={i} className="text-xs" style={{ color: entry.color }}>
+            {entry.name}: {formatTooltipValue(entry.value || 0, "currency")}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  const formatLabel = (value: string) => {
+    if (!value) return value;
+    return value.length > 15 ? `${value.substring(0, 15)}...` : value;
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -112,11 +134,12 @@ const ProductMetrics = ({
         />
       </div>
 
+      {/* Combined Sales Overview + Items Sold */}
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-spa-deep">Sales Overview</CardTitle>
-            <CardDescription>Track your sales performance</CardDescription>
+            <CardTitle className="text-spa-deep">Product Sales Overview</CardTitle>
+            <CardDescription>Track your product sales</CardDescription>
           </div>
           <div className="flex items-center space-x-2">
             <Button 
@@ -142,7 +165,7 @@ const ProductMetrics = ({
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <div className="h-[300px]">
             <MetricsBarChart 
               data={salesData}
@@ -154,18 +177,11 @@ const ProductMetrics = ({
               tooltipLabel="Revenue"
             />
           </div>
-        </CardContent>
-      </Card>
 
-      <Card className="bg-white">
-        <CardHeader>
-          <div>
-            <CardTitle className="text-spa-deep">Items Sold Over Time</CardTitle>
-            <CardDescription>Track quantity of products sold (uses same time range above)</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
+          <Separator className="my-4" />
+
+          <h4 className="text-base font-semibold text-spa-deep">Product Items Sold Over Time</h4>
+          <div className="h-[250px]">
             <MetricsBarChart 
               data={itemsSoldData}
               dataKey="revenue"
@@ -180,23 +196,36 @@ const ProductMetrics = ({
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Upgraded Product Performance with dual bars */}
         <Card className="bg-white">
           <CardHeader>
             <CardTitle className="text-spa-deep">Product Performance</CardTitle>
-            <CardDescription>Profit analysis by product</CardDescription>
+            <CardDescription>Revenue vs Profit by product</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <MetricsBarChart 
-                data={productPerformance.slice(0, 6)}
-                dataKey="profit"
-                nameKey="name"
-                layout="vertical"
-                barName="Profit"
-                barFill="#9CB380"
-                tooltipType="currency"
-                tooltipLabel="Profit"
-              />
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={productPerformance.slice(0, 10)} 
+                  layout="vertical" 
+                  margin={{ left: 120, right: 20, top: 10, bottom: 10 }}
+                  barCategoryGap="15%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    tick={{ fontSize: 11 }} 
+                    width={110}
+                    tickFormatter={formatLabel}
+                  />
+                  <Tooltip content={<DualBarTooltip />} />
+                  <Legend />
+                  <Bar dataKey="totalRevenue" name="Revenue" fill="#AECCC6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="profit" name="Profit" fill="#9CB380" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
@@ -218,6 +247,7 @@ const ProductMetrics = ({
         </Card>
       </div>
 
+      {/* Scrollable Product Profitability */}
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -246,6 +276,7 @@ const ProductMetrics = ({
               profitMargin: item.totalRevenue > 0 ? (item.profit / item.totalRevenue) * 100 : 0
             }))}
             columns={productColumns}
+            maxHeight="400px"
             emptyMessage="No product sales data available."
           />
         </CardContent>
