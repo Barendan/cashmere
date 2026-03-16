@@ -48,8 +48,8 @@ export const useProductMetricsCalculation = (
   }, [salesTransactions, sellableProducts]);
 
   const itemsSoldData = useMemo(() => {
-    return metricsUtils.calculateItemsSoldData(salesTransactions, timeRange, { sevenDaysAgo, thirtyDaysAgo });
-  }, [salesTransactions, timeRange, sevenDaysAgo, thirtyDaysAgo]);
+    return metricsUtils.calculateItemsSoldData(salesTransactions, timeRange, { sevenDaysAgo, sixWeeksAgo });
+  }, [salesTransactions, timeRange, sevenDaysAgo, sixWeeksAgo]);
 
   const { totalRevenue: todayRevenue, totalItemsSold: todayItemsSold, totalProfit: todayProfit } = useMemo(() => {
     return metricsUtils.calculateTotalMetrics(todayTransactions, sellableProducts);
