@@ -166,17 +166,17 @@ const generateWeekRange = (start: Date, end: Date): string[] => {
 export const calculateSalesDataFromTransactions = (
   salesTransactions: Transaction[],
   timeRange: string,
-  dateRanges: { sevenDaysAgo: Date, thirtyDaysAgo: Date }
+  dateRanges: { sevenDaysAgo: Date, sixWeeksAgo: Date }
 ): SalesDataPoint[] => {
   const today = new Date();
   const filteredTransactions = salesTransactions.filter(transaction => {
     const transactionDate = new Date(transaction.date);
     
     switch(timeRange) {
-      case "7days":
+      case "daily":
         return transactionDate >= dateRanges.sevenDaysAgo;
-      case "30days":
-        return transactionDate >= dateRanges.thirtyDaysAgo;
+      case "weekly":
+        return transactionDate >= dateRanges.sixWeeksAgo;
       case "monthly":
         return true;
       default:
@@ -188,12 +188,19 @@ export const calculateSalesDataFromTransactions = (
   
   filteredTransactions.forEach(transaction => {
     const transactionDate = new Date(transaction.date);
-    const dateStr = timeRange === "monthly"
-      ? `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`
-      : toLocalDateKey(transactionDate);
-    const displayDate = timeRange === "monthly"
-      ? transactionDate.toLocaleString('default', { month: 'short', year: 'numeric' })
-      : dateStr;
+    let dateStr: string;
+    let displayDate: string;
+
+    if (timeRange === "monthly") {
+      dateStr = `${transactionDate.getFullYear()}-${String(transactionDate.getMonth() + 1).padStart(2, '0')}`;
+      displayDate = transactionDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+    } else if (timeRange === "weekly") {
+      dateStr = toWeekKey(transactionDate);
+      displayDate = weekKeyToLabel(dateStr);
+    } else {
+      dateStr = toLocalDateKey(transactionDate);
+      displayDate = dateStr;
+    }
     
     if (!salesByDate.has(dateStr)) {
       salesByDate.set(dateStr, { date: displayDate, revenue: 0 });
@@ -202,7 +209,7 @@ export const calculateSalesDataFromTransactions = (
     salesByDate.get(dateStr)!.revenue += transaction.price;
   });
 
-  // Backfill missing dates with zero
+  // Backfill missing buckets with zero
   let allKeys: string[];
   if (timeRange === "monthly") {
     if (filteredTransactions.length === 0) return [];
@@ -215,9 +222,15 @@ export const calculateSalesDataFromTransactions = (
         salesByDate.set(k, { date: d.toLocaleString('default', { month: 'short', year: 'numeric' }), revenue: 0 });
       }
     });
+  } else if (timeRange === "weekly") {
+    allKeys = generateWeekRange(dateRanges.sixWeeksAgo, today);
+    allKeys.forEach(k => {
+      if (!salesByDate.has(k)) {
+        salesByDate.set(k, { date: weekKeyToLabel(k), revenue: 0 });
+      }
+    });
   } else {
-    const rangeStart = timeRange === "7days" ? dateRanges.sevenDaysAgo : dateRanges.thirtyDaysAgo;
-    allKeys = generateDateRange(rangeStart, today);
+    allKeys = generateDateRange(dateRanges.sevenDaysAgo, today);
     allKeys.forEach(k => {
       if (!salesByDate.has(k)) {
         salesByDate.set(k, { date: k, revenue: 0 });
