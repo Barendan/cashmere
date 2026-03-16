@@ -27,6 +27,18 @@ interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalReven
   serviceIncomes: ServiceIncomeWithCategory[];
 }
 
+const getRelativeTime = (date: Date): string => {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+};
+
 const ProductMetrics = ({
   todayRevenue,
   todayProfit,
@@ -134,66 +146,112 @@ const ProductMetrics = ({
         />
       </div>
 
-      {/* Combined Sales Overview + Items Sold */}
-      <Card className="bg-white">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-spa-deep">Product Sales Overview</CardTitle>
-            <CardDescription>Track your product sales</CardDescription>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              variant={timeRange === "7days" ? "default" : "outline"} 
-              onClick={() => setTimeRange("7days")}
-              className="text-xs"
-            >
-              Last 7 Days
-            </Button>
-            <Button 
-              variant={timeRange === "30days" ? "default" : "outline"} 
-              onClick={() => setTimeRange("30days")}
-              className="text-xs"
-            >
-              Last 30 Days
-            </Button>
-            <Button 
-              variant={timeRange === "monthly" ? "default" : "outline"} 
-              onClick={() => setTimeRange("monthly")}
-              className="text-xs"
-            >
-              Monthly
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="h-[300px]">
-            <MetricsBarChart 
-              data={salesData}
-              dataKey="revenue"
-              nameKey="date"
-              barName="Revenue"
-              barFill="#AECCC6"
-              tooltipType="currency"
-              tooltipLabel="Revenue"
-            />
-          </div>
+      {/* Sales Overview + Items Sold side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left: Revenue chart + Recent Sales */}
+        <Card className="bg-white">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-spa-deep">Product Sales Overview</CardTitle>
+              <CardDescription>Track your product sales</CardDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant={timeRange === "7days" ? "default" : "outline"} 
+                onClick={() => setTimeRange("7days")}
+                className="text-xs"
+              >
+                7D
+              </Button>
+              <Button 
+                variant={timeRange === "30days" ? "default" : "outline"} 
+                onClick={() => setTimeRange("30days")}
+                className="text-xs"
+              >
+                30D
+              </Button>
+              <Button 
+                variant={timeRange === "monthly" ? "default" : "outline"} 
+                onClick={() => setTimeRange("monthly")}
+                className="text-xs"
+              >
+                Monthly
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="h-[250px]">
+              <MetricsBarChart 
+                data={salesData}
+                dataKey="revenue"
+                nameKey="date"
+                barName="Revenue"
+                barFill="#AECCC6"
+                tooltipType="currency"
+                tooltipLabel="Revenue"
+              />
+            </div>
 
-          <Separator className="my-4" />
+            <Separator />
 
-          <h4 className="text-base font-semibold text-spa-deep">Product Items Sold Over Time</h4>
-          <div className="h-[250px]">
-            <MetricsBarChart 
-              data={itemsSoldData}
-              dataKey="revenue"
-              nameKey="date"
-              barName="Items Sold"
-              barFill="#D4A574"
-              tooltipType="number"
-              tooltipLabel="Items Sold"
-            />
-          </div>
-        </CardContent>
-      </Card>
+            <div>
+              <h4 className="text-sm font-semibold text-spa-deep mb-2">Recent Sales Activity</h4>
+              <div className="max-h-[250px] overflow-y-auto space-y-2 pr-1">
+                {(() => {
+                  const recentItems = sales
+                    .flatMap(sale => 
+                      (sale.items || []).map(item => ({
+                        ...item,
+                        saleDate: sale.date,
+                      }))
+                    )
+                    .sort((a, b) => new Date(b.saleDate).getTime() - new Date(a.saleDate).getTime())
+                    .slice(0, 20);
+
+                  if (recentItems.length === 0) {
+                    return <p className="text-sm text-muted-foreground text-center py-4">No recent sales.</p>;
+                  }
+
+                  return recentItems.map((item, i) => {
+                    const ago = getRelativeTime(new Date(item.saleDate));
+                    return (
+                      <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium truncate block">{item.productName}</span>
+                        </div>
+                        <span className="text-muted-foreground mx-2">×{item.quantity}</span>
+                        <span className="font-medium w-20 text-right">{formatCurrency(item.price * item.quantity)}</span>
+                        <span className="text-xs text-muted-foreground ml-3 w-20 text-right">{ago}</span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Right: Items Sold chart */}
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle className="text-spa-deep">Items Sold Over Time</CardTitle>
+            <CardDescription>Product quantity sold per day</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[250px]">
+              <MetricsBarChart 
+                data={itemsSoldData}
+                dataKey="revenue"
+                nameKey="date"
+                barName="Items Sold"
+                barFill="#D4A574"
+                tooltipType="number"
+                tooltipLabel="Items Sold"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Upgraded Product Performance with dual bars */}
