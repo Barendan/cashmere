@@ -2,6 +2,10 @@
 import { Transaction, Product, Sale } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
 
+const toLocalDateKey = (d: Date): string => {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export const getDateRanges = () => {
   // Use consistent UTC timezone for all date calculations
   const today = new Date();
