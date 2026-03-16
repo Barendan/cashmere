@@ -56,7 +56,8 @@ const ProductMetrics = ({
   exportCSV,
   isExporting = false,
   sales,
-  serviceIncomes
+  serviceIncomes,
+  transactions
 }: DailyProductMetricsProps) => {
   const productColumns = [
     { key: "name", header: "Product Name", className: "font-medium" },
