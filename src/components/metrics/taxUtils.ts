@@ -413,17 +413,9 @@ export const computeTaxReport = ({
     row.discounts += agg.discount;
     row.tips += agg.tip;
 
-    // Allocate discount across taxable/exempt by share, so Tax Due reflects discounted base.
-    if (agg.discount > 0 && agg.gross > 0) {
-      const taxableShare = agg.taxable / agg.gross;
-      const exemptShare = 1 - taxableShare;
-      const taxableCut = agg.discount * taxableShare;
-      const exemptCut = agg.discount * exemptShare;
-      servicesBucket.taxable -= taxableCut;
-      servicesBucket.exempt -= exemptCut;
-      row.taxable -= taxableCut;
-      row.exempt -= exemptCut;
-    }
+    // NOTE: Do not subtract discount from taxable/exempt here — serviceIncomes[].amount
+    // is already stored net-of-discount upstream in DataContext. Subtracting again
+    // would double-deduct and under-report Tax Due.
 
     const pb = paymentBucket(agg.paymentMethod);
     payTotals[pb] += agg.gross;
