@@ -246,7 +246,7 @@ const paymentBucket = (
 export interface ComputeTaxReportInput {
   year: number;
   quarter: 1 | 2 | 3 | 4;
-  rate: number | null; // percent, e.g. 8.875
+  rate: number; // percent, e.g. 6
   products: Product[];
   services: Service[];
   transactions: Transaction[];
