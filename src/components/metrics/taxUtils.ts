@@ -184,6 +184,25 @@ export interface TaxMonthRow extends TaxBucket {
   other: number;
 }
 
+export interface TaxReturnRow {
+  date: string;
+  monthKey: string;
+  monthLabel: string;
+  productName: string;
+  quantity: number;
+  amount: number;
+  taxable: boolean;
+}
+
+export interface TaxReturnsSummary {
+  count: number;
+  totalAmount: number;
+  taxableAmount: number;
+  exemptAmount: number;
+  taxRefunded: number;
+  rows: TaxReturnRow[];
+}
+
 export interface TaxReport {
   totals: TaxBucket & {
     discounts: number;
@@ -200,6 +219,7 @@ export interface TaxReport {
     other: number;
   };
   byMonth: TaxMonthRow[];
+  returns: TaxReturnsSummary;
 }
 
 const emptyBucket = (): TaxBucket => ({
