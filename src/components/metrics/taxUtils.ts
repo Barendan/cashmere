@@ -464,7 +464,25 @@ export const computeTaxReport = ({
   });
   returnsRows.sort((a, b) => (a.date < b.date ? 1 : -1));
 
-  // Compute tax due per bucket / row
+  // ---- Net refunds into headline filing numbers (DR-15 is cash basis, period of refund) ----
+  // Returns card below still shows the audit trail.
+  returnsRows.forEach((r) => {
+    const row = monthMap.get(r.monthKey);
+    productsBucket.gross -= r.amount;
+    if (row) {
+      row.gross -= r.amount;
+      row.productsGross -= r.amount;
+    }
+    if (r.taxable) {
+      productsBucket.taxable -= r.amount;
+      if (row) row.taxable -= r.amount;
+    } else {
+      productsBucket.exempt -= r.amount;
+      if (row) row.exempt -= r.amount;
+    }
+  });
+
+  // Compute tax due per bucket / row (after refund netting)
   productsBucket.taxDue = productsBucket.taxable * rateMul;
   servicesBucket.taxDue = servicesBucket.taxable * rateMul;
   monthMap.forEach((row) => {
