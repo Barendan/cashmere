@@ -366,13 +366,65 @@ const TaxReport: React.FC<Props> = ({
           </div>
         </div>
 
-        {savedRate === null && (
-          <p className="text-xs text-muted-foreground">
-            Enter your sales-tax rate above and click Save to calculate "Tax
-            Due". Defaults: products are taxable, services are exempt — use
-            "Manage Taxability" to override per item.
+        <p className="text-xs text-muted-foreground">
+          Florida state base is <span className="font-medium">6%</span>. Add
+          your county discretionary surtax (typically 0.5–1.5%) if applicable.
+          Defaults: products are taxable, services are exempt — use "Manage
+          Taxability" to override per item. Tax Due is calculated on the
+          discounted taxable base.
+        </p>
+
+        {/* Returns & Refunds */}
+        <div>
+          <h4 className="text-sm font-semibold text-spa-deep mb-2">
+            Returns & Refunds
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+            <Tile label="# Returns" value={String(report.returns.count)} />
+            <Tile label="Refunded Amount" value={fmt(report.returns.totalAmount)} />
+            <Tile label="Taxable Refunded" value={fmt(report.returns.taxableAmount)} />
+            <Tile
+              label="Tax Refunded"
+              value={fmtTax(report.returns.taxRefunded)}
+              accent="bg-amber-50 border-amber-200"
+            />
+          </div>
+          {report.returns.rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">
+              No returns or refunds this quarter.
+            </p>
+          ) : (
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[640px]">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-3 py-2">Date</th>
+                    <th className="text-left px-3 py-2">Product</th>
+                    <th className="text-right px-3 py-2">Qty</th>
+                    <th className="text-right px-3 py-2">Amount</th>
+                    <th className="text-left px-3 py-2">Taxable</th>
+                    <th className="text-left px-3 py-2">Month</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.returns.rows.map((r, i) => (
+                    <tr key={`${r.date}-${i}`} className="border-t">
+                      <td className="px-3 py-2">{r.date}</td>
+                      <td className="px-3 py-2">{r.productName}</td>
+                      <td className="text-right px-3 py-2">{r.quantity}</td>
+                      <td className="text-right px-3 py-2">{fmt(r.amount)}</td>
+                      <td className="px-3 py-2">{r.taxable ? "Yes" : "No"}</td>
+                      <td className="px-3 py-2">{r.monthLabel}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground mt-2">
+            Returns are listed separately and are not subtracted from the totals above.
           </p>
-        )}
+        </div>
       </CardContent>
     </Card>
   );
