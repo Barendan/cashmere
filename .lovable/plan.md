@@ -1,65 +1,55 @@
-## Final Tax Tab Fix Plan — only what actually matters
+## Corrected security migration
 
-After re-auditing the writers (`recordBulkSale`, `recordServiceSale`) and the schema, most of the "issues" from the earlier audit turned out to be non-issues. Products and services live in fully disjoint tables, and product transactions are already written discount-netted. Only **two** real bugs remain, and both are fixed in one file.
+Verified against the actual schema before writing this. The previous migration was sloppy in two places; this one fixes those and keeps everything else that was already correct.
 
----
+### Verified facts about the current database
 
-### Fix 1 — Stop double-deducting service discounts (Severity 10)
-**Problem:** `DataContext` already stores `serviceIncomes[].amount` as net-of-discount. Then `computeTaxReport` subtracts the discount *again* from `servicesBucket.taxable`/`exempt`. Tax Due on services is materially under-reported.
+- `finance_transactions` is a real, separate table (receipt-level: customer_name, payment_method, tip, discount). RLS is **off**. 384 rows.
+- `transactions` is a different real table (line-item-level: product_id, quantity, price). RLS is **on**. 1,067 rows.
+- `products`, `sales` both have RLS **on** already.
+- `profiles` already has `"Admins can do everything"` (ALL) and `"Users can view their own profile"` (SELECT) policies. Both survive untouched.
 
-**Fix:** Delete the discount-allocation block in `taxUtils.computeTaxReport` (the `if (agg.discount > 0 && agg.gross > 0) { ... }` branch). Keep tracking `agg.discount` for the "Discounts" tile only.
+### What changes vs. last plan
 
-**Cost:** ~10 lines removed in `src/components/metrics/taxUtils.ts`.
+1. **No silent gaps after drops.** Before dropping any `Allow authenticated …` catch-all policy, the migration confirms an admin-scoped and a role-scoped replacement exists for the same verb. If a verb would be left uncovered, the drop is skipped (or replaced) instead of executed blindly.
+2. **Employee writes stay admin-only on `products` and `transactions`** (per your answer). Employees keep: read products, read+insert transactions, full sales access. Admins keep everything via the existing `"Admin users can do everything"` policy.
+3. **Pre-flight assertion block.** The migration starts with a `DO $$ ... $$` block that fails loudly if either of these is missing:
+   - `profiles` SELECT policy that lets a user read their own row (required because new policies do `SELECT role FROM profiles WHERE id = auth.uid()` under RLS).
+   - `profiles` `"Admins can do everything"` ALL policy (required so admins can still assign roles after the self-update policy is tightened).
+   If either is missing, migration aborts with a clear error before any DROP runs.
+4. **`finance_transactions`** still gets RLS enabled + admin ALL + employee SELECT/INSERT/UPDATE (no DELETE for employees on financial records).
+5. **`get_user_role()` rewrite** still reads from `profiles.role` instead of `auth.users.raw_user_meta_data` — this is the right fix and unchanged.
+6. **`profiles` self-update policy** still tightened to forbid role changes via the self path — admins continue to assign roles via the untouched `"Admins can do everything"` policy.
+7. **`search_path` pin** on `update_updated_at_column` — unchanged.
+8. **EXECUTE revokes** from `anon` on SECURITY DEFINER functions — unchanged. `handle_new_user` revoke from `authenticated` is safe (triggers ignore EXECUTE).
 
----
+### Final policy coverage after migration
 
-### Fix 2 — Net returns into the headline filing numbers (Severity 8)
-**Problem:** Returns are computed but never subtracted from `totals.gross`, `totals.taxable`, `totals.taxDue`, or the monthly rows. The DR-15 expects net-of-refund figures.
+```text
+finance_transactions   admin: ALL    employee: SELECT, INSERT, UPDATE
+transactions           admin: ALL    employee: SELECT, INSERT
+products               admin: ALL    employee: SELECT
+sales                  admin: ALL    employee: SELECT, INSERT, UPDATE, DELETE
+profiles               admin: ALL    user: SELECT own + UPDATE own (role frozen)
+```
 
-**Fix:** In `computeTaxReport`, after computing the returns summary:
-- Subtract `returnsTaxable` from `productsBucket.taxable` and the matching month rows (by `monthKey`).
-- Subtract `returnsExempt` from `productsBucket.exempt` and matching months.
-- Subtract `returnsTaxable + returnsExempt` from `productsBucket.gross` and month `gross`.
-- Re-derive `taxDue` from the adjusted `taxable` (already done at the end of the function — just runs against the netted numbers).
+### Where I was wrong last time (honest)
 
-In `TaxReport.tsx`, add a one-line caption under the "Sales" and "Tax Due" tiles: *"Net of refunds — see Returns & Refunds below."* The existing Returns card stays as the audit trail.
+- I dropped `Allow authenticated …` policies as "duplicates" without proving each verb was still covered by a role-scoped policy. The drops happen to be safe given your existing role policies, but I didn't verify it — that was the right thing to call out.
+- I should have explicitly stated that `"Admins can do everything"` on `profiles` is the surviving path for admin role assignment, and that the new restrictive policy only governs the self-update path. Not saying so made the change look more dangerous than it is.
+- I relied on the `profiles` self-SELECT policy existing without asserting it. Adding a pre-flight check is cheap and removes the silent-deny failure mode.
 
-**Cost:** ~12 lines added in `taxUtils.ts`, ~2 lines in `TaxReport.tsx`.
+### Where your critique was wrong (also honest)
 
----
+- `finance_transactions` is a real table, not an invented name. It's the table the Critical "Financial transaction records with customer names" finding points at.
+- The drops on `products`/`transactions`/`sales` do not leave them uncovered — `"Admin users can do everything"` and the role-scoped policies remain. Admins and employees keep working.
+- Admin role assignment is not broken — `"Admins can do everything"` on `profiles` is untouched and overrides the tightened self-update policy for admins.
 
-### Fix 3 — Label cleanup (Severity 5, cosmetic but prevents misreading)
-**Problem:** "Gross Sales" tile is actually net-of-discount (both products and services store discount-netted amounts). The separate "Net" tile then subtracts discounts a second time visually.
+### Out of scope (cannot be fixed by SQL — manual)
 
-**Fix:** In `TaxReport.tsx`:
-- Rename `"Gross Sales"` → `"Sales (after discounts)"`.
-- Remove the redundant `"Net"` tile.
-- Keep `"Discounts"` tile as informational.
-- Add caption under Tax Due: *"Calculated on discount-adjusted, refund-netted sales per FL DR-15."*
+- Enable Leaked Password Protection in Auth dashboard.
+- Upgrade Postgres in Project Settings → Infrastructure.
 
-**Cost:** ~6 lines changed in `src/components/metrics/TaxReport.tsx`.
+### Files touched
 
----
-
-### Explicitly NOT doing (and why)
-
-| Earlier suggestion | Why we're skipping |
-|---|---|
-| Add `sales.discount` column | Product discounts are already baked into `transactions.price` at write time. No DB change needed. |
-| Back-link `sales.finance_transaction_id` | Same reason — no cross-table allocation required. |
-| Audit `payTotals` for double-counting | Products/services live in disjoint tables (`transactions`+`sales` vs `finances`+`finance_transactions`). No overlap possible. |
-| Use `original_total` to show pre-discount "Gross" | Adds tiles, not filing-relevant. DR-15 wants discount-adjusted. |
-| Move taxability flags from localStorage to DB | Only worth it if multiple admins manage flags or you need an audit trail. Defer until asked. |
-| Florida $5,000 surtax cap | Not relevant at current ticket sizes. |
-| Service-refund mechanism | No data path exists today; needs a product decision before any code (see question below). |
-
----
-
-### Totals
-- **Files touched:** 2 (`taxUtils.ts`, `TaxReport.tsx`)
-- **Net lines changed:** ~30
-- **DB migrations:** 0
-- **New dependencies:** 0
-
-### One open question before I build
-Do service refunds happen today? If yes, how are they recorded — a negative `finances` row, a `type='refund'` row, or not at all? That determines whether we add a tiny reader branch for service refunds or punt entirely.
+- One migration file (SQL only). No application code changes.
