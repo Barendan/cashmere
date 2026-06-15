@@ -52,11 +52,8 @@ const TaxReport: React.FC<Props> = ({
   );
   const [year, setYear] = useState<number>(years[years.length - 1]);
   const [quarter, setQuarter] = useState<1 | 2 | 3 | 4>(currentQuarter());
-  const [rateInput, setRateInput] = useState<string>(() => {
-    const r = loadTaxRate();
-    return r === null ? "" : String(r);
-  });
-  const [savedRate, setSavedRate] = useState<number | null>(loadTaxRate());
+  const [rateInput, setRateInput] = useState<string>(() => String(loadTaxRate()));
+  const [savedRate, setSavedRate] = useState<number>(loadTaxRate());
   const [overridesVersion, setOverridesVersion] = useState(0);
 
   // Keep year in sync if years list grows
