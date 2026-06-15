@@ -221,10 +221,9 @@ const TaxReport: React.FC<Props> = ({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Top tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
-          <Tile label="Gross Sales" value={fmt(report.totals.gross)} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+          <Tile label="Sales (net of refunds)" value={fmt(report.totals.gross)} />
           <Tile label="Discounts" value={fmt(report.totals.discounts)} />
-          <Tile label="Net Sales" value={fmt(report.totals.net)} />
           <Tile label="Exempt Sales" value={fmt(report.totals.exempt)} />
           <Tile label="Taxable Sales" value={fmt(report.totals.taxable)} />
           <Tile
@@ -234,6 +233,10 @@ const TaxReport: React.FC<Props> = ({
           />
           <Tile label="Tips" value={fmt(report.totals.tips)} />
         </div>
+        <p className="text-xs text-muted-foreground -mt-3">
+          Sales are shown after discounts and net of refunds. Tax Due is calculated
+          on the discount-adjusted, refund-netted taxable base per FL DR-15.
+        </p>
 
         {/* Breakdown by category */}
         <div>
