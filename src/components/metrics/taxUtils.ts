@@ -560,6 +560,46 @@ export const generateTaxReportCsv = (
     report.byPaymentMethod.card.toFixed(2),
     report.byPaymentMethod.other.toFixed(2),
   ]);
+
+  // Returns / refunds section
+  rows.push([]);
+  rows.push(["Returns & Refunds"]);
+  rows.push(["Date", "Product", "Qty", "Amount", "Taxable", "Month"]);
+  report.returns.rows.forEach((r) => {
+    rows.push([
+      r.date,
+      r.productName,
+      r.quantity,
+      r.amount.toFixed(2),
+      r.taxable ? "Yes" : "No",
+      r.monthLabel,
+    ]);
+  });
+  rows.push([
+    "Returns Total",
+    "",
+    report.returns.count,
+    report.returns.totalAmount.toFixed(2),
+    "",
+    "",
+  ]);
+  rows.push([
+    "Taxable Refunded",
+    "",
+    "",
+    report.returns.taxableAmount.toFixed(2),
+    "",
+    "",
+  ]);
+  rows.push([
+    "Tax Refunded",
+    "",
+    "",
+    report.returns.taxRefunded.toFixed(2),
+    "",
+    "",
+  ]);
+
   return rows.map((r) => r.map(csvEscape).join(",")).join("\n");
 };
 
