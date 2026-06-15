@@ -184,7 +184,7 @@ const TaxReport: React.FC<Props> = ({
               <Input
                 value={rateInput}
                 onChange={(e) => setRateInput(e.target.value)}
-                placeholder="6"
+                placeholder="7"
                 className="w-full lg:w-[100px] h-9"
                 inputMode="decimal"
               />
