@@ -93,7 +93,9 @@ const TaxReport: React.FC<Props> = ({
     const trimmed = rateInput.trim();
     if (trimmed === "") {
       saveTaxRate(null);
-      setSavedRate(null);
+      const fallback = loadTaxRate();
+      setSavedRate(fallback);
+      setRateInput(String(fallback));
       return;
     }
     const n = Number(trimmed);
@@ -103,7 +105,7 @@ const TaxReport: React.FC<Props> = ({
   };
 
   const fmt = (v: number) => formatCurrency(v);
-  const fmtTax = (v: number) => (savedRate === null ? "—" : formatCurrency(v));
+  const fmtTax = (v: number) => formatCurrency(v);
 
   const Tile = ({
     label,
