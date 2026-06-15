@@ -11,10 +11,11 @@ import { Navigate } from "react-router-dom";
 import { TimeRangeType } from "@/components/metrics/types";
 import { useProductMetricsCalculation, useServiceMetricsCalculation } from "@/hooks/useMetricsCalculation";
 import useMetricsExport from "@/hooks/useMetricsExport";
+import TaxReport from "@/components/metrics/TaxReport";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
-  const { products, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
+  const { products, services, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRangeType>("daily");
   const [metricView, setMetricView] = useState<"products" | "services">("products");
@@ -149,25 +150,34 @@ const Metrics = () => {
         </Tabs>
       </div>
       {metricView === "products" ? (
-        <ProductMetrics
-          todayRevenue={todayRevenue}
-          todayProfit={todayProfit}
-          todayItemsSold={todayItemsSold}
-          yesterdayRevenue={yesterdayRevenue}
-          yesterdayProfit={yesterdayProfit}
-          yesterdayItemsSold={yesterdayItemsSold}
-          salesData={salesData}
-          itemsSoldData={itemsSoldData}
-          productPerformance={productPerformance}
-          categoryData={categoryData}
-          timeRange={timeRange}
-          setTimeRange={setTimeRange}
-          exportCSV={handleExport}
-          isExporting={isExportingProducts}
-          sales={sales}
-          serviceIncomes={serviceIncomes}
-          transactions={transactions}
-        />
+        <>
+          <ProductMetrics
+            todayRevenue={todayRevenue}
+            todayProfit={todayProfit}
+            todayItemsSold={todayItemsSold}
+            yesterdayRevenue={yesterdayRevenue}
+            yesterdayProfit={yesterdayProfit}
+            yesterdayItemsSold={yesterdayItemsSold}
+            salesData={salesData}
+            itemsSoldData={itemsSoldData}
+            productPerformance={productPerformance}
+            categoryData={categoryData}
+            timeRange={timeRange}
+            setTimeRange={setTimeRange}
+            exportCSV={handleExport}
+            isExporting={isExportingProducts}
+            sales={sales}
+            serviceIncomes={serviceIncomes}
+            transactions={transactions}
+          />
+          <TaxReport
+            products={products}
+            services={services}
+            transactions={transactions}
+            serviceIncomes={serviceIncomes}
+            sales={sales}
+          />
+        </>
       ) : (
         <ServiceMetrics
           todayServiceRevenue={todayServiceRevenue}
