@@ -340,8 +340,8 @@ const TaxReport: React.FC<Props> = ({
             <h4 className="text-sm font-semibold text-spa-deep mb-2">
               Monthly Sub-totals
             </h4>
-            <div className="border rounded-md overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[420px]">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="text-left px-3 py-2">Month</th>
