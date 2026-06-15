@@ -211,8 +211,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: session.user.id,
       name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
       email: session.user.email || '',
-      // Default to employee role for security (least privilege)
-      role: (session.user.user_metadata?.role as UserRole) || 'employee'
+      // SECURITY: Never trust user_metadata for role (user-controllable).
+      // Default to least-privilege until profile row is loaded.
+      role: 'employee'
     };
   };
 
@@ -247,7 +248,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: session.user.id,
       name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
       email: session.user.email || '',
-      role: (session.user.user_metadata?.role as UserRole) || 'employee'
+      // SECURITY: Never trust user_metadata for role. Default least-privilege.
+      role: 'employee' as UserRole
     };
 
     try {
