@@ -109,11 +109,14 @@ const STORAGE_RATE = "tax.rate";
 const STORAGE_EXEMPT_PRODUCTS = "tax.exemptProductIds";
 const STORAGE_TAXABLE_SERVICES = "tax.taxableServiceIds";
 
-export const loadTaxRate = (): number | null => {
+/** Florida state sales tax base. Counties may add a discretionary surtax. */
+export const DEFAULT_TAX_RATE = 6;
+
+export const loadTaxRate = (): number => {
   const v = localStorage.getItem(STORAGE_RATE);
-  if (!v) return null;
+  if (!v) return DEFAULT_TAX_RATE;
   const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  return Number.isFinite(n) ? n : DEFAULT_TAX_RATE;
 };
 
 export const saveTaxRate = (rate: number | null) => {
