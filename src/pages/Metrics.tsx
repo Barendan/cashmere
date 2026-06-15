@@ -153,35 +153,28 @@ const Metrics = () => {
           </TabsList>
         </Tabs>
       </div>
-      {metricView === "products" ? (
+      {metricView === "products" && (
         <ProductMetrics
-            todayRevenue={todayRevenue}
-            todayProfit={todayProfit}
-            todayItemsSold={todayItemsSold}
-            yesterdayRevenue={yesterdayRevenue}
-            yesterdayProfit={yesterdayProfit}
-            yesterdayItemsSold={yesterdayItemsSold}
-            salesData={salesData}
-            itemsSoldData={itemsSoldData}
-            productPerformance={productPerformance}
-            categoryData={categoryData}
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            exportCSV={handleExport}
-            isExporting={isExportingProducts}
-            sales={sales}
-            serviceIncomes={serviceIncomes}
-            transactions={transactions}
-          />
-          <TaxReport
-            products={products}
-            services={services}
-            transactions={transactions}
-            serviceIncomes={serviceIncomes}
-            sales={sales}
-          />
-        </>
-      ) : (
+          todayRevenue={todayRevenue}
+          todayProfit={todayProfit}
+          todayItemsSold={todayItemsSold}
+          yesterdayRevenue={yesterdayRevenue}
+          yesterdayProfit={yesterdayProfit}
+          yesterdayItemsSold={yesterdayItemsSold}
+          salesData={salesData}
+          itemsSoldData={itemsSoldData}
+          productPerformance={productPerformance}
+          categoryData={categoryData}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          exportCSV={handleExport}
+          isExporting={isExportingProducts}
+          sales={sales}
+          serviceIncomes={serviceIncomes}
+          transactions={transactions}
+        />
+      )}
+      {metricView === "services" && (
         <ServiceMetrics
           todayServiceRevenue={todayServiceRevenue}
           todayUniqueCustomers={todayUniqueCustomers}
@@ -195,6 +188,15 @@ const Metrics = () => {
           setTimeRange={setTimeRange}
           exportCSV={handleExport}
           isExporting={isExportingServices}
+        />
+      )}
+      {metricView === "tax" && (
+        <TaxReport
+          products={products}
+          services={services}
+          transactions={transactions}
+          serviceIncomes={serviceIncomes}
+          sales={sales}
         />
       )}
     </div>
