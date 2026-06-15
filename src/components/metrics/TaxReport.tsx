@@ -241,8 +241,8 @@ const TaxReport: React.FC<Props> = ({
           <h4 className="text-sm font-semibold text-spa-deep mb-2">
             Breakdown by Category
           </h4>
-          <div className="border rounded-md overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="border rounded-md overflow-x-auto">
+            <table className="w-full text-sm min-w-[520px]">
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left px-3 py-2">Category</th>
@@ -309,8 +309,8 @@ const TaxReport: React.FC<Props> = ({
             <h4 className="text-sm font-semibold text-spa-deep mb-2">
               By Payment Method (Gross)
             </h4>
-            <div className="border rounded-md overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[280px]">
                 <tbody>
                   <tr>
                     <td className="px-3 py-2">Cash</td>
