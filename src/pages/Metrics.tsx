@@ -15,7 +15,7 @@ import TaxReport from "@/components/metrics/TaxReport";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
-  const { products, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
+  const { products, services, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRangeType>("daily");
   const [metricView, setMetricView] = useState<"products" | "services">("products");
