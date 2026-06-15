@@ -127,8 +127,8 @@ const TaxReport: React.FC<Props> = ({
 
   return (
     <Card className="bg-card">
-      <CardHeader className="flex flex-row items-start justify-between flex-wrap gap-3">
-        <div>
+      <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <CardTitle className="text-spa-deep flex items-center gap-2">
             <Receipt className="h-5 w-5" />
             Quarterly Tax Report
@@ -137,8 +137,8 @@ const TaxReport: React.FC<Props> = ({
             Gross, exempt, taxable, and tax-due for sales-tax filing (EST).
           </CardDescription>
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:items-end gap-2 w-full lg:w-auto">
+          <div className="min-w-0">
             <label className="text-xs text-muted-foreground block mb-1">
               Year
             </label>
@@ -146,7 +146,7 @@ const TaxReport: React.FC<Props> = ({
               value={String(year)}
               onValueChange={(v) => setYear(Number(v))}
             >
-              <SelectTrigger className="w-[100px] h-9">
+              <SelectTrigger className="w-full lg:w-[100px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -158,7 +158,7 @@ const TaxReport: React.FC<Props> = ({
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="text-xs text-muted-foreground block mb-1">
               Quarter
             </label>
@@ -166,7 +166,7 @@ const TaxReport: React.FC<Props> = ({
               value={String(quarter)}
               onValueChange={(v) => setQuarter(Number(v) as 1 | 2 | 3 | 4)}
             >
-              <SelectTrigger className="w-[140px] h-9">
+              <SelectTrigger className="w-full lg:w-[140px] h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -177,7 +177,7 @@ const TaxReport: React.FC<Props> = ({
               </SelectContent>
             </Select>
           </div>
-          <div>
+          <div className="min-w-0 col-span-2 sm:col-span-1">
             <label className="text-xs text-muted-foreground block mb-1">
               Tax rate (%)
             </label>
@@ -186,14 +186,14 @@ const TaxReport: React.FC<Props> = ({
                 value={rateInput}
                 onChange={(e) => setRateInput(e.target.value)}
                 placeholder="8.875"
-                className="w-[100px] h-9"
+                className="w-full lg:w-[100px] h-9"
                 inputMode="decimal"
               />
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleSaveRate}
-                className="h-9"
+                className="h-9 shrink-0"
               >
                 Save
               </Button>
@@ -204,7 +204,7 @@ const TaxReport: React.FC<Props> = ({
             services={services}
             onSaved={() => setOverridesVersion((v) => v + 1)}
             trigger={
-              <Button variant="outline" size="sm" className="h-9">
+              <Button variant="outline" size="sm" className="h-9 w-full lg:w-auto">
                 <Settings2 className="h-4 w-4 mr-1" />
                 Manage Taxability
               </Button>
@@ -212,7 +212,7 @@ const TaxReport: React.FC<Props> = ({
           />
           <Button
             size="sm"
-            className="h-9 bg-spa-deep text-white"
+            className="h-9 bg-spa-deep text-white w-full lg:w-auto"
             onClick={() => downloadTaxReportCsv(report, year, quarter)}
           >
             <Download className="h-4 w-4 mr-1" />
@@ -222,7 +222,7 @@ const TaxReport: React.FC<Props> = ({
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Top tiles */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
           <Tile label="Gross Sales" value={fmt(report.totals.gross)} />
           <Tile label="Discounts" value={fmt(report.totals.discounts)} />
           <Tile label="Net Sales" value={fmt(report.totals.net)} />
@@ -241,8 +241,8 @@ const TaxReport: React.FC<Props> = ({
           <h4 className="text-sm font-semibold text-spa-deep mb-2">
             Breakdown by Category
           </h4>
-          <div className="border rounded-md overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="border rounded-md overflow-x-auto">
+            <table className="w-full text-sm min-w-[520px]">
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left px-3 py-2">Category</th>
@@ -309,8 +309,8 @@ const TaxReport: React.FC<Props> = ({
             <h4 className="text-sm font-semibold text-spa-deep mb-2">
               By Payment Method (Gross)
             </h4>
-            <div className="border rounded-md overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[280px]">
                 <tbody>
                   <tr>
                     <td className="px-3 py-2">Cash</td>
@@ -340,8 +340,8 @@ const TaxReport: React.FC<Props> = ({
             <h4 className="text-sm font-semibold text-spa-deep mb-2">
               Monthly Sub-totals
             </h4>
-            <div className="border rounded-md overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="border rounded-md overflow-x-auto">
+              <table className="w-full text-sm min-w-[420px]">
                 <thead className="bg-muted/50">
                   <tr>
                     <th className="text-left px-3 py-2">Month</th>

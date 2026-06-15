@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useData } from "../contexts/DataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Package2, Award } from "lucide-react";
+import { Loader2, Package2, Award, Receipt } from "lucide-react";
 import usePageTitle from "@/hooks/usePageTitle";
 import ProductMetrics from "@/components/metrics/ProductMetrics";
 import ServiceMetrics from "@/components/metrics/ServiceMetrics";
@@ -18,7 +18,7 @@ const Metrics = () => {
   const { products, services, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRangeType>("daily");
-  const [metricView, setMetricView] = useState<"products" | "services">("products");
+  const [metricView, setMetricView] = useState<"products" | "services" | "tax">("products");
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
 
   // Use cached data if available, otherwise fetch
@@ -131,54 +131,50 @@ const Metrics = () => {
 
   return (
     <div className="w-full space-y-6 min-w-[90vw] xl:min-w-[60vw] px-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-spa-deep mb-1">Business Metrics</h1>
           <p className="text-muted-foreground">Analyze your business performance</p>
         </div>
-        <Tabs defaultValue="products" value={metricView} onValueChange={(v) => setMetricView(v as "products" | "services")}>
-          <TabsList className="h-auto">
-            <TabsTrigger value="products" className="flex items-center gap-2 text-base px-6 py-3">
+        <Tabs defaultValue="products" value={metricView} onValueChange={(v) => setMetricView(v as "products" | "services" | "tax")}>
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="products" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
               <Package2 className="h-5 w-5" />
               Products
             </TabsTrigger>
-            <TabsTrigger value="services" className="flex items-center gap-2 text-base px-6 py-3">
+            <TabsTrigger value="services" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
               <Award className="h-5 w-5" />
               Services
+            </TabsTrigger>
+            <TabsTrigger value="tax" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
+              <Receipt className="h-5 w-5" />
+              Tax
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
-      {metricView === "products" ? (
-        <>
-          <ProductMetrics
-            todayRevenue={todayRevenue}
-            todayProfit={todayProfit}
-            todayItemsSold={todayItemsSold}
-            yesterdayRevenue={yesterdayRevenue}
-            yesterdayProfit={yesterdayProfit}
-            yesterdayItemsSold={yesterdayItemsSold}
-            salesData={salesData}
-            itemsSoldData={itemsSoldData}
-            productPerformance={productPerformance}
-            categoryData={categoryData}
-            timeRange={timeRange}
-            setTimeRange={setTimeRange}
-            exportCSV={handleExport}
-            isExporting={isExportingProducts}
-            sales={sales}
-            serviceIncomes={serviceIncomes}
-            transactions={transactions}
-          />
-          <TaxReport
-            products={products}
-            services={services}
-            transactions={transactions}
-            serviceIncomes={serviceIncomes}
-            sales={sales}
-          />
-        </>
-      ) : (
+      {metricView === "products" && (
+        <ProductMetrics
+          todayRevenue={todayRevenue}
+          todayProfit={todayProfit}
+          todayItemsSold={todayItemsSold}
+          yesterdayRevenue={yesterdayRevenue}
+          yesterdayProfit={yesterdayProfit}
+          yesterdayItemsSold={yesterdayItemsSold}
+          salesData={salesData}
+          itemsSoldData={itemsSoldData}
+          productPerformance={productPerformance}
+          categoryData={categoryData}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+          exportCSV={handleExport}
+          isExporting={isExportingProducts}
+          sales={sales}
+          serviceIncomes={serviceIncomes}
+          transactions={transactions}
+        />
+      )}
+      {metricView === "services" && (
         <ServiceMetrics
           todayServiceRevenue={todayServiceRevenue}
           todayUniqueCustomers={todayUniqueCustomers}
@@ -192,6 +188,15 @@ const Metrics = () => {
           setTimeRange={setTimeRange}
           exportCSV={handleExport}
           isExporting={isExportingServices}
+        />
+      )}
+      {metricView === "tax" && (
+        <TaxReport
+          products={products}
+          services={services}
+          transactions={transactions}
+          serviceIncomes={serviceIncomes}
+          sales={sales}
         />
       )}
     </div>
