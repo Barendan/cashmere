@@ -1,108 +1,80 @@
-## Goal
+## Florida tax default, discount-adjusted taxable base, and a Returns/Refunds section
 
-Add a "Quarterly Tax Report" section to the Metrics page that gives you the numbers needed for sales-tax filing: gross sales, exempt sales, taxable sales, tax due, plus a full product/service/payment-method breakdown — all without changing the database.
+### Research: Florida sales tax
+- **Florida state sales tax: 6.0%** (applies to taxable retail goods statewide).
+- Counties add a **discretionary sales surtax** (typically 0.5%–1.5%) on top — varies by county, and only applies to the first $5,000 of a single tangible-personal-property sale.
+- Recommendation: **default to 6.0%** (state base) and keep the rate field editable so you can add your county surtax (e.g. 6.5%, 7.0%, 7.5%) without code changes. We'll show a small helper note under the field.
 
-## Ground rules (per your answers)
+### Are we handling discounts in the taxable base today?
+**No.** In `taxUtils.ts > computeTaxReport`:
+- Product line amounts (`t.price`) and service line allocations are added to `gross` / `taxable` / `exempt` **before** discounts.
+- `totalDiscounts` is tracked per finance transaction and shown as a tile and CSV column, and subtracted only from `net`.
+- **Tax Due = taxable × rate**, where `taxable` is pre-discount → this **over-reports tax owed** whenever there's a discount on a taxable sale.
 
-- **No DB changes.** All tax logic lives in the frontend.
-- **Defaults**: products = taxable, services = exempt.
-- **Tax rate**: editable in the UI, persisted in `localStorage` (no DB). Empty until you enter it; tax-due cells show "—" until set.
-- **Per-item overrides**: a small UI lets you mark specific products as exempt or specific services as taxable. Overrides stored as a list of IDs in `localStorage` (keys: `tax.exemptProductIds`, `tax.taxableServiceIds`, `tax.rate`). No schema change.
-- **EST bucketing** (`America/New_York`) reused from the existing monthly export so totals reconcile with your CSV.
+Also: returns are currently **silently dropped** — only `t.type === "sale"` is included; refunded product transactions don't appear anywhere on the Tax tab.
 
-## What gets added
+### Fix plan (minimal, surgical)
 
-### 1. New component: `src/components/metrics/TaxReport.tsx`
+**1. Default rate to Florida 6%** (`taxUtils.ts` + `TaxReport.tsx`)
+- `loadTaxRate()` returns `6` instead of `null` when nothing is saved. Treat "user has not saved yet" as "use 6% default" so Tax Due always renders.
+- Remove the "—" fallback and the "Enter your sales-tax rate" hint; replace with a small caption: *"Florida state base is 6%. Add your county discretionary surtax if applicable."*
 
-A card placed on the Metrics → Products tab, below Cash Overview.
+**2. Allocate discounts into the taxable base (accurate Tax Due)**
+For each service finance-transaction (the only place discounts live in our schema, per memory), after we sum its service lines into taxable/exempt:
+- Compute `taxableShare = taxableForThisFT / grossForThisFT` (0 if gross is 0).
+- Subtract `discount × taxableShare` from `servicesBucket.taxable` and the matching month's `taxable`.
+- Subtract `discount × (1 - taxableShare)` from `servicesBucket.exempt` and the month's `exempt` (keeps exempt accurate too).
+- Tax Due is then `taxable_after_discount × rate` — correct.
+- Net stays `gross − discounts` (unchanged display).
+- Products have no per-sale discount field in our data (confirmed via memory), so no product-side allocation needed.
 
-Header controls:
-- **Year** dropdown (auto-populated from earliest transaction year → current year, EST)
-- **Quarter** selector: Q1 (Jan–Mar) / Q2 (Apr–Jun) / Q3 (Jul–Sep) / Q4 (Oct–Dec), defaults to current quarter
-- **Tax rate** input (e.g. `8.875`), with a small "Save" — persists to `localStorage`
-- **Manage taxability** button → opens a dialog listing all products and services with a taxable/exempt toggle each; saves the override lists to `localStorage`
-- **Export Quarterly CSV** button
+**3. Returns & Refunds section (new, at the bottom of the Tax tab)**
+Extend `TaxReport` shape with a `returns` block:
+```ts
+returns: {
+  totalCount: number;
+  totalAmount: number;       // sum of refunded amounts in quarter
+  taxableAmount: number;     // portion that was taxable
+  taxRefunded: number;       // taxableAmount × rate
+  rows: Array<{
+    date: string;            // EST yyyy-mm-dd
+    productName: string;
+    quantity: number;        // |t.quantity|
+    amount: number;          // |t.price|
+    taxable: boolean;
+    monthLabel: string;
+  }>;
+}
+```
+- Source: `transactions` where `t.type === "return"` and date is in the EST quarter range.
+- Use `productById` + `exemptProductIds` to determine taxability (same rule as sales).
+- Render as a new card section beneath the monthly table:
+  - 4 small tiles: **# Returns**, **Refunded Amount**, **Taxable Refunded**, **Tax Refunded**.
+  - Table: Date | Product | Qty | Amount | Taxable? | Month — wrapped in `overflow-x-auto`, `min-w-[640px]`.
+  - Empty state: *"No returns or refunds this quarter."*
+- These are **kept separate** from Gross/Taxable tiles (not netted in) so the headline numbers still match what was sold; the returns card stands alone for filing-time review. Add a one-line note: *"Returns are listed separately and are not subtracted from the totals above."*
 
-Top tiles (selected quarter, EST):
-- Gross Sales (products + services, sum of line prices before discount)
-- Discounts (sum of `finance_transactions.discount` in range)
-- Net Sales (Gross − Discounts)
-- Exempt Sales
-- Taxable Sales
-- Tax Due (Taxable × rate, or "—" if no rate)
-- Tips (informational; from `finance_transactions.tip_amount`)
+**4. CSV export**
+Append a blank row, then a `Returns` section to the same CSV:
+```
+Returns
+Date,Product,Qty,Amount,Taxable,Month
+...
+Returns Total,,,<amount>,,
+Tax Refunded,,,<taxRefunded>,,
+```
 
-Breakdown table:
-- Rows: Products, Services, **Total**
-- Columns: Gross, Exempt, Taxable, Tax Due
-
-Payment-method table (gross totals from `sales.payment_method` + service incomes):
-- Cash, Card, Other
-
-Monthly sub-totals (3 rows for the quarter's months) with the same columns as the breakdown table — for cross-checking bookkeeping.
-
-CSV export (`Tax_Report_{Year}_Q{n}.csv`):
-- One row per month + a quarter total row
-- Columns: Month, Gross, Discounts, Net, Exempt, Taxable, Tax Due, Tips, Cash, Card, Other
-
-### 2. New helper: `src/components/metrics/taxUtils.ts`
-
-Pure functions, fully unit-testable, all EST-aware (`Intl.DateTimeFormat` with `America/New_York`, same pattern as the existing `toESTMonthKey`):
-
-- `getQuarterRange(year, quarter)` → returns `{ startMs, endMs }` covering the EST quarter bounds.
-- `isProductTaxable(productId, exemptIds)` → default `true` unless in `exemptIds`.
-- `isServiceTaxable(serviceId, taxableIds)` → default `false` unless in `taxableIds`.
-- `computeTaxReport({ transactions, serviceIncomes, financeTransactions, sales, products, services, year, quarter, rate, exemptProductIds, taxableServiceIds })` → returns:
-  ```
-  {
-    totals: { gross, discounts, net, exempt, taxable, taxDue, tips },
-    byCategory: { products: {...}, services: {...} },
-    byPaymentMethod: { cash, card, other },
-    byMonth: [ { monthLabel, gross, exempt, taxable, taxDue, ... }, x3 ]
-  }
-  ```
-- `generateTaxReportCsv(report, year, quarter)` → triggers the download.
-
-Source data:
-- **Product sales** → from `transactions` where `type = 'sale'` (already loaded in `metricsCache.transactions`). Uses `productId` to look up taxability.
-- **Service sales** → from `serviceIncomes` parsed via the existing `ParsedServiceCategory` JSON (mirrors `calculateServicesData`), applying per-line discount allocation so net stays consistent with current dashboard math. Uses each line's `serviceId` for taxability.
-- **Discounts** → sum `finance_transactions.discount` in range (already exposed on `metricsCache`; if not, pull alongside other metrics in `fetchAllMetricsData`).
-- **Tips** → sum `finance_transactions.tip_amount` in range.
-- **Payment methods** → group `sales.totalAmount` by `sales.payment_method`, plus service incomes by their payment method.
-
-### 3. `Manage Taxability` dialog: `src/components/metrics/TaxabilityManager.tsx`
-
-Simple two-tab dialog (Products / Services). Each row: name + a Switch. "Save" writes the two ID lists to `localStorage` and closes. No DB writes.
-
-### 4. Wiring
-
-- `src/pages/Metrics.tsx`: render `<TaxReport ... />` inside the Products view, below `<ProductMetrics ... />`. Pass `products`, `services`, `transactions`, `serviceIncomes`, plus `financeTransactions` and `sales` from `metricsCache`.
-- `src/contexts/DataContext.tsx` / `fetchAllMetricsData`: confirm `financeTransactions` is included in `metricsCache`; if not, add it to the same fetch (it's needed for discounts + tips). This is the only data-layer touch.
-
-## Files changed
-
+### Files changed
 | File | Change |
 |---|---|
-| `src/components/metrics/TaxReport.tsx` | NEW — main report card UI |
-| `src/components/metrics/TaxabilityManager.tsx` | NEW — taxability override dialog |
-| `src/components/metrics/taxUtils.ts` | NEW — pure tax math + EST bucketing + CSV |
-| `src/pages/Metrics.tsx` | Mount `<TaxReport />` under Products |
-| `src/contexts/DataContext.tsx` | (Only if needed) include `financeTransactions` in `metricsCache` |
+| `src/components/metrics/taxUtils.ts` | `loadTaxRate` defaults to 6; allocate discounts into taxable/exempt; add `returns` to `TaxReport`; aggregate `type==='return'` transactions; extend CSV. |
+| `src/components/metrics/TaxReport.tsx` | Show "FL 6%" helper text; render new Returns & Refunds card with tiles + responsive table. |
 
-No DB migrations. No schema changes. No changes to existing charts or exports.
+No DB changes, no new dependencies, no changes outside the Tax tab.
 
-## Acceptance checks
-
-1. Selecting Year + Quarter on the Tax Report renders gross / exempt / taxable / tax-due tiles for that EST quarter.
-2. Setting the rate and clicking save persists across reloads (`localStorage`).
-3. Default behavior: every product counts as taxable; every service counts as exempt.
-4. Flipping a product to exempt (or a service to taxable) in the manager immediately changes the totals.
-5. Monthly rows sum exactly to the quarter total.
-6. CSV export downloads with months + quarter total, all required columns.
-7. Existing Sales Dashboard, monthly export, and cash overview totals are unchanged.
-
-## What's intentionally NOT in scope
-
-- No DB columns, no migrations, no tax snapshots on past sales.
-- No multi-rate support (single flat rate). Easy to extend later if needed.
-- No automatic state-by-state nexus logic; this is a single-jurisdiction report.
+### Acceptance checks
+- Fresh load with no saved rate → tiles show Tax Due using 6%.
+- A quarter with a discounted, fully-taxable service: Tax Due ≈ `(gross − discount) × 6%` (within cents).
+- A return transaction in the quarter appears in the Returns table; headline Gross/Taxable are unchanged.
+- CSV contains both the monthly section and the Returns section.
+- On mobile, Returns table scrolls horizontally; no overflow breaks the card.
