@@ -62,49 +62,16 @@ const Login = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLocalError("");
-    setIsProcessing(true);
-    
-    try {
-      // Validate inputs
-      if (!email.trim() || !password.trim() || !name.trim()) {
-        setLocalError("All fields are required");
-        setIsProcessing(false);
-        return;
-      }
-      
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            role: 'employee' // Default role for new users
-          }
-        }
-      });
+  // Self-registration is intentionally disabled. New accounts must be
+  // provisioned by an admin via the Supabase dashboard.
 
-      if (error) throw error;
-
-      toast.success("Registration successful! Please check your email for confirmation.");
-      setLocalError("Please check your email for the confirmation link.");
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      setLocalError(error.message || "Registration failed");
-      toast.error(error.message || "Registration failed");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // Show retry option if in error state
   const showRetryOption = authState.status === 'error';
 
   // Determine if button should be disabled
   const isLoginDisabled = isProcessing || authState.status === 'authenticating';
-  const isSignupDisabled = isProcessing || authState.status === 'authenticating';
+  // Signup disabled — no signup-specific state needed.
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-spa-sand/30">
@@ -135,117 +102,54 @@ const Login = () => {
             </div>
           )}
           
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
-              <CardContent>
-                {!showRetryOption && localError && (
-                  <Alert variant="destructive" className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{localError}</AlertDescription>
-                  </Alert>
-                )}
+          <CardContent>
+            {!showRetryOption && localError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{localError}</AlertDescription>
+              </Alert>
+            )}
 
-                <form onSubmit={handleLogin}>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="your-email@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        disabled={isLoginDisabled}
-                        className="border-spa-sand focus:border-spa-sage"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="Your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isLoginDisabled}
-                        className="border-spa-sand focus:border-spa-sage"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                      disabled={isLoginDisabled}
-                    >
-                      {isLoginDisabled ? "Signing In..." : "Sign In"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </TabsContent>
+            <form onSubmit={handleLogin}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your-email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoginDisabled}
+                    className="border-spa-sand focus:border-spa-sage"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoginDisabled}
+                    className="border-spa-sand focus:border-spa-sage"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
+                  disabled={isLoginDisabled}
+                >
+                  {isLoginDisabled ? "Signing In..." : "Sign In"}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  Accounts are provisioned by an administrator. Contact your admin if you need access.
+                </p>
+              </div>
+            </form>
+          </CardContent>
 
-            <TabsContent value="register">
-              <CardContent>
-                {!showRetryOption && localError && (
-                  <Alert variant={localError.includes("check your email") ? "default" : "destructive"} className="mb-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{localError}</AlertDescription>
-                  </Alert>
-                )}
-
-                <form onSubmit={handleSignUp}>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-name">Full Name</Label>
-                      <Input
-                        id="signup-name"
-                        placeholder="John Doe"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={isSignupDisabled}
-                        className="border-spa-sand focus:border-spa-sage"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="your-email@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        disabled={isSignupDisabled}
-                        className="border-spa-sand focus:border-spa-sage"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-password">Password</Label>
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="Choose a password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={isSignupDisabled}
-                        className="border-spa-sand focus:border-spa-sage"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full bg-spa-sage text-spa-deep hover:bg-spa-deep hover:text-white"
-                      disabled={isSignupDisabled}
-                    >
-                      {isSignupDisabled ? "Signing Up..." : "Sign Up"}
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </TabsContent>
-          </Tabs>
         </Card>
       </div>
     </div>
