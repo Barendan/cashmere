@@ -268,7 +268,7 @@ export const computeTaxReport = ({
   taxableServiceIds,
 }: ComputeTaxReportInput): TaxReport => {
   const { startMs, endMs, months } = getQuarterRange(year, quarter);
-  const rateMul = rate !== null ? rate / 100 : 0;
+  const rateMul = rate / 100;
 
   const monthMap = new Map<string, TaxMonthRow>();
   months.forEach((mk) =>
@@ -305,11 +305,10 @@ export const computeTaxReport = ({
     if (!inRange(d, startMs, endMs)) return;
 
     const product = productById.get(t.productId);
-    // If a product is missing or not for sale, still include (it was sold historically)
     const taxable = product
       ? isProductTaxable(product.id, exemptProductIds)
       : !exemptProductIds.has(t.productId);
-    const amount = t.price; // line total
+    const amount = t.price;
     const mk = estMonthKey(d);
     const row = monthMap.get(mk);
     if (!row) return;
@@ -328,8 +327,17 @@ export const computeTaxReport = ({
   });
 
   // ---- Service sales (serviceIncomes; parse multi-service rows) ----
-  // Track finance transactions we've handled so per-transaction values (discount/tip/payment) only counted once.
-  const seenFt = new Set<string>();
+  // Aggregate per finance transaction so we can apply discounts proportionally to taxable/exempt.
+  interface FtAgg {
+    monthKey: string;
+    taxable: number;
+    exempt: number;
+    gross: number;
+    discount: number;
+    tip: number;
+    paymentMethod?: string;
+  }
+  const ftAggs = new Map<string, FtAgg>();
 
   serviceIncomes.forEach((income) => {
     const d = new Date(income.date);
@@ -338,7 +346,6 @@ export const computeTaxReport = ({
     const row = monthMap.get(mk);
     if (!row) return;
 
-    // Determine taxability per service line. The income.category JSON may list multiple services.
     let lines: Array<{ serviceId: string; price: number }> = [];
     if (income.category) {
       try {
@@ -347,7 +354,6 @@ export const computeTaxReport = ({
           Array.isArray(parsed.serviceIds) &&
           Array.isArray(parsed.servicePrices)
         ) {
-          // Allocate this finances row's amount proportionally across its services list.
           const subtotal = parsed.servicePrices.reduce((s, v) => s + v, 0) || 1;
           parsed.serviceIds.forEach((id, idx) => {
             const p = parsed.servicePrices?.[idx] || 0;
@@ -365,6 +371,21 @@ export const computeTaxReport = ({
       lines = [{ serviceId: income.serviceId, price: income.amount }];
     }
 
+    const ftId = income.financeTransactionId || `legacy-${income.id}`;
+    let agg = ftAggs.get(ftId);
+    if (!agg) {
+      agg = {
+        monthKey: mk,
+        taxable: 0,
+        exempt: 0,
+        gross: 0,
+        discount: income.discount || 0,
+        tip: income.tipAmount || 0,
+        paymentMethod: income.paymentMethod,
+      };
+      ftAggs.set(ftId, agg);
+    }
+
     lines.forEach((ln) => {
       const taxable = isServiceTaxable(ln.serviceId, taxableServiceIds);
       servicesBucket.gross += ln.price;
@@ -373,28 +394,40 @@ export const computeTaxReport = ({
       if (taxable) {
         servicesBucket.taxable += ln.price;
         row.taxable += ln.price;
+        agg.taxable += ln.price;
       } else {
         servicesBucket.exempt += ln.price;
         row.exempt += ln.price;
+        agg.exempt += ln.price;
       }
+      agg.gross += ln.price;
     });
+  });
 
-    // Per-transaction extras (discount, tip, payment method). Only count once per finance_transaction.
-    const ftId = income.financeTransactionId || `legacy-${income.id}`;
-    if (!seenFt.has(ftId)) {
-      seenFt.add(ftId);
-      const disc = income.discount || 0;
-      const tip = income.tipAmount || 0;
-      totalDiscounts += disc;
-      totalTips += tip;
-      row.discounts += disc;
-      row.tips += tip;
-      // payment method for service finance transaction
-      const grossForLine = lines.reduce((s, l) => s + l.price, 0);
-      const pb = paymentBucket(income.paymentMethod);
-      payTotals[pb] += grossForLine;
-      row[pb] += grossForLine;
+  // Apply per-FT discounts/tips/payments
+  ftAggs.forEach((agg) => {
+    const row = monthMap.get(agg.monthKey);
+    if (!row) return;
+    totalDiscounts += agg.discount;
+    totalTips += agg.tip;
+    row.discounts += agg.discount;
+    row.tips += agg.tip;
+
+    // Allocate discount across taxable/exempt by share, so Tax Due reflects discounted base.
+    if (agg.discount > 0 && agg.gross > 0) {
+      const taxableShare = agg.taxable / agg.gross;
+      const exemptShare = 1 - taxableShare;
+      const taxableCut = agg.discount * taxableShare;
+      const exemptCut = agg.discount * exemptShare;
+      servicesBucket.taxable -= taxableCut;
+      servicesBucket.exempt -= exemptCut;
+      row.taxable -= taxableCut;
+      row.exempt -= exemptCut;
     }
+
+    const pb = paymentBucket(agg.paymentMethod);
+    payTotals[pb] += agg.gross;
+    row[pb] += agg.gross;
   });
 
   // ---- Product sales payment methods (from sales table) ----
@@ -408,6 +441,36 @@ export const computeTaxReport = ({
     payTotals[pb] += s.totalAmount;
     row[pb] += s.totalAmount;
   });
+
+  // ---- Returns / refunds (product transactions of type 'return') ----
+  const returnsRows: TaxReturnRow[] = [];
+  let returnsTaxable = 0;
+  let returnsExempt = 0;
+  transactions.forEach((t) => {
+    if (t.type !== "return") return;
+    const d = new Date(t.date);
+    if (!inRange(d, startMs, endMs)) return;
+    const product = productById.get(t.productId);
+    const taxable = product
+      ? isProductTaxable(product.id, exemptProductIds)
+      : !exemptProductIds.has(t.productId);
+    const amount = Math.abs(t.price);
+    const qty = Math.abs(t.quantity);
+    const mk = estMonthKey(d);
+    const { year: yy, month: mm, day: dd } = estParts(d);
+    if (taxable) returnsTaxable += amount;
+    else returnsExempt += amount;
+    returnsRows.push({
+      date: `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`,
+      monthKey: mk,
+      monthLabel: monthLabel(mk),
+      productName: t.productName || product?.name || "Unknown product",
+      quantity: qty,
+      amount,
+      taxable,
+    });
+  });
+  returnsRows.sort((a, b) => (a.date < b.date ? 1 : -1));
 
   // Compute tax due per bucket / row
   productsBucket.taxDue = productsBucket.taxable * rateMul;
@@ -432,6 +495,14 @@ export const computeTaxReport = ({
     byCategory: { products: productsBucket, services: servicesBucket },
     byPaymentMethod: payTotals,
     byMonth: Array.from(monthMap.values()),
+    returns: {
+      count: returnsRows.length,
+      totalAmount: returnsTaxable + returnsExempt,
+      taxableAmount: returnsTaxable,
+      exemptAmount: returnsExempt,
+      taxRefunded: returnsTaxable * rateMul,
+      rows: returnsRows,
+    },
   };
 };
 
