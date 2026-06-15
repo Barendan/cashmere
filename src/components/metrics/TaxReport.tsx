@@ -370,8 +370,9 @@ const TaxReport: React.FC<Props> = ({
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Florida state base is <span className="font-medium">6%</span>. Add
-          your county discretionary surtax (typically 0.5–1.5%) if applicable.
+          Miami-Dade combined rate is <span className="font-medium">7%</span>{" "}
+          (6% Florida state + 1% county discretionary surtax). The 1% surtax
+          applies only to the first $5,000 of a single tangible item.
           Defaults: products are taxable, services are exempt — use "Manage
           Taxability" to override per item. Tax Due is calculated on the
           discounted taxable base.

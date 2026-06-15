@@ -109,8 +109,13 @@ const STORAGE_RATE = "tax.rate";
 const STORAGE_EXEMPT_PRODUCTS = "tax.exemptProductIds";
 const STORAGE_TAXABLE_SERVICES = "tax.taxableServiceIds";
 
-/** Florida state sales tax base. Counties may add a discretionary surtax. */
-export const DEFAULT_TAX_RATE = 6;
+/**
+ * Miami-Dade combined sales tax: 6% FL state + 1% county discretionary surtax = 7%.
+ * Note: the 1% surtax technically only applies to the first $5,000 of a single
+ * tangible item; for typical retail/service tickets well under that cap, a flat
+ * 7% matches what FL DOR expects at point of sale.
+ */
+export const DEFAULT_TAX_RATE = 7;
 
 export const loadTaxRate = (): number => {
   const v = localStorage.getItem(STORAGE_RATE);
