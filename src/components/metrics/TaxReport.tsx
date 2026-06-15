@@ -425,7 +425,8 @@ const TaxReport: React.FC<Props> = ({
             </div>
           )}
           <p className="text-xs text-muted-foreground mt-2">
-            Returns are listed separately and are not subtracted from the totals above.
+            Audit trail only — refund amounts are already subtracted from the
+            Sales, Taxable, and Tax Due tiles above.
           </p>
         </div>
       </CardContent>
