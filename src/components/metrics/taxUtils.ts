@@ -1,5 +1,6 @@
 import { Transaction, Product, Sale, Service } from "@/models/types";
 import { ServiceIncomeWithCategory, ParsedServiceCategory } from "./types";
+import { allocatePassThroughCash } from "./passThroughCash";
 
 const TZ = "America/New_York";
 
@@ -108,6 +109,7 @@ export const monthLabel = (yyyyMm: string): string => {
 const STORAGE_RATE = "tax.rate";
 const STORAGE_EXEMPT_PRODUCTS = "tax.exemptProductIds";
 const STORAGE_TAXABLE_SERVICES = "tax.taxableServiceIds";
+const STORAGE_EXCLUDE_CASH = "tax.excludePassThroughCash";
 
 /**
  * Miami-Dade combined sales tax: 6% FL state + 1% county discretionary surtax = 7%.
@@ -158,6 +160,16 @@ export const saveTaxableServiceIds = (ids: string[]) => {
   localStorage.setItem(STORAGE_TAXABLE_SERVICES, JSON.stringify(ids));
 };
 
+export const loadExcludePassThroughCash = (): boolean => {
+  const v = localStorage.getItem(STORAGE_EXCLUDE_CASH);
+  if (v === null) return false;
+  return v === "true";
+};
+
+export const saveExcludePassThroughCash = (exclude: boolean) => {
+  localStorage.setItem(STORAGE_EXCLUDE_CASH, String(exclude));
+};
+
 export const isProductTaxable = (
   productId: string,
   exemptIds: Set<string>
@@ -184,6 +196,7 @@ export interface TaxMonthRow extends TaxBucket {
   servicesGross: number;
   discounts: number;
   tips: number;
+  cashExcluded: number;
   cash: number;
   card: number;
   other: number;
@@ -209,10 +222,12 @@ export interface TaxReturnsSummary {
 }
 
 export interface TaxReport {
+  excludePassThroughCash: boolean;
   totals: TaxBucket & {
     discounts: number;
     net: number;
     tips: number;
+    cashExcluded: number;
   };
   byCategory: {
     products: TaxBucket;
@@ -248,6 +263,65 @@ const paymentBucket = (
   return "other";
 };
 
+/** Raw pass-through cash on a grouped service finance transaction. */
+const getGroupedServiceRawCash = (agg: {
+  cashAmount: number;
+  paymentMethod?: string;
+  gross: number;
+}): number => {
+  if (agg.cashAmount > 0) return agg.cashAmount;
+  if (agg.paymentMethod === "cash") return agg.gross;
+  return 0;
+};
+
+/** Split gross across cash vs primary non-cash payment method (card/other). */
+const addSplitPaymentToBuckets = (
+  gross: number,
+  paymentMethod: string | undefined,
+  rawCash: number,
+  payTotals: { cash: number; card: number; other: number },
+  row: TaxMonthRow
+): void => {
+  const cashPortion = rawCash > 0 ? Math.min(rawCash, gross) : 0;
+  const nonCashPortion = gross - cashPortion;
+
+  if (cashPortion > 0) {
+    payTotals.cash += cashPortion;
+    row.cash += cashPortion;
+  }
+  if (nonCashPortion > 0) {
+    const pb = paymentBucket(paymentMethod);
+    payTotals[pb] += nonCashPortion;
+    row[pb] += nonCashPortion;
+  }
+};
+
+const subtractServicePassThroughCash = (
+  filingCash: number,
+  taxable: number,
+  exempt: number,
+  gross: number,
+  servicesBucket: TaxBucket,
+  row: TaxMonthRow
+): void => {
+  if (filingCash <= 0 || gross <= 0) return;
+
+  const { fromTaxable, fromExempt } = allocatePassThroughCash(
+    filingCash,
+    taxable,
+    exempt,
+    gross
+  );
+
+  servicesBucket.gross -= filingCash;
+  servicesBucket.taxable -= fromTaxable;
+  servicesBucket.exempt -= fromExempt;
+  row.gross -= filingCash;
+  row.servicesGross -= filingCash;
+  row.taxable -= fromTaxable;
+  row.exempt -= fromExempt;
+};
+
 export interface ComputeTaxReportInput {
   year: number;
   quarter: 1 | 2 | 3 | 4;
@@ -259,6 +333,8 @@ export interface ComputeTaxReportInput {
   sales: Sale[];
   exemptProductIds: Set<string>;
   taxableServiceIds: Set<string>;
+  /** When true, pass-through cash is removed from gross/taxable/exempt (not tax due inputs). */
+  excludePassThroughCash?: boolean;
 }
 
 export const computeTaxReport = ({
@@ -271,9 +347,13 @@ export const computeTaxReport = ({
   sales,
   exemptProductIds,
   taxableServiceIds,
+  excludePassThroughCash = false,
 }: ComputeTaxReportInput): TaxReport => {
   const { startMs, endMs, months } = getQuarterRange(year, quarter);
   const rateMul = rate / 100;
+
+  const salesById = new Map(sales.map((s) => [s.id, s]));
+  let totalCashExcluded = 0;
 
   const monthMap = new Map<string, TaxMonthRow>();
   months.forEach((mk) =>
@@ -288,6 +368,7 @@ export const computeTaxReport = ({
       servicesGross: 0,
       discounts: 0,
       tips: 0,
+      cashExcluded: 0,
       cash: 0,
       card: 0,
       other: 0,
@@ -318,6 +399,15 @@ export const computeTaxReport = ({
     const row = monthMap.get(mk);
     if (!row) return;
 
+    if (excludePassThroughCash && t.saleId) {
+      const sale = salesById.get(t.saleId);
+      if (sale?.paymentMethod === "cash") {
+        row.cashExcluded += amount;
+        totalCashExcluded += amount;
+        return;
+      }
+    }
+
     productsBucket.gross += amount;
     row.productsGross += amount;
     row.gross += amount;
@@ -341,6 +431,7 @@ export const computeTaxReport = ({
     discount: number;
     tip: number;
     paymentMethod?: string;
+    cashAmount: number;
   }
   const ftAggs = new Map<string, FtAgg>();
 
@@ -376,6 +467,21 @@ export const computeTaxReport = ({
       lines = [{ serviceId: income.serviceId, price: income.amount }];
     }
 
+    // Legacy 100% cash service rows — exclude at source (no grouped cash_amount).
+    if (
+      excludePassThroughCash &&
+      !income.financeTransactionId &&
+      income.paymentMethod === "cash"
+    ) {
+      lines.forEach((ln) => {
+        row.cashExcluded += ln.price;
+        totalCashExcluded += ln.price;
+        row.cash += ln.price;
+        payTotals.cash += ln.price;
+      });
+      return;
+    }
+
     const ftId = income.financeTransactionId || `legacy-${income.id}`;
     let agg = ftAggs.get(ftId);
     if (!agg) {
@@ -387,6 +493,7 @@ export const computeTaxReport = ({
         discount: income.discount || 0,
         tip: income.tipAmount || 0,
         paymentMethod: income.paymentMethod,
+        cashAmount: income.cashAmount || 0,
       };
       ftAggs.set(ftId, agg);
     }
@@ -399,18 +506,18 @@ export const computeTaxReport = ({
       if (taxable) {
         servicesBucket.taxable += ln.price;
         row.taxable += ln.price;
-        agg.taxable += ln.price;
+        agg!.taxable += ln.price;
       } else {
         servicesBucket.exempt += ln.price;
         row.exempt += ln.price;
-        agg.exempt += ln.price;
+        agg!.exempt += ln.price;
       }
-      agg.gross += ln.price;
+      agg!.gross += ln.price;
     });
   });
 
-  // Apply per-FT discounts/tips/payments
-  ftAggs.forEach((agg) => {
+  // Apply per-FT discounts/tips/payments; subtract grouped pass-through cash.
+  ftAggs.forEach((agg, ftId) => {
     const row = monthMap.get(agg.monthKey);
     if (!row) return;
     totalDiscounts += agg.discount;
@@ -422,9 +529,30 @@ export const computeTaxReport = ({
     // is already stored net-of-discount upstream in DataContext. Subtracting again
     // would double-deduct and under-report Tax Due.
 
-    const pb = paymentBucket(agg.paymentMethod);
-    payTotals[pb] += agg.gross;
-    row[pb] += agg.gross;
+    if (excludePassThroughCash && !ftId.startsWith("legacy-")) {
+      const rawCash = getGroupedServiceRawCash(agg);
+      if (rawCash > 0) {
+        row.cashExcluded += rawCash;
+        totalCashExcluded += rawCash;
+        const filingCash = Math.min(rawCash, agg.gross);
+        subtractServicePassThroughCash(
+          filingCash,
+          agg.taxable,
+          agg.exempt,
+          agg.gross,
+          servicesBucket,
+          row
+        );
+      }
+    }
+
+    addSplitPaymentToBuckets(
+      agg.gross,
+      agg.paymentMethod,
+      getGroupedServiceRawCash(agg),
+      payTotals,
+      row
+    );
   });
 
   // ---- Product sales payment methods (from sales table) ----
@@ -506,7 +634,11 @@ export const computeTaxReport = ({
   totals.net = totals.gross - totals.discounts;
 
   return {
-    totals,
+    excludePassThroughCash,
+    totals: {
+      ...totals,
+      cashExcluded: excludePassThroughCash ? totalCashExcluded : 0,
+    },
     byCategory: { products: productsBucket, services: servicesBucket },
     byPaymentMethod: payTotals,
     byMonth: Array.from(monthMap.values()),
@@ -542,6 +674,7 @@ export const generateTaxReportCsv = (
     "Taxable",
     "Tax Due",
     "Tips",
+    ...(report.excludePassThroughCash ? (["Cash Excluded"] as const) : []),
     "Cash",
     "Card",
     "Other",
@@ -557,6 +690,9 @@ export const generateTaxReportCsv = (
       m.taxable.toFixed(2),
       m.taxDue.toFixed(2),
       m.tips.toFixed(2),
+      ...(report.excludePassThroughCash
+        ? [m.cashExcluded.toFixed(2)]
+        : []),
       m.cash.toFixed(2),
       m.card.toFixed(2),
       m.other.toFixed(2),
@@ -571,6 +707,9 @@ export const generateTaxReportCsv = (
     report.totals.taxable.toFixed(2),
     report.totals.taxDue.toFixed(2),
     report.totals.tips.toFixed(2),
+    ...(report.excludePassThroughCash
+      ? [report.totals.cashExcluded.toFixed(2)]
+      : []),
     report.byPaymentMethod.cash.toFixed(2),
     report.byPaymentMethod.card.toFixed(2),
     report.byPaymentMethod.other.toFixed(2),
@@ -628,7 +767,8 @@ export const downloadTaxReportCsv = (
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `Tax_Report_${year}_Q${quarter}.csv`;
+  const suffix = report.excludePassThroughCash ? "_excl-cash" : "";
+  link.download = `Tax_Report_${year}_Q${quarter}${suffix}.csv`;
   link.style.visibility = "hidden";
   document.body.appendChild(link);
   link.click();

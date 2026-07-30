@@ -38,6 +38,7 @@ export interface Sale {
   userId: string;
   userName: string;
   paymentMethod?: string;
+  cashAmount?: number;
   notes?: string;
   items?: Transaction[];
   discount?: number;

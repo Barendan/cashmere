@@ -35,6 +35,11 @@ import { supabase } from "../integrations/supabase/client";
 import { formatCurrency } from "../lib/format";
 import { BULK_RESTOCK_PRODUCT_ID, isBulkRestockProduct } from "../config/systemProducts";
 import { recordFinanceTransactionInDb } from "../services/financeTransactionService";
+import { validateAndNormalizeCashAmount, splitAmountByRatio } from "../components/metrics/passThroughCash";
+
+interface SaleCheckoutOptions {
+  suppressSuccessToast?: boolean;
+}
 
 interface ServiceIncome {
   id: string;
@@ -66,8 +71,8 @@ interface DataContextType {
   updateService: (id: string, updates: Partial<Service>) => void;
   deleteService: (id: string) => void;
   recordSale: (productId: string, quantity: number) => void;
-  recordBulkSale: (items: {product: Product, quantity: number}[], globalDiscount?: number, paymentMethod?: string) => Promise<void>;
-  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string, cashAmount?: number) => Promise<void>;
+  recordBulkSale: (items: {product: Product, quantity: number}[], globalDiscount?: number, paymentMethod?: string, cashAmount?: number, options?: SaleCheckoutOptions) => Promise<void>;
+  recordServiceSale: (items: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string, cashAmount?: number, options?: SaleCheckoutOptions) => Promise<void>;
   recordMixedSale: (products: {product: Product, quantity: number}[], serviceItems: {service: Service, quantity: number}[], globalDiscount?: number, globalTip?: number, globalCustomerName?: string, paymentMethod?: string, cashAmount?: number) => Promise<void>;
   recordRestock: (productId: string, quantity: number) => void;
   updateLastRestockDate: () => void;
@@ -658,8 +663,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const recordBulkSale = async (items: {product: Product, quantity: number}[], globalDiscount: number = 0, paymentMethod?: string) => {
+  const recordBulkSale = async (
+    items: {product: Product, quantity: number}[],
+    globalDiscount: number = 0,
+    paymentMethod?: string,
+    cashAmount: number = 0,
+    options?: SaleCheckoutOptions
+  ) => {
     if (items.length === 0) return;
+
+    if (!paymentMethod) {
+      throw new Error('Payment method is required');
+    }
     
     for (const item of items) {
       if (item.product.stockQuantity < item.quantity) {
@@ -685,17 +700,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const totalDiscount = globalDiscount;
       
       const finalTotal = Math.max(0, subtotal - totalDiscount);
+
+      const validatedCashAmount = validateAndNormalizeCashAmount(
+        paymentMethod,
+        cashAmount,
+        finalTotal
+      );
       
       const saleData = {
         date: now.toISOString(),
         total_amount: finalTotal,
         user_id: user?.id || 'unknown',
         user_name: user?.name || 'Unknown User',
-        discount: totalDiscount > 0 ? totalDiscount : null,
-        tip_amount: null,
-        original_total: totalDiscount > 0 ? subtotal : null,
         notes: totalDiscount > 0 ? `Discount: $${totalDiscount.toFixed(2)}` : null,
-        payment_method: paymentMethod || null
+        payment_method: paymentMethod,
+        cash_amount: validatedCashAmount
       };
       
       const { id: saleId, sale: newSale } = await recordSaleInDb(saleData);
@@ -743,18 +762,21 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           items: newLocalTransactions,
           discount: totalDiscount > 0 ? totalDiscount : undefined,
           originalTotal: totalDiscount > 0 ? subtotal : undefined,
-          paymentMethod: paymentMethod || undefined
+          paymentMethod: paymentMethod,
+          cashAmount: validatedCashAmount
         };
         
         setSales([saleWithItems, ...sales]);
         setTransactions([...newLocalTransactions, ...transactions]);
         
-        toast({ 
-          title: "Sale Completed", 
-          description: totalDiscount > 0 ? 
-            `Sold ${items.length} item(s) with a $${totalDiscount.toFixed(2)} discount.` : 
-            `Sold ${items.length} item(s).` 
-        });
+        if (!options?.suppressSuccessToast) {
+          toast({ 
+            title: "Sale Completed", 
+            description: totalDiscount > 0 ? 
+              `Sold ${items.length} item(s) with a $${totalDiscount.toFixed(2)} discount.` : 
+              `Sold ${items.length} item(s).` 
+          });
+        }
         await refreshData();
       } catch (error) {
         console.error('Error in transaction recording:', error);
@@ -782,7 +804,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     globalTip: number = 0,
     globalCustomerName: string = '',
     paymentMethod?: string,
-    cashAmount: number = 0
+    cashAmount: number = 0,
+    options?: SaleCheckoutOptions
   ) => {
     if (items.length === 0) return;
     
@@ -818,17 +841,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const finalSubtotal = Math.max(0, originalSubtotal - globalDiscount);
       const finalTotal = finalSubtotal + globalTip;
       
-      // Validate cash amount
-      let validatedCashAmount = cashAmount;
-      if (paymentMethod === 'cash') {
-        // If payment is cash-only, cash_amount must equal total
-        validatedCashAmount = finalTotal;
-      } else if (cashAmount > 0) {
-        // If split payment, validate cash doesn't exceed total
-        if (cashAmount >= finalTotal) {
-          throw new Error('Cash amount cannot exceed or equal total amount in split payment');
-        }
-      }
+      const validatedCashAmount = validateAndNormalizeCashAmount(
+        paymentMethod,
+        cashAmount,
+        finalTotal
+      );
       
       // Step 1: Create finance_transaction (summary row)
       const financeTransactionData = {
@@ -875,10 +892,12 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       await Promise.all(financePromises);
       
-      toast({ 
-        title: "Service Sale Completed", 
-        description: `Processed ${items.length} service(s) successfully.`
-      });
+      if (!options?.suppressSuccessToast) {
+        toast({ 
+          title: "Service Sale Completed", 
+          description: `Processed ${items.length} service(s) successfully.`
+        });
+      }
       
       // Refresh service incomes to show the new record
       const updatedServiceIncomes = await fetchServiceIncomes();
@@ -934,15 +953,50 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       const productDiscountShare = totalSubtotal > 0 ? (productSubtotal / totalSubtotal) * globalDiscount : 0;
       const serviceDiscountShare = totalSubtotal > 0 ? (serviceSubtotal / totalSubtotal) * globalDiscount : 0;
-      
-      // Process products through existing recordBulkSale
-      if (products.length > 0) {
-        await recordBulkSale(products, productDiscountShare, paymentMethod);
+
+      const productFinal = Math.max(0, productSubtotal - productDiscountShare);
+      const serviceFinal = Math.max(0, serviceSubtotal - serviceDiscountShare + globalTip);
+      const combinedFinal = productFinal + serviceFinal;
+
+      for (const item of products) {
+        if (item.product.stockQuantity < item.quantity) {
+          throw new Error(`Not enough ${item.product.name} in stock.`);
+        }
       }
-      
-      // Process services through recordServiceSale
+
+      const validatedCombinedCash = validateAndNormalizeCashAmount(
+        paymentMethod,
+        cashAmount,
+        combinedFinal
+      );
+
+      const { a: productCash, b: serviceCash } = splitAmountByRatio(
+        validatedCombinedCash,
+        productFinal,
+        serviceFinal
+      );
+
+      // Services first, then products — reduces orphaned product sale if second call fails
       if (serviceItems.length > 0) {
-        await recordServiceSale(serviceItems, serviceDiscountShare, globalTip, globalCustomerName, paymentMethod, cashAmount);
+        await recordServiceSale(
+          serviceItems,
+          serviceDiscountShare,
+          globalTip,
+          globalCustomerName,
+          paymentMethod,
+          serviceCash,
+          { suppressSuccessToast: true }
+        );
+      }
+
+      if (products.length > 0) {
+        await recordBulkSale(
+          products,
+          productDiscountShare,
+          paymentMethod,
+          productCash,
+          { suppressSuccessToast: true }
+        );
       }
       
       toast({ 

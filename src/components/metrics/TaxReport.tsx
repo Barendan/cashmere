@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Download, Receipt, Settings2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { formatCurrency } from "@/lib/format";
 import { Product, Service, Transaction, Sale } from "@/models/types";
 import { ServiceIncomeWithCategory } from "./types";
@@ -25,8 +26,10 @@ import {
   currentQuarter,
   downloadTaxReportCsv,
   loadExemptProductIds,
+  loadExcludePassThroughCash,
   loadTaxRate,
   loadTaxableServiceIds,
+  saveExcludePassThroughCash,
   saveTaxRate,
 } from "./taxUtils";
 import TaxabilityManager from "./TaxabilityManager";
@@ -54,6 +57,9 @@ const TaxReport: React.FC<Props> = ({
   const [quarter, setQuarter] = useState<1 | 2 | 3 | 4>(currentQuarter());
   const [rateInput, setRateInput] = useState<string>(() => String(loadTaxRate()));
   const [savedRate, setSavedRate] = useState<number>(loadTaxRate());
+  const [excludePassThroughCash, setExcludePassThroughCash] = useState<boolean>(
+    () => loadExcludePassThroughCash()
+  );
   const [overridesVersion, setOverridesVersion] = useState(0);
 
   // Keep year in sync if years list grows
@@ -75,12 +81,14 @@ const TaxReport: React.FC<Props> = ({
       sales,
       exemptProductIds,
       taxableServiceIds,
+      excludePassThroughCash,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     year,
     quarter,
     savedRate,
+    excludePassThroughCash,
     products,
     services,
     transactions,
@@ -88,6 +96,11 @@ const TaxReport: React.FC<Props> = ({
     sales,
     overridesVersion,
   ]);
+
+  const handleExcludePassThroughCashChange = (checked: boolean) => {
+    setExcludePassThroughCash(checked);
+    saveExcludePassThroughCash(checked);
+  };
 
   const handleSaveRate = () => {
     const trimmed = rateInput.trim();
@@ -217,11 +230,28 @@ const TaxReport: React.FC<Props> = ({
             <Download className="h-4 w-4 mr-1" />
             Export CSV
           </Button>
+          <div className="col-span-2 sm:col-span-3 lg:col-span-full flex items-center gap-2 min-w-0">
+            <Switch
+              id="exclude-pass-through-cash"
+              checked={excludePassThroughCash}
+              onCheckedChange={handleExcludePassThroughCashChange}
+            />
+            <label
+              htmlFor="exclude-pass-through-cash"
+              className="text-sm text-muted-foreground cursor-pointer select-none"
+            >
+              Exclude pass-through cash
+            </label>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Top tiles */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+        <div
+          className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 ${
+            report.excludePassThroughCash ? "xl:grid-cols-7" : "xl:grid-cols-6"
+          }`}
+        >
           <Tile label="Sales (net of refunds)" value={fmt(report.totals.gross)} />
           <Tile label="Discounts" value={fmt(report.totals.discounts)} />
           <Tile label="Exempt Sales" value={fmt(report.totals.exempt)} />
@@ -232,10 +262,25 @@ const TaxReport: React.FC<Props> = ({
             accent="bg-amber-50 border-amber-200"
           />
           <Tile label="Tips" value={fmt(report.totals.tips)} />
+          {report.excludePassThroughCash && (
+            <Tile
+              label="Cash Excluded"
+              value={fmt(report.totals.cashExcluded)}
+              accent="bg-slate-50 border-slate-200"
+            />
+          )}
         </div>
         <p className="text-xs text-muted-foreground -mt-3">
           Sales are shown after discounts and net of refunds. Tax Due is calculated
           on the discount-adjusted, refund-netted taxable base per FL DR-15.
+          {report.excludePassThroughCash && (
+            <>
+              {" "}
+              Pass-through cash has been removed from Sales, Exempt, Taxable, and
+              Tax Due above. Product split-cash at checkout is not fully tracked.
+              Returns on cash-only sales may need manual review.
+            </>
+          )}
         </p>
 
         {/* Breakdown by category */}
@@ -348,6 +393,9 @@ const TaxReport: React.FC<Props> = ({
                   <tr>
                     <th className="text-left px-3 py-2">Month</th>
                     <th className="text-right px-3 py-2">Gross</th>
+                    {report.excludePassThroughCash && (
+                      <th className="text-right px-3 py-2">Cash Excl.</th>
+                    )}
                     <th className="text-right px-3 py-2">Taxable</th>
                     <th className="text-right px-3 py-2">Tax Due</th>
                   </tr>
@@ -357,6 +405,11 @@ const TaxReport: React.FC<Props> = ({
                     <tr key={m.monthKey} className="border-t">
                       <td className="px-3 py-2">{m.label}</td>
                       <td className="text-right px-3 py-2">{fmt(m.gross)}</td>
+                      {report.excludePassThroughCash && (
+                        <td className="text-right px-3 py-2">
+                          {fmt(m.cashExcluded)}
+                        </td>
+                      )}
                       <td className="text-right px-3 py-2">{fmt(m.taxable)}</td>
                       <td className="text-right px-3 py-2">
                         {fmtTax(m.taxDue)}

@@ -1,6 +1,10 @@
 
 import { Transaction, Product, Sale } from "@/models/types";
 import { ServiceIncomeWithCategory, ServiceMetric, ProductMetric, SalesDataPoint, CategoryDataPoint, ParsedServiceCategory } from "./types";
+import {
+  getProductSalePassThroughCash,
+  getServicePassThroughCash,
+} from "./passThroughCash";
 
 const toLocalDateKey = (d: Date): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -701,45 +705,26 @@ export const calculateCashIncome = (
 ): number => {
   let totalCash = 0;
 
-  // Calculate cash from product sales (unchanged)
-  const cashSales = sales.filter(sale => {
+  sales.forEach((sale) => {
     const saleDate = new Date(sale.date);
-    const inDateRange = endDate 
+    const inDateRange = endDate
       ? saleDate >= startDate && saleDate <= endDate
       : saleDate >= startDate;
-    return sale.paymentMethod === 'cash' && inDateRange;
+    if (!inDateRange) return;
+    totalCash += getProductSalePassThroughCash(sale);
   });
 
-  cashSales.forEach(sale => {
-    totalCash += sale.totalAmount;
-  });
-
-  // Calculate cash from service incomes
-  // Filter by date range first
-  const serviceIncomesInRange = serviceIncomes.filter(income => {
+  const serviceIncomesInRange = serviceIncomes.filter((income) => {
     const incomeDate = new Date(income.date);
-    const inDateRange = endDate
+    return endDate
       ? incomeDate >= startDate && incomeDate <= endDate
       : incomeDate >= startDate;
-    return inDateRange;
   });
 
-  // Track which transactions we've already counted (for grouped transactions)
-  // For grouped transactions, multiple service income records share the same financeTransactionId and cashAmount
   const countedTransactions = new Set<string>();
 
-  serviceIncomesInRange.forEach(income => {
-    // For grouped transactions (has financeTransactionId), count cashAmount only once per transaction
-    if (income.financeTransactionId && income.cashAmount && income.cashAmount > 0) {
-      if (!countedTransactions.has(income.financeTransactionId)) {
-        totalCash += income.cashAmount;
-        countedTransactions.add(income.financeTransactionId);
-      }
-    } 
-    // For legacy records (no financeTransactionId), use old logic
-    else if (income.paymentMethod === 'cash') {
-      totalCash += income.amount;
-    }
+  serviceIncomesInRange.forEach((income) => {
+    totalCash += getServicePassThroughCash(income, countedTransactions);
   });
 
   return totalCash;
@@ -877,50 +862,35 @@ export const calculateDailyCashIncome = (
     currentDate.setDate(currentDate.getDate() + 1);
   }
   
-  // Calculate cash from product sales
-  const cashSales = sales.filter(sale => {
+  sales.forEach((sale) => {
     const saleDate = new Date(sale.date);
-    return sale.paymentMethod === 'cash' && saleDate >= startDate && saleDate <= endDate;
-  });
-  
-  cashSales.forEach(sale => {
-    const saleDate = new Date(sale.date);
+    if (saleDate < startDate || saleDate > endDate) return;
+    const cash = getProductSalePassThroughCash(sale);
+    if (cash <= 0) return;
     const dateStr = toLocalDateKey(saleDate);
-    const currentCash = dailyCashMap.get(dateStr) || 0;
-    dailyCashMap.set(dateStr, currentCash + sale.totalAmount);
+    dailyCashMap.set(dateStr, (dailyCashMap.get(dateStr) || 0) + cash);
   });
-  
-  // Calculate cash from service incomes
-  // Filter by date range first
-  const serviceIncomesInRange = serviceIncomes.filter(income => {
+
+  const serviceIncomesInRange = serviceIncomes.filter((income) => {
     const incomeDate = new Date(income.date);
     return incomeDate >= startDate && incomeDate <= endDate;
   });
 
-  // Track which transactions we've already counted per day (for grouped transactions)
   const countedTransactionsByDay = new Map<string, Set<string>>();
 
-  serviceIncomesInRange.forEach(income => {
+  serviceIncomesInRange.forEach((income) => {
     const incomeDate = new Date(income.date);
     const dateStr = toLocalDateKey(incomeDate);
-    const currentCash = dailyCashMap.get(dateStr) || 0;
 
-    // For grouped transactions (has financeTransactionId), count cashAmount only once per transaction per day
-    if (income.financeTransactionId && income.cashAmount && income.cashAmount > 0) {
-      if (!countedTransactionsByDay.has(dateStr)) {
-        countedTransactionsByDay.set(dateStr, new Set());
-      }
-      const dayCountedSet = countedTransactionsByDay.get(dateStr)!;
-      
-      if (!dayCountedSet.has(income.financeTransactionId)) {
-        dailyCashMap.set(dateStr, currentCash + income.cashAmount);
-        dayCountedSet.add(income.financeTransactionId);
-      }
-    } 
-    // For legacy records (no financeTransactionId), use old logic
-    else if (income.paymentMethod === 'cash') {
-      dailyCashMap.set(dateStr, currentCash + income.amount);
+    if (!countedTransactionsByDay.has(dateStr)) {
+      countedTransactionsByDay.set(dateStr, new Set());
     }
+    const dayCountedSet = countedTransactionsByDay.get(dateStr)!;
+
+    const cash = getServicePassThroughCash(income, dayCountedSet);
+    if (cash <= 0) return;
+
+    dailyCashMap.set(dateStr, (dailyCashMap.get(dateStr) || 0) + cash);
   });
   
   // Convert to array and sort by date

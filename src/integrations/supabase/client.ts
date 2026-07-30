@@ -44,18 +44,6 @@ export type ExtendedTransactionInsert = {
   original_price?: number;
 };
 
-// Define RPC result types for better type safety
-export type RpcSaleResult = {
-  id: string;
-  date: string;
-  total_amount: number;
-  user_id: string;
-  user_name: string;
-  payment_method?: string | null;
-  notes?: string | null;
-  created_at: string;
-};
-
 export type RpcTransactionResult = {
   id: string;
   product_id: string;
@@ -121,16 +109,4 @@ export const mapTransactionRowToTransaction = (row: TransactionRow | RpcTransact
   userId: row.user_id,
   userName: row.user_name,
   saleId: row.sale_id || undefined
-});
-
-export const mapSaleRowToSale = (row: SaleRow | RpcSaleResult) => ({
-  id: row.id,
-  date: new Date(row.date),
-  totalAmount: row.total_amount,
-  userId: row.user_id,
-  userName: row.user_name,
-  paymentMethod: row.payment_method || undefined,
-  notes: row.notes || undefined,
-  discount: (row as any).discount || undefined,           // Keep discount field here
-  originalTotal: (row as any).original_total || undefined // Keep original total field here
 });

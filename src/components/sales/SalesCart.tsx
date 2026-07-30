@@ -52,7 +52,7 @@ const SalesCart = ({ isProcessing, setIsProcessing }: SalesCartProps) => {
           quantity: item.quantity
         }));
         
-        await recordBulkSale(saleItems, globalDiscount, paymentMethod);
+        await recordBulkSale(saleItems, globalDiscount, paymentMethod, cashAmount);
       } else if (hasServices) {
         // Services only
         const serviceSaleItems = serviceItems.map(item => ({

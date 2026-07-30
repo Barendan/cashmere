@@ -55,6 +55,7 @@ const mapSaleRowToSale = (row: SaleRow) => ({
   userId: row.user_id,
   userName: row.user_name,
   paymentMethod: row.payment_method || undefined,
+  cashAmount: row.cash_amount ?? 0,
   notes: row.notes || undefined,
   discount: row.discount || undefined,
   originalTotal: row.original_total || undefined

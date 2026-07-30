@@ -97,6 +97,11 @@ const ShoppingCart = ({
     }
     recordSale(paymentMethod, globalCashAmount);
   };
+
+  const isInvalidSplitPayment =
+    paymentMethod !== "cash" &&
+    finalTotal > 0 &&
+    globalCashAmount >= finalTotal;
   return <div className="h-full flex flex-col">
       
       {items.length === 0 ? <div className="flex-grow flex items-center justify-center text-muted-foreground p-4">
@@ -233,7 +238,7 @@ const ShoppingCart = ({
                 <Input id="global-customer" type="text" value={globalCustomerName} onChange={e => updateGlobalCustomerName(e.target.value)} placeholder="Enter customer name" />
               </div>}
 
-              <HoverFillButton className="w-full" onClick={handleCompleteSale} disabled={isProcessing || items.length === 0 || !paymentMethod}>
+              <HoverFillButton className="w-full" onClick={handleCompleteSale} disabled={isProcessing || items.length === 0 || !paymentMethod || isInvalidSplitPayment}>
                 {isProcessing ? "Processing..." : `Complete ${isMixed ? 'Mixed ' : hasServices ? 'Service ' : ''}Sale`}
               </HoverFillButton>
             </div>

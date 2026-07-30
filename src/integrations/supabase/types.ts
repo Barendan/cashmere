@@ -208,6 +208,7 @@ export type Database = {
       }
       sales: {
         Row: {
+          cash_amount: number
           created_at: string
           date: string
           id: string
@@ -218,6 +219,7 @@ export type Database = {
           user_name: string
         }
         Insert: {
+          cash_amount?: number
           created_at?: string
           date?: string
           id?: string
@@ -228,6 +230,7 @@ export type Database = {
           user_name: string
         }
         Update: {
+          cash_amount?: number
           created_at?: string
           date?: string
           id?: string
@@ -344,6 +347,7 @@ export type Database = {
       get_sales: {
         Args: never
         Returns: {
+          cash_amount: number
           created_at: string
           date: string
           id: string
@@ -387,6 +391,7 @@ export type Database = {
       insert_sale: {
         Args: { p_sale: Json }
         Returns: {
+          cash_amount: number
           created_at: string
           date: string
           id: string
