@@ -419,7 +419,7 @@ const WEEKDAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export const calculateWeekdayPattern = (visits: VisitRecord[]): PatternPoint[] => {
   const counts = new Map<string, number>(WEEKDAY_ORDER.map((d) => [d, 0]));
-  visits.forEach((v) => {
+  countableVisits(visits).forEach((v) => {
     const day = weekdayFormatter.format(v.date);
     counts.set(day, (counts.get(day) || 0) + 1);
   });
