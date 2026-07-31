@@ -12,6 +12,7 @@ import { TimeRangeType } from "@/components/metrics/types";
 import { useProductMetricsCalculation, useServiceMetricsCalculation } from "@/hooks/useMetricsCalculation";
 import useMetricsExport from "@/hooks/useMetricsExport";
 import TaxReport from "@/components/metrics/TaxReport";
+import TrafficMetrics from "@/components/metrics/TrafficMetrics";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
