@@ -92,10 +92,10 @@ const TrafficMetrics = ({
       formatter: (value: number) => formatCurrency(value || 0),
     },
     {
-      key: "totalSpent",
+      key: "avgTicket",
       header: "Avg Ticket",
       className: "text-right",
-      formatter: (_: number, item?: Record<string, any>) =>
+      formatter: (_: unknown, item?: Record<string, any>) =>
         formatCurrency(item && item.visits > 0 ? item.totalSpent / item.visits : 0),
     },
     { key: "services", header: "Services", className: "text-right" },
