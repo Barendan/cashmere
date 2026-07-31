@@ -428,7 +428,7 @@ export const calculateWeekdayPattern = (visits: VisitRecord[]): PatternPoint[] =
 
 export const calculateHourPattern = (visits: VisitRecord[]): PatternPoint[] => {
   const counts = new Map<number, number>();
-  visits.forEach((v) => {
+  countableVisits(visits).forEach((v) => {
     const hour = Number(hourFormatter.format(v.date).replace(/\D/g, ""));
     counts.set(hour, (counts.get(hour) || 0) + 1);
   });
