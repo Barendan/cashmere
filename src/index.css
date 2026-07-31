@@ -34,7 +34,16 @@
     --ring: 158 25% 73%;
 
     --radius: 0.75rem;
+
+    /* Traffic metric accents (spa palette) */
+    --traffic-1: 180 12% 55%;
+    --traffic-2: 205 30% 73%;
+    --traffic-3: 88 24% 60%;
+    --traffic-4: 37 52% 70%;
+    --traffic-5: 169 27% 74%;
+    --traffic-6: 33 22% 77%;
   }
+
 
   .dark {
     --background: 30 6% 15%;
