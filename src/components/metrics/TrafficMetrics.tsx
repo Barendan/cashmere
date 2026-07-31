@@ -123,13 +123,15 @@ const TrafficMetrics = ({
           icon={<Receipt className="h-6 w-6 text-spa-deep" />}
           explanation={
             <>
-              <p>How many checkout tickets were rung up {currentLabel.toLowerCase()}.</p>
+              <p>How many client visits happened {currentLabel.toLowerCase()}.</p>
               <p>
-                One ticket = one visit. Services and products paid together count once. Standalone
-                tips are not counted as visits.
+                One client = one visit. Back-to-back tickets for the same name (within 30 minutes)
+                count once, services and products paid together count once, and standalone tips are
+                not counted. Tickets with no name are grouped as one "unknown" client.
               </p>
             </>
           }
+
         />
         <MetricsCard
           accent={2}
