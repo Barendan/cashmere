@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useData } from "../contexts/DataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Package2, Award, Receipt } from "lucide-react";
+import { Loader2, Package2, Award, Receipt, Users } from "lucide-react";
 import usePageTitle from "@/hooks/usePageTitle";
 import ProductMetrics from "@/components/metrics/ProductMetrics";
 import ServiceMetrics from "@/components/metrics/ServiceMetrics";
@@ -12,13 +12,14 @@ import { TimeRangeType } from "@/components/metrics/types";
 import { useProductMetricsCalculation, useServiceMetricsCalculation } from "@/hooks/useMetricsCalculation";
 import useMetricsExport from "@/hooks/useMetricsExport";
 import TaxReport from "@/components/metrics/TaxReport";
+import TrafficMetrics from "@/components/metrics/TrafficMetrics";
 
 const Metrics = () => {
   usePageTitle("Business Metrics");
   const { products, services, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRangeType>("daily");
-  const [metricView, setMetricView] = useState<"products" | "services" | "tax">("products");
+  const [metricView, setMetricView] = useState<"products" | "services" | "traffic" | "tax">("products");
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
 
   // Use cached data if available, otherwise fetch
@@ -136,7 +137,7 @@ const Metrics = () => {
           <h1 className="text-2xl font-bold text-spa-deep mb-1">Business Metrics</h1>
           <p className="text-muted-foreground">Analyze your business performance</p>
         </div>
-        <Tabs defaultValue="products" value={metricView} onValueChange={(v) => setMetricView(v as "products" | "services" | "tax")}>
+        <Tabs defaultValue="products" value={metricView} onValueChange={(v) => setMetricView(v as "products" | "services" | "traffic" | "tax")}>
           <TabsList className="h-auto flex-wrap">
             <TabsTrigger value="products" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
               <Package2 className="h-5 w-5" />
@@ -145,6 +146,10 @@ const Metrics = () => {
             <TabsTrigger value="services" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
               <Award className="h-5 w-5" />
               Services
+            </TabsTrigger>
+            <TabsTrigger value="traffic" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
+              <Users className="h-5 w-5" />
+              Traffic
             </TabsTrigger>
             <TabsTrigger value="tax" className="flex items-center gap-2 text-base px-4 md:px-6 py-3">
               <Receipt className="h-5 w-5" />
@@ -188,6 +193,15 @@ const Metrics = () => {
           setTimeRange={setTimeRange}
           exportCSV={handleExport}
           isExporting={isExportingServices}
+        />
+      )}
+      {metricView === "traffic" && (
+        <TrafficMetrics
+          transactions={transactions}
+          sales={sales}
+          serviceIncomes={serviceIncomes}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
         />
       )}
       {metricView === "tax" && (
