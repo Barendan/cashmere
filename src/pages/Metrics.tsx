@@ -19,7 +19,7 @@ const Metrics = () => {
   const { products, services, fetchAllMetricsData, metricsCache, isLoadingMetrics: contextIsLoadingMetrics } = useData();
   const { isAdmin, isLoading: authLoading } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRangeType>("daily");
-  const [metricView, setMetricView] = useState<"products" | "services" | "tax">("products");
+  const [metricView, setMetricView] = useState<"products" | "services" | "traffic" | "tax">("products");
   const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
 
   // Use cached data if available, otherwise fetch
