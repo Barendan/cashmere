@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useData } from "../contexts/DataContext";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Package2, Award, Receipt } from "lucide-react";
+import { Loader2, Package2, Award, Receipt, Users } from "lucide-react";
 import usePageTitle from "@/hooks/usePageTitle";
 import ProductMetrics from "@/components/metrics/ProductMetrics";
 import ServiceMetrics from "@/components/metrics/ServiceMetrics";
