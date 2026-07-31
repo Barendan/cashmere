@@ -146,10 +146,11 @@ export const buildVisits = (
 
   serviceIncomes.forEach((income) => {
     const key = income.financeTransactionId || `legacy-${income.id}`;
+    const isTip = isTipLineItem(income.serviceName);
     const existing = serviceVisits.get(key);
     if (existing) {
       existing.revenue += income.amount || 0;
-      existing.serviceCount += 1;
+      if (!isTip) existing.serviceCount += 1;
       if (!existing.customerName) existing.customerName = normalizeName(income.customerName);
       if (new Date(income.date) < existing.date) existing.date = new Date(income.date);
       return;
@@ -162,11 +163,12 @@ export const buildVisits = (
       customerName: normalizeName(income.customerName),
       revenue: income.amount || 0,
       tip: income.tipAmount || 0,
-      serviceCount: 1,
+      serviceCount: isTip ? 0 : 1,
       productCount: 0,
       paymentMethod: income.paymentMethod,
     });
   });
+
 
   // Product units sold per sale
   const unitsBySale = new Map<string, number>();
