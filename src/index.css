@@ -113,3 +113,51 @@
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8;
   }
 }
+
+@layer components {
+  .accent-card-1,
+  .accent-card-2,
+  .accent-card-3,
+  .accent-card-4,
+  .accent-card-5,
+  .accent-card-6 {
+    border-left-width: 4px;
+  }
+
+  .accent-card-1 {
+    background-image: linear-gradient(135deg, hsl(var(--traffic-1) / 0.30) 0%, hsl(var(--traffic-1) / 0.10) 45%, hsl(var(--card)) 100%);
+    border-left-color: hsl(var(--traffic-1));
+  }
+  .accent-icon-1 { background-color: hsl(var(--traffic-1) / 0.28); }
+
+  .accent-card-2 {
+    background-image: linear-gradient(135deg, hsl(var(--traffic-2) / 0.32) 0%, hsl(var(--traffic-2) / 0.10) 45%, hsl(var(--card)) 100%);
+    border-left-color: hsl(var(--traffic-2));
+  }
+  .accent-icon-2 { background-color: hsl(var(--traffic-2) / 0.30); }
+
+  .accent-card-3 {
+    background-image: linear-gradient(135deg, hsl(var(--traffic-3) / 0.30) 0%, hsl(var(--traffic-3) / 0.10) 45%, hsl(var(--card)) 100%);
+    border-left-color: hsl(var(--traffic-3));
+  }
+  .accent-icon-3 { background-color: hsl(var(--traffic-3) / 0.28); }
+
+  .accent-card-4 {
+    background-image: linear-gradient(135deg, hsl(var(--traffic-4) / 0.34) 0%, hsl(var(--traffic-4) / 0.10) 45%, hsl(var(--card)) 100%);
+    border-left-color: hsl(var(--traffic-4));
+  }
+  .accent-icon-4 { background-color: hsl(var(--traffic-4) / 0.32); }
+
+  .accent-card-5 {
+    background-image: linear-gradient(135deg, hsl(var(--traffic-5) / 0.34) 0%, hsl(var(--traffic-5) / 0.10) 45%, hsl(var(--card)) 100%);
+    border-left-color: hsl(var(--traffic-5));
+  }
+  .accent-icon-5 { background-color: hsl(var(--traffic-5) / 0.32); }
+
+  .accent-card-6 {
+    background-image: linear-gradient(135deg, hsl(var(--traffic-6) / 0.36) 0%, hsl(var(--traffic-6) / 0.12) 45%, hsl(var(--card)) 100%);
+    border-left-color: hsl(var(--traffic-6));
+  }
+  .accent-icon-6 { background-color: hsl(var(--traffic-6) / 0.34); }
+}
+
