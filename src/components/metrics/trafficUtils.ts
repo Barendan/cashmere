@@ -78,6 +78,8 @@ export interface VisitRecord {
   serviceCount: number;
   productCount: number;
   paymentMethod?: string;
+  /** Ticket that only recorded a standalone tip (no real service, no product, no revenue). */
+  tipOnly?: boolean;
 }
 
 export interface VisitBucket {
@@ -101,11 +103,17 @@ export interface PeriodSummary {
   visits: number;
   uniqueClients: number;
   newClients: number;
+  returningClients: number;
   revenue: number;
+  services: number;
+  products: number;
   avgTicket: number;
   servicesPerVisit: number;
   productsPerVisit: number;
   unnamedVisits: number;
+  serviceTickets: number;
+  productOnlyTickets: number;
+  tipOnlyTickets: number;
 }
 
 const normalizeName = (name?: string | null): string | null => {
@@ -115,8 +123,13 @@ const normalizeName = (name?: string | null): string | null => {
 
 const clientKey = (name: string): string => name.trim().toLowerCase();
 
+/** $0 "Tip" placeholder services should not be counted as services performed. */
+const isTipLineItem = (name?: string | null): boolean =>
+  (name || "").trim().toLowerCase() === "tip";
+
 /** Mixed sales are written as two records (services + products) seconds apart. */
 const MERGE_WINDOW_MS = 120 * 1000;
+
 
 /**
  * Builds one visit per checkout ticket from the cached metrics data.
