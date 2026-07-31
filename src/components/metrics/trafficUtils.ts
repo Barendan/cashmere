@@ -213,10 +213,14 @@ export const buildVisits = (
     });
   });
 
-  return [...serviceVisitList, ...productVisits].sort(
-    (a, b) => b.date.getTime() - a.date.getTime()
-  );
+  return [...serviceVisitList, ...productVisits]
+    .map((v) => ({
+      ...v,
+      tipOnly: v.serviceCount === 0 && v.productCount === 0 && (v.revenue || 0) <= 0,
+    }))
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 };
+
 
 /** Bucket keys/labels for the chart, plus the current and previous period keys. */
 const getBucketPlan = (timeRange: TimeRangeType, now: Date) => {
