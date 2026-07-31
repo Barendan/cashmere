@@ -271,6 +271,9 @@ const getBucketPlan = (timeRange: TimeRangeType, now: Date) => {
   };
 };
 
+/** Tip-only tickets are not client visits — they are payments attached to an earlier visit. */
+const countableVisits = (visits: VisitRecord[]) => visits.filter((v) => !v.tipOnly);
+
 export const calculateVisitBuckets = (
   visits: VisitRecord[],
   timeRange: TimeRangeType,
@@ -282,7 +285,7 @@ export const calculateVisitBuckets = (
     map.set(key, { key, name: plan.label(key), visits: 0, revenue: 0, avgTicket: 0 });
   });
 
-  visits.forEach((visit) => {
+  countableVisits(visits).forEach((visit) => {
     const bucket = map.get(plan.keyOf(visit));
     if (!bucket) return;
     bucket.visits += 1;
@@ -301,28 +304,34 @@ export const getPeriodLabels = (timeRange: TimeRangeType, now: Date = new Date()
 };
 
 const summarize = (
-  periodVisits: VisitRecord[],
-  firstVisitByClient: Map<string, number>,
-  periodStartMs: number
+  allPeriodVisits: VisitRecord[],
+  firstVisitDayByClient: Map<string, string>,
+  /** "YYYY-MM-DD" EST day the period starts on. */
+  periodStartDayKey: string
 ): PeriodSummary => {
+  const periodVisits = countableVisits(allPeriodVisits);
   const clients = new Set<string>();
   let revenue = 0;
   let services = 0;
   let products = 0;
   let unnamed = 0;
+  let serviceTickets = 0;
+  let productOnlyTickets = 0;
 
   periodVisits.forEach((v) => {
     revenue += v.revenue;
     services += v.serviceCount;
     products += v.productCount;
+    if (v.serviceCount > 0) serviceTickets += 1;
+    else if (v.productCount > 0) productOnlyTickets += 1;
     if (v.customerName) clients.add(clientKey(v.customerName));
     else unnamed += 1;
   });
 
   let newClients = 0;
   clients.forEach((key) => {
-    const first = firstVisitByClient.get(key);
-    if (first !== undefined && first >= periodStartMs) newClients += 1;
+    const firstDay = firstVisitDayByClient.get(key);
+    if (firstDay !== undefined && firstDay >= periodStartDayKey) newClients += 1;
   });
 
   const visits = periodVisits.length;
@@ -330,13 +339,23 @@ const summarize = (
     visits,
     uniqueClients: clients.size,
     newClients,
+    returningClients: Math.max(clients.size - newClients, 0),
     revenue,
+    services,
+    products,
     avgTicket: visits > 0 ? revenue / visits : 0,
     servicesPerVisit: visits > 0 ? services / visits : 0,
     productsPerVisit: visits > 0 ? products / visits : 0,
     unnamedVisits: unnamed,
+    serviceTickets,
+    productOnlyTickets,
+    tipOnlyTickets: allPeriodVisits.length - visits,
   };
 };
+
+/** Month keys ("YYYY-MM") start on the first day; day/week keys already are day keys. */
+const startDayKeyOf = (periodKey: string): string =>
+  periodKey.length === 7 ? `${periodKey}-01` : periodKey;
 
 export const calculatePeriodSummaries = (
   visits: VisitRecord[],
@@ -345,26 +364,23 @@ export const calculatePeriodSummaries = (
 ): { current: PeriodSummary; previous: PeriodSummary } => {
   const plan = getBucketPlan(timeRange, now);
 
-  const firstVisitByClient = new Map<string, number>();
-  visits.forEach((v) => {
+  const firstVisitDayByClient = new Map<string, string>();
+  countableVisits(visits).forEach((v) => {
     if (!v.customerName) return;
     const key = clientKey(v.customerName);
-    const ms = v.date.getTime();
-    const existing = firstVisitByClient.get(key);
-    if (existing === undefined || ms < existing) firstVisitByClient.set(key, ms);
+    const existing = firstVisitDayByClient.get(key);
+    if (existing === undefined || v.dayKey < existing) firstVisitDayByClient.set(key, v.dayKey);
   });
 
   const currentVisits = visits.filter((v) => plan.keyOf(v) === plan.current);
   const previousVisits = visits.filter((v) => plan.keyOf(v) === plan.previous);
 
-  const minMs = (list: VisitRecord[]) =>
-    list.length > 0 ? Math.min(...list.map((v) => v.date.getTime())) : Number.MAX_SAFE_INTEGER;
-
   return {
-    current: summarize(currentVisits, firstVisitByClient, minMs(currentVisits)),
-    previous: summarize(previousVisits, firstVisitByClient, minMs(previousVisits)),
+    current: summarize(currentVisits, firstVisitDayByClient, startDayKeyOf(plan.current)),
+    previous: summarize(previousVisits, firstVisitDayByClient, startDayKeyOf(plan.previous)),
   };
 };
+
 
 export const calculateClientSummaries = (visits: VisitRecord[]): ClientSummary[] => {
   const map = new Map<string, ClientSummary>();
