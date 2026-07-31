@@ -213,13 +213,52 @@ export const buildVisits = (
     });
   });
 
-  return [...serviceVisitList, ...productVisits]
-    .map((v) => ({
+  return mergeSameClientVisits(
+    [...serviceVisitList, ...productVisits].map((v) => ({
       ...v,
       tipOnly: v.serviceCount === 0 && v.productCount === 0 && (v.revenue || 0) <= 0,
     }))
-    .sort((a, b) => b.date.getTime() - a.date.getTime());
+  );
 };
+
+/**
+ * Back-to-back tickets for the same client are one visit.
+ * Tickets with no client name are grouped as "unknown" and merged the same way,
+ * so a split checkout is not double-counted as traffic.
+ */
+const SAME_CLIENT_WINDOW_MS = 30 * 60 * 1000;
+
+const mergeSameClientVisits = (visits: VisitRecord[]): VisitRecord[] => {
+  const ascending = [...visits].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const merged: VisitRecord[] = [];
+  const openByClient = new Map<string, { visit: VisitRecord; lastTicketAt: number }>();
+
+  ascending.forEach((visit) => {
+    const key = `${visit.dayKey}|${visit.customerName ? clientKey(visit.customerName) : "unknown"}`;
+    const open = openByClient.get(key);
+
+    if (open && visit.date.getTime() - open.lastTicketAt <= SAME_CLIENT_WINDOW_MS) {
+      const target = open.visit;
+      target.revenue += visit.revenue || 0;
+      target.tip += visit.tip || 0;
+      target.serviceCount += visit.serviceCount;
+      target.productCount += visit.productCount;
+      target.tipOnly =
+        target.serviceCount === 0 && target.productCount === 0 && (target.revenue || 0) <= 0;
+      if (!target.paymentMethod) target.paymentMethod = visit.paymentMethod;
+      open.lastTicketAt = visit.date.getTime();
+      return;
+    }
+
+    const copy = { ...visit };
+    merged.push(copy);
+    openByClient.set(key, { visit: copy, lastTicketAt: visit.date.getTime() });
+  });
+
+  return merged.sort((a, b) => b.date.getTime() - a.date.getTime());
+};
+
+
 
 
 /** Bucket keys/labels for the chart, plus the current and previous period keys. */
