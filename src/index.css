@@ -114,8 +114,9 @@
   }
 }
 
-@layer components {
-  .accent-card-1,
+/* Traffic metric accent cards (plain CSS: class names are applied dynamically) */
+.accent-card-1,
+
   .accent-card-2,
   .accent-card-3,
   .accent-card-4,
