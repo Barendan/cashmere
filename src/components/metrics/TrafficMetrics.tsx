@@ -385,12 +385,14 @@ const TrafficMetrics = ({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Visits are counted from checkout tickets, hover any card to see how it is calculated. Tickets
-        rung up without a client name still count as visits but cannot be attributed to a client, and
-        names spelled differently are counted as separate clients. Standalone tips are excluded from
-        visit counts
+        A visit is one client, not one receipt — hover any card to see how it is calculated. Tickets
+        for the same client name rung up back-to-back count as a single visit, and tickets with no
+        client name are grouped together as one "unknown" client, so they count as visits but cannot
+        be attributed. Names spelled differently are counted as separate clients, and standalone tips
+        are excluded from visit counts
         {current.tipOnlyTickets > 0 && <> ({current.tipOnlyTickets} in this period)</>}.
       </p>
+
 
     </div>
   );
