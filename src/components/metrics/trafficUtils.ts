@@ -385,7 +385,7 @@ export const calculatePeriodSummaries = (
 export const calculateClientSummaries = (visits: VisitRecord[]): ClientSummary[] => {
   const map = new Map<string, ClientSummary>();
 
-  visits.forEach((visit) => {
+  countableVisits(visits).forEach((visit) => {
     if (!visit.customerName) return;
     const key = clientKey(visit.customerName);
     const existing = map.get(key);
