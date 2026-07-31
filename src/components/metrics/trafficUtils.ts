@@ -231,35 +231,33 @@ const SAME_CLIENT_WINDOW_MS = 30 * 60 * 1000;
 const mergeSameClientVisits = (visits: VisitRecord[]): VisitRecord[] => {
   const ascending = [...visits].sort((a, b) => a.date.getTime() - b.date.getTime());
   const merged: VisitRecord[] = [];
-  const lastByClient = new Map<string, VisitRecord>();
+  const openByClient = new Map<string, { visit: VisitRecord; lastTicketAt: number }>();
 
   ascending.forEach((visit) => {
     const key = `${visit.dayKey}|${visit.customerName ? clientKey(visit.customerName) : "unknown"}`;
-    const previous = lastByClient.get(key);
+    const open = openByClient.get(key);
 
-    if (
-      previous &&
-      visit.date.getTime() - previous.date.getTime() <= SAME_CLIENT_WINDOW_MS &&
-      // a tip-only ticket folds into the visit it belongs to, and vice versa
-      true
-    ) {
-      previous.revenue += visit.revenue || 0;
-      previous.tip += visit.tip || 0;
-      previous.serviceCount += visit.serviceCount;
-      previous.productCount += visit.productCount;
-      previous.tipOnly =
-        previous.serviceCount === 0 && previous.productCount === 0 && (previous.revenue || 0) <= 0;
-      if (!previous.paymentMethod) previous.paymentMethod = visit.paymentMethod;
+    if (open && visit.date.getTime() - open.lastTicketAt <= SAME_CLIENT_WINDOW_MS) {
+      const target = open.visit;
+      target.revenue += visit.revenue || 0;
+      target.tip += visit.tip || 0;
+      target.serviceCount += visit.serviceCount;
+      target.productCount += visit.productCount;
+      target.tipOnly =
+        target.serviceCount === 0 && target.productCount === 0 && (target.revenue || 0) <= 0;
+      if (!target.paymentMethod) target.paymentMethod = visit.paymentMethod;
+      open.lastTicketAt = visit.date.getTime();
       return;
     }
 
     const copy = { ...visit };
     merged.push(copy);
-    lastByClient.set(key, copy);
+    openByClient.set(key, { visit: copy, lastTicketAt: visit.date.getTime() });
   });
 
   return merged.sort((a, b) => b.date.getTime() - a.date.getTime());
 };
+
 
 
 
