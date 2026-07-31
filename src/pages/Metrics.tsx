@@ -157,8 +157,6 @@ const Metrics = () => {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-          </TabsList>
-        </Tabs>
       </div>
       {metricView === "products" && (
         <ProductMetrics
