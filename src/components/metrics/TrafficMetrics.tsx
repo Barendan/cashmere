@@ -112,52 +112,124 @@ const TrafficMetrics = ({
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
         <MetricsCard
+          accent={1}
           title={`Visits (${currentLabel.toLowerCase()})`}
           value={current.visits}
+          subLine={`${current.serviceTickets} service ticket${
+            current.serviceTickets === 1 ? "" : "s"
+          } · ${current.productOnlyTickets} product-only`}
           secondaryValue={previous.visits}
           secondaryLabel={previousLabel}
           icon={<Receipt className="h-6 w-6 text-spa-deep" />}
+          explanation={
+            <>
+              <p>How many checkout tickets were rung up {currentLabel.toLowerCase()}.</p>
+              <p>
+                One ticket = one visit. Services and products paid together count once. Standalone
+                tips are not counted as visits.
+              </p>
+            </>
+          }
         />
         <MetricsCard
+          accent={2}
           title={`Unique Clients (${currentLabel.toLowerCase()})`}
           value={current.uniqueClients}
+          subLine={
+            current.unnamedVisits > 0
+              ? `${current.unnamedVisits} ticket${
+                  current.unnamedVisits === 1 ? "" : "s"
+                } had no client name`
+              : undefined
+          }
           secondaryValue={previous.uniqueClients}
           secondaryLabel={previousLabel}
           icon={<Users className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
+          explanation={
+            <>
+              <p>How many different client names appear on those tickets.</p>
+              <p>
+                Counted by name (case-insensitive), so one client with two tickets counts once.
+                Tickets left without a name still count as visits but not as a client.
+              </p>
+            </>
+          }
         />
         <MetricsCard
+          accent={3}
           title={`New Clients (${currentLabel.toLowerCase()})`}
           value={current.newClients}
+          subLine={`${current.returningClients} returning`}
           secondaryValue={previous.newClients}
           secondaryLabel={previousLabel}
           icon={<UserPlus className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-stone/20"
+          explanation={
+            <>
+              <p>Clients whose first-ever recorded visit falls inside this period.</p>
+              <p>
+                Everyone else is "returning" — they have an earlier ticket in the app's history. So
+                4 unique with 1 new means 3 of them had visited before.
+              </p>
+            </>
+          }
         />
         <MetricsCard
+          accent={4}
           title="Avg Ticket"
           value={formatCurrency(current.avgTicket)}
+          subLine={`${formatCurrency(current.revenue)} over ${current.visits} visit${
+            current.visits === 1 ? "" : "s"
+          }`}
           secondaryValue={formatCurrency(previous.avgTicket)}
           secondaryLabel={previousLabel}
           icon={<DollarSign className="h-6 w-6 text-spa-deep" />}
+          explanation={
+            <>
+              <p>Average amount spent per visit.</p>
+              <p>
+                Total sales in the period ÷ visits. Amounts are after discounts and exclude tips.
+              </p>
+            </>
+          }
         />
         <MetricsCard
-          title="Services per Visit"
-          value={oneDecimal(current.servicesPerVisit)}
-          secondaryValue={oneDecimal(previous.servicesPerVisit)}
+          accent={5}
+          title="Services Performed"
+          value={current.services}
+          subLine={`${oneDecimal(current.servicesPerVisit)} per visit`}
+          secondaryValue={previous.services}
           secondaryLabel={previousLabel}
           icon={<Users className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
+          explanation={
+            <>
+              <p>How many services were performed in the period.</p>
+              <p>
+                Counted from service line items on tickets ($0 tip placeholders excluded). "Per
+                visit" is below 1 whenever some tickets were product-only.
+              </p>
+            </>
+          }
         />
         <MetricsCard
-          title="Products per Visit"
-          value={oneDecimal(current.productsPerVisit)}
-          secondaryValue={oneDecimal(previous.productsPerVisit)}
+          accent={6}
+          title="Products Sold"
+          value={current.products}
+          subLine={`${oneDecimal(current.productsPerVisit)} per visit`}
+          secondaryValue={previous.products}
           secondaryLabel={previousLabel}
           icon={<Receipt className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-stone/20"
+          explanation={
+            <>
+              <p>How many product units were sold in the period.</p>
+              <p>
+                Counted from the quantities on product sale lines. "Per visit" is below 1 because
+                most tickets are services only.
+              </p>
+            </>
+          }
         />
       </div>
+
 
       <Card className="bg-white">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -311,10 +383,13 @@ const TrafficMetrics = ({
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Visits are counted from checkout tickets. Tickets rung up without a client name still count
-        as visits but cannot be attributed to a client, and names spelled differently are counted as
-        separate clients.
+        Visits are counted from checkout tickets, hover any card to see how it is calculated. Tickets
+        rung up without a client name still count as visits but cannot be attributed to a client, and
+        names spelled differently are counted as separate clients. Standalone tips are excluded from
+        visit counts
+        {current.tipOnlyTickets > 0 && <> ({current.tipOnlyTickets} in this period)</>}.
       </p>
+
     </div>
   );
 };
