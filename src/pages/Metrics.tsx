@@ -195,6 +195,15 @@ const Metrics = () => {
           isExporting={isExportingServices}
         />
       )}
+      {metricView === "traffic" && (
+        <TrafficMetrics
+          transactions={transactions}
+          sales={sales}
+          serviceIncomes={serviceIncomes}
+          timeRange={timeRange}
+          setTimeRange={setTimeRange}
+        />
+      )}
       {metricView === "tax" && (
         <TaxReport
           products={products}
