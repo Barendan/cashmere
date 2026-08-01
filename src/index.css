@@ -161,3 +161,9 @@
   }
   .accent-icon-6 { background-color: hsl(var(--traffic-6) / 0.34); }
 
+/* Wide panel surface (inventory table container) */
+.panel-gradient {
+  background-image: linear-gradient(to right, hsl(var(--traffic-5) / 0.16) 0%, hsl(var(--traffic-1) / 0.10) 55%, hsl(var(--card)) 100%);
+}
+
+

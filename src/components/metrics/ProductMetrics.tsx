@@ -14,6 +14,7 @@ import { ServiceIncomeWithCategory } from "./types";
 import { exportMonthlyProductSales } from "./metricsUtils";
 import CashMetricsViewer from "./CashMetricsViewer";
 import { Separator } from "@/components/ui/separator";
+import InfoHint from "@/components/ui/info-hint";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, TooltipProps } from "recharts";
 
 interface DailyProductMetricsProps extends Omit<ProductMetricsProps, 'totalRevenue' | 'totalProfit' | 'totalItemsSold'> {
@@ -119,6 +120,13 @@ const ProductMetrics = ({
           value={formatCurrency(todayRevenue)}
           secondaryValue={formatCurrency(yesterdayRevenue)}
           icon={<DollarSign className="h-6 w-6 text-spa-deep" />}
+          accent={1}
+          explanation={
+            <>
+              <p>Total product sales rung up today, after discounts.</p>
+              <p>Services and tips are not included here.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -126,7 +134,13 @@ const ProductMetrics = ({
           value={formatCurrency(todayProfit)}
           secondaryValue={formatCurrency(yesterdayProfit)}
           icon={<ArrowUp className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
+          accent={3}
+          explanation={
+            <>
+              <p>Revenue minus the cost price of every unit sold.</p>
+              <p>Cost comes from each product's recorded cost price, so keep those current.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -134,15 +148,28 @@ const ProductMetrics = ({
           value={todayItemsSold}
           secondaryValue={yesterdayItemsSold}
           icon={<ShoppingBag className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-stone/20"
+          accent={4}
+          explanation={
+            <>
+              <p>Number of product units sold today.</p>
+              <p>Counts quantity, not tickets — three bottles on one ticket count as three.</p>
+            </>
+          }
         />
       </div>
+
 
       {/* Sales Overview + Items Sold + Recent Sales in one container */}
       <Card className="bg-card">
         <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-2">
           <div>
-            <CardTitle className="text-spa-deep">Sales Dashboard</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Sales Dashboard
+              <InfoHint title="Sales Dashboard">
+                <p>Product revenue and units sold over the selected period, plus the most recent sales.</p>
+                <p>Switch Daily / Weekly / Monthly to change the buckets.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Product sales overview and recent activity</CardDescription>
           </div>
           <div className="flex items-center space-x-2">
@@ -249,7 +276,12 @@ const ProductMetrics = ({
         {/* Upgraded Product Performance with dual bars */}
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Product Performance</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Product Performance
+              <InfoHint title="Product Performance">
+                <p>Top products by revenue, with profit shown beside it (revenue minus unit cost).</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Revenue vs Profit by product</CardDescription>
           </CardHeader>
           <CardContent>
@@ -282,7 +314,12 @@ const ProductMetrics = ({
 
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Sales by Category</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Sales by Category
+              <InfoHint title="Sales by Category">
+                <p>Share of product revenue by category, so you can see where retail sales concentrate.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Revenue distribution by product category</CardDescription>
           </CardHeader>
           <CardContent>
@@ -301,7 +338,13 @@ const ProductMetrics = ({
       <Card className="bg-card">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-spa-deep">Product Profitability</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Product Profitability
+              <InfoHint title="Product Profitability">
+                <p>Every product with units sold, revenue, total cost, profit, and margin.</p>
+                <p>Margin is profit divided by revenue for that product.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Detailed product sales and profit analysis</CardDescription>
           </div>
           <Button 

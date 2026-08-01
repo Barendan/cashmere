@@ -9,6 +9,7 @@ import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
 import { ServiceMetricsProps } from "./types";
+import InfoHint from "@/components/ui/info-hint";
 
 interface DailyServiceMetricsProps extends Omit<ServiceMetricsProps, 'totalServiceRevenue' | 'totalUniqueCustomers' | 'totalServicesProvided'> {
   todayServiceRevenue: number;
@@ -63,6 +64,13 @@ const ServiceMetrics = ({
           value={formatCurrency(todayServiceRevenue)}
           secondaryValue={formatCurrency(yesterdayServiceRevenue)}
           icon={<DollarSign className="h-6 w-6 text-spa-deep" />}
+          accent={2}
+          explanation={
+            <>
+              <p>Total charged for services today, after discounts.</p>
+              <p>Retail products and tips are not included here.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -70,7 +78,13 @@ const ServiceMetrics = ({
           value={todayUniqueCustomers}
           secondaryValue={yesterdayUniqueCustomers}
           icon={<Users className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
+          accent={5}
+          explanation={
+            <>
+              <p>How many different client names appear on today's service tickets.</p>
+              <p>Tickets rung up with no name can't be attributed, so they don't add to this count.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -78,16 +92,30 @@ const ServiceMetrics = ({
           value={todayServicesProvided}
           secondaryValue={yesterdayServicesProvided}
           icon={<Award className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-stone/20"
+          accent={6}
+          explanation={
+            <>
+              <p>Count of service line items performed today.</p>
+              <p>One ticket can include several services, so this is usually higher than customers.</p>
+            </>
+          }
         />
       </div>
+
 
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-spa-deep">Service Revenue</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Service Revenue
+              <InfoHint title="Service Revenue">
+                <p>Revenue for the top 10 services in the selected period, after discounts.</p>
+                <p>Switch Daily / Weekly / Monthly to change the period the totals cover.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Track your service performance</CardDescription>
           </div>
+
           <div className="flex items-center space-x-2">
             <Button 
               variant={timeRange === "daily" ? "default" : "outline"} 
@@ -133,7 +161,12 @@ const ServiceMetrics = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Service Performance</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Service Performance
+              <InfoHint title="Service Performance">
+                <p>Your six highest-earning services, ranked by revenue in the selected period.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Revenue analysis by service</CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,7 +187,12 @@ const ServiceMetrics = ({
 
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Services by Type</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Services by Type
+              <InfoHint title="Services by Type">
+                <p>Share of service revenue by service category, so you can see what the business leans on.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Revenue distribution by service type</CardDescription>
           </CardHeader>
           <CardContent>
@@ -172,7 +210,12 @@ const ServiceMetrics = ({
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-spa-deep">Service Performance</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Service Performance
+              <InfoHint title="Service Performance table">
+                <p>Every service with how many times it was provided, revenue after discounts, and how many different clients booked it.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Detailed service revenue analysis</CardDescription>
           </div>
           <Button 
