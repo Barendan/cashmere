@@ -105,9 +105,16 @@ const ServiceMetrics = ({
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-spa-deep">Service Revenue</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Service Revenue
+              <InfoHint title="Service Revenue">
+                <p>Revenue for the top 10 services in the selected period, after discounts.</p>
+                <p>Switch Daily / Weekly / Monthly to change the period the totals cover.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Track your service performance</CardDescription>
           </div>
+
           <div className="flex items-center space-x-2">
             <Button 
               variant={timeRange === "daily" ? "default" : "outline"} 
