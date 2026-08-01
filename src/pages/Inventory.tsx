@@ -20,6 +20,7 @@ import { HoverFillButton } from "@/components/ui/hover-fill-button";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import InventoryTable from "@/components/inventory/InventoryTable";
 import { useSortableTable } from "@/components/inventory/useSortableTable";
+import InfoHint from "@/components/ui/info-hint";
 
 const InventoryPage = () => {
   usePageTitle("Inventory");
@@ -256,11 +257,17 @@ const InventoryPage = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card className="bg-white">
+        <Card className="accent-card-1 h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-spa-deep flex items-center">
-              <DollarSign className="h-4 w-4 mr-2" />
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              <span className="accent-icon-1 h-8 w-8 rounded-full flex items-center justify-center shrink-0">
+                <DollarSign className="h-4 w-4" />
+              </span>
               Inventory Value
+              <InfoHint title="Inventory Value">
+                <p>Cost price multiplied by the quantity on hand, summed across every product.</p>
+                <p>Uses cost, not sell price, so it reflects what the stock actually cost you.</p>
+              </InfoHint>
             </CardTitle>
             <CardDescription>Total value of current inventory:</CardDescription>
           </CardHeader>
@@ -275,11 +282,17 @@ const InventoryPage = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-white">
+        <Card className="accent-card-4 h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-spa-deep flex items-center">
-              <CalendarDays className="h-4 w-4 mr-2" />
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              <span className="accent-icon-4 h-8 w-8 rounded-full flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4" />
+              </span>
               Low Stock Threshold
+              <InfoHint title="Low Stock Threshold">
+                <p>The minimum quantity before a product is flagged as low stock.</p>
+                <p>Applying it sets this threshold on every product at once.</p>
+              </InfoHint>
             </CardTitle>
             <CardDescription>Set minimum stock level for all products. 
               <span className="block text-xs text-muted-foreground">
@@ -308,11 +321,17 @@ const InventoryPage = () => {
           </CardContent>
         </Card>
         
-        <Card className="bg-white">
+        <Card className="accent-card-3 h-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-spa-deep flex items-center">
-              <CalendarDays className="h-4 w-4 mr-2" />
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              <span className="accent-icon-3 h-8 w-8 rounded-full flex items-center justify-center shrink-0">
+                <CalendarDays className="h-4 w-4" />
+              </span>
               Monthly Restock
+              <InfoHint title="Monthly Restock">
+                <p>Records this month's stock count for every product in one pass.</p>
+                <p>The badges show how many products are currently low or out of stock.</p>
+              </InfoHint>
             </CardTitle>
             <CardDescription>Update inventory levels for all products</CardDescription>
           </CardHeader>
@@ -335,7 +354,7 @@ const InventoryPage = () => {
         </Card>
       </div>
       
-      <Card className="w-full mb-8 bg-gradient-to-r from-[#f5faf8] to-[#e5f4ed]/60">
+      <Card className="w-full mb-8 panel-gradient">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div>
             <CardTitle>Inventory Management</CardTitle>
