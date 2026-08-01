@@ -119,6 +119,13 @@ const ProductMetrics = ({
           value={formatCurrency(todayRevenue)}
           secondaryValue={formatCurrency(yesterdayRevenue)}
           icon={<DollarSign className="h-6 w-6 text-spa-deep" />}
+          accent={1}
+          explanation={
+            <>
+              <p>Total product sales rung up today, after discounts.</p>
+              <p>Services and tips are not included here.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -126,7 +133,13 @@ const ProductMetrics = ({
           value={formatCurrency(todayProfit)}
           secondaryValue={formatCurrency(yesterdayProfit)}
           icon={<ArrowUp className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
+          accent={3}
+          explanation={
+            <>
+              <p>Revenue minus the cost price of every unit sold.</p>
+              <p>Cost comes from each product's recorded cost price, so keep those current.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -134,9 +147,16 @@ const ProductMetrics = ({
           value={todayItemsSold}
           secondaryValue={yesterdayItemsSold}
           icon={<ShoppingBag className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-stone/20"
+          accent={4}
+          explanation={
+            <>
+              <p>Number of product units sold today.</p>
+              <p>Counts quantity, not tickets — three bottles on one ticket count as three.</p>
+            </>
+          }
         />
       </div>
+
 
       {/* Sales Overview + Items Sold + Recent Sales in one container */}
       <Card className="bg-card">
