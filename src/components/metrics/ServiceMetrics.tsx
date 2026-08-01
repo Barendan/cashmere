@@ -9,6 +9,7 @@ import MetricsBarChart from "./MetricsBarChart";
 import MetricsPieChart from "./MetricsPieChart";
 import DataTable from "./DataTable";
 import { ServiceMetricsProps } from "./types";
+import InfoHint from "@/components/ui/info-hint";
 
 interface DailyServiceMetricsProps extends Omit<ServiceMetricsProps, 'totalServiceRevenue' | 'totalUniqueCustomers' | 'totalServicesProvided'> {
   todayServiceRevenue: number;
@@ -160,7 +161,12 @@ const ServiceMetrics = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Service Performance</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Service Performance
+              <InfoHint title="Service Performance">
+                <p>Your six highest-earning services, ranked by revenue in the selected period.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Revenue analysis by service</CardDescription>
           </CardHeader>
           <CardContent>
@@ -181,7 +187,12 @@ const ServiceMetrics = ({
 
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-spa-deep">Services by Type</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Services by Type
+              <InfoHint title="Services by Type">
+                <p>Share of service revenue by service category, so you can see what the business leans on.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Revenue distribution by service type</CardDescription>
           </CardHeader>
           <CardContent>
@@ -199,7 +210,12 @@ const ServiceMetrics = ({
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-spa-deep">Service Performance</CardTitle>
+            <CardTitle className="text-spa-deep flex items-center gap-1.5">
+              Service Performance
+              <InfoHint title="Service Performance table">
+                <p>Every service with how many times it was provided, revenue after discounts, and how many different clients booked it.</p>
+              </InfoHint>
+            </CardTitle>
             <CardDescription>Detailed service revenue analysis</CardDescription>
           </div>
           <Button 
