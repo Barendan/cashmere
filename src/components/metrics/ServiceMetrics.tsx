@@ -63,6 +63,13 @@ const ServiceMetrics = ({
           value={formatCurrency(todayServiceRevenue)}
           secondaryValue={formatCurrency(yesterdayServiceRevenue)}
           icon={<DollarSign className="h-6 w-6 text-spa-deep" />}
+          accent={2}
+          explanation={
+            <>
+              <p>Total charged for services today, after discounts.</p>
+              <p>Retail products and tips are not included here.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -70,7 +77,13 @@ const ServiceMetrics = ({
           value={todayUniqueCustomers}
           secondaryValue={yesterdayUniqueCustomers}
           icon={<Users className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-water/20"
+          accent={5}
+          explanation={
+            <>
+              <p>How many different client names appear on today's service tickets.</p>
+              <p>Tickets rung up with no name can't be attributed, so they don't add to this count.</p>
+            </>
+          }
         />
         
         <MetricsCard 
@@ -78,9 +91,16 @@ const ServiceMetrics = ({
           value={todayServicesProvided}
           secondaryValue={yesterdayServicesProvided}
           icon={<Award className="h-6 w-6 text-spa-deep" />}
-          iconBgClass="bg-spa-stone/20"
+          accent={6}
+          explanation={
+            <>
+              <p>Count of service line items performed today.</p>
+              <p>One ticket can include several services, so this is usually higher than customers.</p>
+            </>
+          }
         />
       </div>
+
 
       <Card className="bg-white">
         <CardHeader className="flex flex-row items-center justify-between">
